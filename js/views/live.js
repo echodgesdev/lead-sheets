@@ -1,7 +1,7 @@
 import * as store from '../store.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
-import { viewChords, transposeKey, hasKey } from '../sheet/transpose.js';
+import { viewChords, transposeKey, hasKey, capoFret, placeCapo } from '../sheet/transpose.js';
 import {
   TAGS,
   NUMBER_STYLES,
@@ -10,6 +10,8 @@ import {
   getNumbers,
   setNumbers,
   getNumberStyle,
+  getPedalMode,
+  getTextSize,
   tagValue,
 } from '../prefs.js';
 import { openInfo } from './info.js';
@@ -21,6 +23,8 @@ const TAP_SLOP = 10;
 const MAX_FRAME_MS = 100;
 const PAGE_FRACTION = 0.85;
 const MAX_SHIFT = 11;
+const FORWARD_KEYS = new Set(['PageDown', 'ArrowDown', 'ArrowRight']);
+const BACK_KEYS = new Set(['PageUp', 'ArrowUp', 'ArrowLeft']);
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -41,6 +45,10 @@ function iconButton(name, title) {
   const b = button('', title);
   b.append(icon(name));
   return b;
+}
+
+function signed(n) {
+  return n > 0 ? `+${n}` : String(n);
 }
 
 function pixelsPerSecond(speed) {
@@ -89,6 +97,8 @@ export function mount(root, { id, preview = false }) {
   const controls = new Set(getShownControls());
   const autoscroll = controls.has('autoscroll');
   const keyed = hasKey(rec.key);
+  const capo = capoFret(rec.capo);
+  const pedal = getPedalMode();
   const parsed = parse(rec.text);
   let shift = 0;
   let numbers = controls.has('numbers') && keyed && getNumbers();
@@ -99,7 +109,7 @@ export function mount(root, { id, preview = false }) {
   editBtn.hidden = !preview;
   const transpose = el('div', 'seg-toggle');
   const downBtn = iconButton('minus', 'Transpose down');
-  const keyBtn = button('', 'Reset transpose');
+  const keyBtn = button('', 'Reset capo');
   keyBtn.classList.add('live-key');
   const upBtn = iconButton('plus', 'Transpose up');
   transpose.append(downBtn, keyBtn, upBtn);
@@ -113,6 +123,7 @@ export function mount(root, { id, preview = false }) {
   const tags = el('div', 'live-tags');
 
   const sheet = el('div', 'sheet');
+  sheet.style.setProperty('--sheet-size', `${getTextSize()}px`);
 
   const bar = el('div', 'bar');
   const prevBtn = iconButton('backward-step', 'Previous song');
@@ -127,11 +138,11 @@ export function mount(root, { id, preview = false }) {
   root.replaceChildren(header, tags, sheet, bar);
 
   function renderContent() {
-    const key = transposeKey(rec.key, shift);
-    const offset = shift > 0 ? `+${shift}` : String(shift);
-    renderSheet(viewChords(parsed, { key: rec.key, shift, numbers: numbers ? style.id : null }), sheet);
-    fillTags(tags, { ...rec, key });
-    keyBtn.textContent = keyed ? (shift ? `${key} ${offset}` : key) : offset;
+    const placed = placeCapo(capo, shift);
+    renderSheet(viewChords(parsed, { key: rec.key, capo, shift, numbers: numbers ? style.id : null }), sheet);
+    fillTags(tags, { ...rec, key: transposeKey(rec.key, shift), capo: shift ? String(placed.capo) : rec.capo });
+    const fret = placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo);
+    keyBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', fret));
     keyBtn.classList.toggle('active', shift !== 0);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
@@ -240,6 +251,14 @@ export function mount(root, { id, preview = false }) {
     pos = next;
   }
 
+  function turn(dir) {
+    const top = scroller().scrollTop;
+    if (pedal === 'song') go(dir > 0 ? nextId : prevId);
+    else if (dir > 0 && top >= maxScroll() - 1) go(nextId);
+    else if (dir < 0 && top <= 0) go(prevId);
+    else pageScroll(dir);
+  }
+
   async function requestWakeLock() {
     try {
       const lock = await navigator.wakeLock?.request('screen');
@@ -293,29 +312,11 @@ export function mount(root, { id, preview = false }) {
 
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
-    switch (e.key) {
-      case ' ':
-      case 'k':
-        toggle();
-        break;
-      case 'ArrowRight':
-        go(nextId);
-        break;
-      case 'ArrowLeft':
-        go(prevId);
-        break;
-      case 'PageDown':
-        pageScroll(1);
-        break;
-      case 'PageUp':
-        pageScroll(-1);
-        break;
-      case 'Escape':
-        onHome();
-        break;
-      default:
-        return;
-    }
+    if (e.key === ' ' || e.key === 'k') toggle();
+    else if (e.key === 'Escape') onHome();
+    else if (FORWARD_KEYS.has(e.key)) turn(1);
+    else if (BACK_KEYS.has(e.key)) turn(-1);
+    else return;
     e.preventDefault();
   }
 

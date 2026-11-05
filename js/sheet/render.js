@@ -37,6 +37,8 @@ function renderBlock(block) {
       return make('div', 'lyric', block.text);
     case 'note':
       return make('div', 'note', block.text);
+    case 'key':
+      return make('div', 'keychange', `Key change: ${block.key}`);
     case 'tab':
       return make('pre', 'tab', block.lines.join('\n'));
     case 'blank':

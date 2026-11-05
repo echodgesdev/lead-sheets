@@ -2,6 +2,20 @@ const TAGS_KEY = 'tabs.liveTags';
 const CONTROLS_KEY = 'tabs.liveControls';
 const NUMBERS_KEY = 'tabs.numbers';
 const NUMBER_STYLE_KEY = 'tabs.numberStyle';
+const PEDAL_KEY = 'tabs.pedal';
+const TEXT_SIZE_KEY = 'tabs.textSize';
+const EDITOR_KEY = 'tabs.editor';
+
+export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
+
+export const PEDAL_MODES = [
+  { id: 'page', label: 'Page' },
+  { id: 'song', label: 'Song' },
+];
+
+export const EDITOR_OPTIONS = [
+  { id: 'autofix', label: 'Fix format on Done' },
+];
 
 export const NUMBER_STYLES = [
   { id: 'nashville', label: 'Nashville', short: '123', title: 'Nashville numbers' },
@@ -79,6 +93,32 @@ export function getNumberStyle() {
 
 export function setNumberStyle(id) {
   write(NUMBER_STYLE_KEY, id);
+}
+
+export function getPedalMode() {
+  const id = read(PEDAL_KEY);
+  return PEDAL_MODES.some((m) => m.id === id) ? id : 'page';
+}
+
+export function setPedalMode(id) {
+  write(PEDAL_KEY, id);
+}
+
+export function getTextSize() {
+  const n = read(TEXT_SIZE_KEY);
+  return Number.isFinite(n) ? Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, n)) : TEXT_SIZE.fallback;
+}
+
+export function setTextSize(n) {
+  write(TEXT_SIZE_KEY, n);
+}
+
+export function getEditorOptions() {
+  return shownIds(EDITOR_KEY, EDITOR_OPTIONS, []);
+}
+
+export function setEditorOptions(ids) {
+  write(EDITOR_KEY, ids);
 }
 
 export function tagValue(rec, id) {

@@ -20,6 +20,7 @@ const INVERSIONS = {
 };
 const CHORD_RE = /^([A-Ga-g])([#b]?)(.*?)(?:\/([A-Ga-g])([#b]?))?(\**)$/;
 const KEY_RE = /^([A-G])([#b]?)\s*(m(?!aj)|-)?/i;
+const MAX_CAPO = 7;
 
 function mod12(n) {
   return ((n % 12) + 12) % 12;
@@ -99,6 +100,16 @@ export function hasKey(key) {
   return parseKey(key) !== null;
 }
 
+export function capoFret(capo) {
+  const m = /\d+/.exec(String(capo ?? ''));
+  return m ? Number(m[0]) : 0;
+}
+
+export function placeCapo(capo, shift) {
+  const fret = Math.min(Math.max(MAX_CAPO, capo), Math.max(0, capo + shift));
+  return { capo: fret, shift: capo + shift - fret };
+}
+
 function fit(gap, over) {
   if (over < 0) return ' '.repeat(-over) + gap;
   const lead = gap.length - gap.trimStart().length;
@@ -115,19 +126,29 @@ function mapLine(line, fn) {
   return out + line.slice(last);
 }
 
-function mapChords(parsed, fn) {
-  const blocks = parsed.blocks.map((b) => {
-    if (b.type === 'chords') return { ...b, line: mapLine(b.line, fn) };
-    if (b.type !== 'pair') return b;
-    return { ...b, segments: b.segments.map((s) => (s.chord === null ? s : { ...s, chord: fn(s.chord) })) };
-  });
-  return { ...parsed, blocks };
+function mapBlock(b, fn) {
+  if (!fn) return b;
+  if (b.type === 'chords') return { ...b, line: mapLine(b.line, fn) };
+  if (b.type !== 'pair') return b;
+  return { ...b, segments: b.segments.map((s) => (s.chord === null ? s : { ...s, chord: fn(s.chord) })) };
 }
 
-export function viewChords(parsed, { key, shift = 0, numbers = null }) {
-  const base = parseKey(key);
-  if (NUMERALS[numbers] && base) return mapChords(parsed, (c) => NUMERALS[numbers](c, base));
-  if (!shift) return parsed;
-  const flats = base ? FLAT_KEYS.has(transposeKey(key, shift)) : shift < 0;
-  return mapChords(parsed, (c) => transposeChord(c, shift, flats));
+function chordView(key, capo, shift, numbers) {
+  const sounding = parseKey(key);
+  const shapes = sounding && { ...sounding, pc: mod12(sounding.pc - capo) };
+  if (NUMERALS[numbers] && shapes) return (c) => NUMERALS[numbers](c, shapes);
+  if (!shift) return null;
+  const flats = shapes ? FLAT_KEYS.has(keyName({ ...shapes, pc: mod12(shapes.pc + shift) })) : shift < 0;
+  return (c) => transposeChord(c, shift, flats);
+}
+
+export function viewChords(parsed, { key, capo = 0, shift = 0, numbers = null }) {
+  const placed = placeCapo(capo, shift);
+  let fn = chordView(key, capo, placed.shift, numbers);
+  const blocks = parsed.blocks.map((b) => {
+    if (b.type !== 'key') return mapBlock(b, fn);
+    fn = chordView(b.key, capo, placed.shift, numbers);
+    return { ...b, key: transposeKey(b.key, shift) };
+  });
+  return { ...parsed, blocks };
 }

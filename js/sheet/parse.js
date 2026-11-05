@@ -10,6 +10,7 @@ const KNOWN = '(?:intro|verse|pre-?chorus|pre chorus|chorus|bridge|solo|outro|in
 const BARE_RE = new RegExp(`^${KNOWN}(?:\\s*\\d+)?(?:\\s*x\\d+)?$`, 'i');
 const NOTE_RE = /^\(.*\)$/;
 const NOTES_RE = /^notes?\s*:\s*(.*)$/i;
+const KEY_CHANGE_RE = /^key\s*change\s*:\s*(\S.*)$/i;
 
 function titleCase(s) {
   if (s !== s.toLowerCase() && s !== s.toUpperCase()) return s;
@@ -113,6 +114,7 @@ function isLyricLine(line) {
     asChordLine(line) === null &&
     !NOTE_RE.test(s) &&
     !NOTES_RE.test(s) &&
+    !KEY_CHANGE_RE.test(s) &&
     !hasInlineChords(line)
   );
 }
@@ -179,6 +181,12 @@ function parseBody(lines) {
     const notes = NOTES_RE.exec(line.trim());
     if (notes) {
       blocks.push(notes[1] ? { type: 'note', text: notes[1] } : { type: 'section', name: 'Notes' });
+      i++;
+      continue;
+    }
+    const change = KEY_CHANGE_RE.exec(line.trim());
+    if (change) {
+      blocks.push({ type: 'key', key: change[1] });
       i++;
       continue;
     }

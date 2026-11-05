@@ -3,6 +3,7 @@ import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../edit/keybar.js';
 import { icon } from '../icons.js';
 import { toast } from '../toast.js';
+import { getEditorOptions } from '../prefs.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nSetlist: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
@@ -117,6 +118,14 @@ export function mount(el, { id }) {
   }
 
   async function onDone() {
+    const untouched = !currentId && editor.value === NEW_TEMPLATE;
+    if (!untouched && getEditorOptions().includes('autofix')) {
+      const after = infer(editor.value);
+      if (after !== editor.value) {
+        replaceText(after);
+        toast('Format fixed');
+      }
+    }
     await flush();
     location.hash = currentId ? `#/preview/${currentId}` : '#/';
   }

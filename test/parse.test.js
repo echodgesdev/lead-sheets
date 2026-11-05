@@ -302,3 +302,9 @@ test('tabs.txt', async () => {
   eq(blocks[4].lines[0], 'e|-----0-----3-----|');
   eq(blocks[4].lines[5], 'E|-----------------|');
 });
+
+test('Key change: in the body is a key block', () => {
+  const { meta, blocks } = parse('Song\nKey: G\n\nG\nKey change: A\nHi');
+  eq(meta.key, 'G');
+  eq(blocks.slice(1), [{ type: 'key', key: 'A' }, { type: 'lyric', text: 'Hi' }]);
+});
