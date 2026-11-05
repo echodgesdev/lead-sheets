@@ -9,8 +9,10 @@
   align-items: center;
   gap: 6px;
   padding: 6px 8px;
-  background: var(--surface);
-  border-top: 1px solid var(--line);
+  background: var(--glass-surface);
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  border-top: 1px solid var(--glass-edge);
   overflow-x: auto;
   overflow-y: hidden;
   touch-action: pan-x;
@@ -33,9 +35,10 @@
   font-weight: 600;
   font-size: 16px;
   color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
+  background: var(--surface-2);
+  box-shadow: var(--elev-1);
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
   touch-action: pan-x;
   user-select: none;
   -webkit-user-select: none;
@@ -54,6 +57,9 @@
 .kb-section {
   color: var(--muted);
   border-style: dashed;
+  border-color: var(--line);
+  background: transparent;
+  box-shadow: none;
 }
 
 .kb-chord {

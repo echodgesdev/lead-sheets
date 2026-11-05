@@ -19,12 +19,17 @@ function currentRoute() {
   return { mount: mountList, params: {} };
 }
 
-function render() {
+function swap() {
   cleanup?.();
   cleanup = null;
   app.replaceChildren();
   const { mount, params } = currentRoute();
   cleanup = mount(app, params);
+}
+
+function render() {
+  if (document.startViewTransition) document.startViewTransition(swap);
+  else swap();
 }
 
 function showStatus(text) {
