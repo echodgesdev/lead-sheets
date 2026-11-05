@@ -15,7 +15,7 @@ import {
   getTextSize,
   tagValue,
 } from '../prefs.js';
-import { openInfo } from './info.js';
+import { openSongMenu } from './menu.js';
 import { icon } from '../icons.js';
 
 const MIN_SPEED = 1;
@@ -100,14 +100,14 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   root.classList.add('with-bar', 'live-view');
 
-  const controls = new Set(getShownControls());
-  const autoscroll = controls.has('autoscroll');
   const keyed = hasKey(rec.key);
   const capo = capoFret(rec.capo);
-  const pedal = getPedalMode();
   const parsed = parse(rec.text);
+  let autoscroll;
+  let style;
+  let pedal;
+  let numbers;
   let shift = baseShift;
-  let numbers = controls.has('numbers') && keyed && getNumbers();
 
   const header = el('header', 'hdr live-hdr');
   const homeBtn = iconButton('chevron-left', 'Back to songs');
@@ -119,13 +119,10 @@ export function mount(root, { id, preview = false, setId = null }) {
   keyBtn.classList.add('live-key');
   const upBtn = iconButton('plus', 'Transpose up');
   transpose.append(downBtn, keyBtn, upBtn);
-  transpose.hidden = !controls.has('transpose');
-  const style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
-  const numbersBtn = button(style.short, keyed ? style.title : 'Add a Key to see numbers');
-  numbersBtn.hidden = !controls.has('numbers');
+  const numbersBtn = button('', '');
   numbersBtn.disabled = !keyed;
-  const infoBtn = iconButton('circle-info', 'Song info');
-  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), transpose, numbersBtn, infoBtn, editBtn);
+  const menuBtn = iconButton('ellipsis', 'More options');
+  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), transpose, numbersBtn, menuBtn, editBtn);
   const tags = el('div', 'live-tags');
 
   const sheet = el('div', 'sheet');
@@ -139,7 +136,6 @@ export function mount(root, { id, preview = false, setId = null }) {
   const fastBtn = iconButton('plus', 'Faster');
   const nextBtn = iconButton('forward-step', 'Next song');
   const speedLabel = el('span', 'live-bar-speed');
-  for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
   root.replaceChildren(header, tags, sheet, bar);
@@ -242,6 +238,22 @@ export function mount(root, { id, preview = false, setId = null }) {
     else play();
   }
 
+  function applyPrefs() {
+    const controls = new Set(getShownControls());
+    autoscroll = controls.has('autoscroll');
+    style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
+    pedal = getPedalMode();
+    numbers = controls.has('numbers') && keyed && getNumbers();
+    transpose.hidden = !controls.has('transpose');
+    numbersBtn.hidden = !controls.has('numbers');
+    numbersBtn.textContent = style.short;
+    numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
+    numbersBtn.setAttribute('aria-label', numbersBtn.title);
+    for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
+    if (!autoscroll) pause();
+    renderContent();
+  }
+
   function setSpeed(n) {
     speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, n));
     renderControls();
@@ -329,9 +341,15 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   const onHome = () => { location.hash = '#/'; };
   const onEdit = () => { location.hash = `#/edit/${id}`; };
-  const onInfo = () => {
+  const onMenu = () => {
     pause();
-    openInfo(rec, setSize);
+    openSongMenu(rec, {
+      onSize: setSize,
+      onClose: () => {
+        if (!disposed) applyPrefs();
+      },
+      onEdit,
+    });
   };
   const onPrev = () => go(prevId);
   const onNext = () => go(nextId);
@@ -347,7 +365,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   upBtn.addEventListener('click', onUp);
   keyBtn.addEventListener('click', onReset);
   numbersBtn.addEventListener('click', toggleNumbers);
-  infoBtn.addEventListener('click', onInfo);
+  menuBtn.addEventListener('click', onMenu);
   homeBtn.addEventListener('click', onHome);
   prevBtn.addEventListener('click', onPrev);
   nextBtn.addEventListener('click', onNext);
@@ -365,7 +383,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   window.addEventListener('keydown', onKey);
   document.addEventListener('visibilitychange', onVisibility);
 
-  renderContent();
+  applyPrefs();
   window.scrollTo(0, 0);
   renderControls();
   requestWakeLock();
@@ -378,7 +396,7 @@ export function mount(root, { id, preview = false, setId = null }) {
     upBtn.removeEventListener('click', onUp);
     keyBtn.removeEventListener('click', onReset);
     numbersBtn.removeEventListener('click', toggleNumbers);
-    infoBtn.removeEventListener('click', onInfo);
+    menuBtn.removeEventListener('click', onMenu);
     homeBtn.removeEventListener('click', onHome);
     prevBtn.removeEventListener('click', onPrev);
     nextBtn.removeEventListener('click', onNext);
