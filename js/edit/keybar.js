@@ -1,7 +1,7 @@
 import { chordsIn, diatonic } from '../sheet/chords.js';
 import { parse } from '../sheet/parse.js';
 
-const SYMBOLS = ['[ ]', ':', '#', 'b', '/', '|', 'x2'];
+const SYMBOLS = [':', '#', 'b', '/', '|', 'x2'];
 const SECTIONS = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro'];
 const TAP_SLOP = 8;
 const DEBOUNCE_MS = 300;
@@ -51,14 +51,8 @@ function nextVerseNumber(text) {
   return max + 1;
 }
 
-function insert(textarea, str, caretOffset) {
-  const start = textarea.selectionStart;
-  const end = textarea.selectionEnd;
-  textarea.setRangeText(str, start, end, 'end');
-  if (caretOffset !== undefined) {
-    const pos = start + caretOffset;
-    textarea.setSelectionRange(pos, pos);
-  }
+function insert(textarea, str) {
+  textarea.setRangeText(str, textarea.selectionStart, textarea.selectionEnd, 'end');
   textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
@@ -81,7 +75,6 @@ function insertSection(textarea, word) {
 function act(textarea, kind, value) {
   if (kind === 'chord') insertChord(textarea, value);
   else if (kind === 'section') insertSection(textarea, value);
-  else if (value === '[ ]') insert(textarea, '[]', 1);
   else insert(textarea, value);
 }
 

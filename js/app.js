@@ -10,6 +10,7 @@ let cleanup = null;
 function currentRoute() {
   const [, view = '', id = ''] = location.hash.slice(1).split('/');
   if (view === 'live' && id) return { mount: mountLive, params: { id } };
+  if (view === 'preview' && id) return { mount: mountLive, params: { id, preview: true } };
   if (view === 'edit' && id) return { mount: mountEdit, params: { id } };
   return { mount: mountList, params: {} };
 }

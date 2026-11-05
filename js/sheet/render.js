@@ -7,11 +7,18 @@ function make(tag, className, text) {
   return node;
 }
 
+function withMarks(node, text) {
+  for (const part of text.split(/(\*+)/)) {
+    if (part) node.append(part[0] === '*' ? make('span', 'mark', part) : part);
+  }
+  return node;
+}
+
 function renderSegment(segment) {
   if (segment.chord === null) return [segment.text];
   const [, anchor, rest] = /^(\S*)([\s\S]*)$/.exec(segment.text);
   const seg = make('span', 'seg');
-  seg.append(make('b', '', segment.chord), make('span', '', anchor || NO_CHORD));
+  seg.append(withMarks(make('b'), segment.chord), make('span', '', anchor || NO_CHORD));
   return rest ? [seg, rest] : [seg];
 }
 
@@ -25,7 +32,7 @@ function renderBlock(block) {
       return pair;
     }
     case 'chords':
-      return make('div', 'chordline', block.line);
+      return withMarks(make('div', 'chordline'), block.line);
     case 'lyric':
       return make('div', 'lyric', block.text);
     case 'note':

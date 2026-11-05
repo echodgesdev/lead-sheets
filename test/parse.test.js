@@ -95,7 +95,28 @@ test('sectionName rejects non-sections', () => {
 });
 
 test('META_FIELDS', () => {
-  eq(META_FIELDS, ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist']);
+  eq(META_FIELDS, ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist', 'notes']);
+});
+
+test('chords with * marks', () => {
+  ['A*', 'G/B*', 'Em7**'].forEach((t) => eq(isChord(t), true, t));
+  eq(isChord('*'), false);
+  eq(isChordLine('A*  G  D*'), true);
+  eq(chordsIn('A*  G\nhi\n[D*]there'), ['A', 'G', 'D']);
+  eq(body('A*   G\nHello world')[0].segments, [{ chord: 'A*', text: 'Hello' }, { chord: 'G', text: ' world' }]);
+});
+
+test('Notes: in the header is a tag and in the body is a note', () => {
+  const { meta, blocks } = parse('Song\nNotes: capo up\nTuning: DADGAD\n\nVerse 1:\nNotes: let ring\nAm G\nNotes: hold\nNotes:\nHi');
+  eq([meta.notes, meta.tuning], ['capo up', 'DADGAD']);
+  eq(blocks, [
+    { type: 'section', name: 'Verse 1' },
+    { type: 'note', text: 'let ring' },
+    { type: 'chords', line: 'Am G' },
+    { type: 'note', text: 'hold' },
+    { type: 'section', name: 'Notes' },
+    { type: 'lyric', text: 'Hi' },
+  ]);
 });
 
 test('meta field and tags alias', () => {

@@ -1,6 +1,8 @@
 import * as store from '../store.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
+import { TAGS, getShownTags, tagValue } from '../tags.js';
+import { openInfo } from './info.js';
 import { icon } from '../icons.js';
 
 const MIN_SPEED = 1;
@@ -44,11 +46,16 @@ function songOrder() {
   return store.all().map((r) => r.id);
 }
 
-function metaBadges(rec) {
-  const parts = [];
-  if (rec.key) parts.push(`Key ${rec.key}`);
-  if (rec.capo) parts.push(`Capo ${rec.capo}`);
-  return parts;
+function tagStrip(rec) {
+  const strip = el('div', 'live-tags');
+  const shown = new Set(getShownTags());
+  for (const t of TAGS) {
+    const value = shown.has(t.id) ? tagValue(rec, t.id) : '';
+    if (!value) continue;
+    if (t.id === 'notes') strip.append(el('p', 'live-notes', value));
+    else strip.append(el('span', 'badge', t.prefix ? `${t.label} ${value}` : value));
+  }
+  return strip;
 }
 
 function mountMissing(root) {
@@ -62,30 +69,34 @@ function mountMissing(root) {
   return () => home.removeEventListener('click', onHome);
 }
 
-export function mount(root, { id }) {
+export function mount(root, { id, preview = false }) {
   const rec = store.get(id);
   if (!rec) return mountMissing(root);
 
   root.classList.add('with-bar');
 
-  const meta = el('div', 'live-meta');
-  meta.append(el('span', 'live-title', rec.title || 'Untitled'));
-  metaBadges(rec).forEach((text) => meta.append(el('span', 'badge', text)));
+  const header = el('header', 'hdr live-hdr');
+  const editBtn = button('', 'Edit song');
+  editBtn.append(icon('pen-to-square'), 'Edit');
+  editBtn.hidden = !preview;
+  const infoBtn = iconButton('circle-info', 'Song info');
+  const homeBtn = iconButton('chevron-left', 'Back to songs');
+  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), editBtn, infoBtn);
+  const tags = tagStrip(rec);
 
   const sheet = el('div', 'sheet');
   renderSheet(parse(rec.text), sheet);
 
   const bar = el('div', 'bar');
-  const homeBtn = iconButton('house', 'Home');
   const prevBtn = iconButton('backward-step', 'Previous song');
   const slowBtn = iconButton('minus', 'Slower');
   const playBtn = button('', 'Play or pause');
   const fastBtn = iconButton('plus', 'Faster');
   const nextBtn = iconButton('forward-step', 'Next song');
   const speedLabel = el('span', 'live-bar-speed');
-  bar.append(homeBtn, prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
+  bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
-  root.replaceChildren(meta, sheet, bar);
+  root.replaceChildren(header, tags, sheet, bar);
 
   const order = songOrder();
   const at = order.indexOf(id);
@@ -228,7 +239,7 @@ export function mount(root, { id }) {
   }
 
   function onKey(e) {
-    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
     switch (e.key) {
       case ' ':
       case 'k':
@@ -256,11 +267,18 @@ export function mount(root, { id }) {
   }
 
   const onHome = () => { location.hash = '#/'; };
+  const onEdit = () => { location.hash = `#/edit/${id}`; };
+  const onInfo = () => {
+    pause();
+    openInfo(rec);
+  };
   const onPrev = () => go(prevId);
   const onNext = () => go(nextId);
   const onSlow = () => setSpeed(speed - 1);
   const onFast = () => setSpeed(speed + 1);
 
+  editBtn.addEventListener('click', onEdit);
+  infoBtn.addEventListener('click', onInfo);
   homeBtn.addEventListener('click', onHome);
   prevBtn.addEventListener('click', onPrev);
   nextBtn.addEventListener('click', onNext);
@@ -285,6 +303,8 @@ export function mount(root, { id }) {
   return () => {
     disposed = true;
     pause();
+    editBtn.removeEventListener('click', onEdit);
+    infoBtn.removeEventListener('click', onInfo);
     homeBtn.removeEventListener('click', onHome);
     prevBtn.removeEventListener('click', onPrev);
     nextBtn.removeEventListener('click', onNext);

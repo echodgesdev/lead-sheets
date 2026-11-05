@@ -2,8 +2,9 @@ import * as store from '../store.js';
 import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../edit/keybar.js';
 import { icon } from '../icons.js';
+import { toast } from '../toast.js';
 
-const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nMeta: \nSetlist: \n\nVerse 1:\n\nChorus:\n';
+const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nSetlist: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
 
 function create(tag, attrs = {}, text) {
@@ -30,6 +31,7 @@ export function mount(el, { id }) {
   let disposed = false;
   let timer = null;
   let queue = Promise.resolve();
+  let dismissToast = null;
 
   const screen = create('div', { class: 'screen' });
   const header = create('header', { class: 'hdr' });
@@ -98,14 +100,25 @@ export function mount(el, { id }) {
     scheduleSave();
   }
 
-  function onInfer() {
-    editor.setRangeText(infer(editor.value), 0, editor.value.length);
+  function replaceText(text) {
+    editor.setRangeText(text, 0, editor.value.length);
     editor.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function onInfer() {
+    const before = editor.value;
+    const after = infer(before);
+    if (after === before) {
+      dismissToast = toast('Nothing to fix');
+      return;
+    }
+    replaceText(after);
+    dismissToast = toast('Format fixed', { label: 'Undo', run: () => replaceText(before) });
   }
 
   async function onDone() {
     await flush();
-    location.hash = currentId ? `#/live/${currentId}` : '#/';
+    location.hash = currentId ? `#/preview/${currentId}` : '#/';
   }
 
   async function onDelete() {
@@ -148,6 +161,7 @@ export function mount(el, { id }) {
 
   return () => {
     disposed = true;
+    dismissToast?.();
     flush();
     detachKeybar();
     document.removeEventListener('visibilitychange', onVisibility);

@@ -291,6 +291,27 @@ input:focus-visible {
   color: var(--on-accent);
 }
 
+.list-top {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg);
+}
+
+.chips {
+  display: flex;
+  flex-basis: 100%;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  min-height: 36px;
+  border-radius: 999px;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -453,22 +474,85 @@ select.field {
   white-space: nowrap;
 }
 
-.live-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: calc(env(safe-area-inset-top) + 10px) 16px 10px;
-  background: var(--nav-bg);
-  color: var(--nav-fg);
+.live-hdr {
+  position: static;
 }
 
-.live-title {
-  flex: 1;
-  min-width: 0;
-  font-weight: 700;
+.live-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 0;
+}
+
+.live-tags:empty {
+  display: none;
+}
+
+.live-tags .badge {
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.live-notes {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+  font-style: italic;
+  white-space: pre-wrap;
+}
+
+.info-value {
+  flex: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.info-empty {
+  padding-top: 16px;
+}
+
+.toast {
+  position: fixed;
+  top: calc(env(safe-area-inset-top) + 64px);
+  left: 50%;
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: var(--nav-bg);
+  color: var(--nav-fg);
+  box-shadow: var(--shadow);
+  font-size: 14px;
+  font-weight: 600;
+  transform: translateX(-50%);
+  animation: toast-in 0.18s ease-out;
+}
+
+.toast-action {
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  color: var(--lime);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
 }
 
 .bar {

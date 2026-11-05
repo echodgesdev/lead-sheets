@@ -1,5 +1,7 @@
 import * as backup from '../backup.js';
 import { getTheme, setTheme } from '../theme.js';
+import { TAGS, getShownTags, setShownTags } from '../tags.js';
+import { openModal } from '../modal.js';
 import { icon } from '../icons.js';
 
 const THEMES = [
@@ -21,24 +23,50 @@ function labeledButton(name, text) {
   return b;
 }
 
-export function openSettings({ onImport } = {}) {
-  const dialog = create('dialog', { class: 'modal', 'aria-labelledby': 'settings-title' });
-  const head = create('div', { class: 'modal-head' });
-  const doneBtn = create('button', { class: 'btn primary', type: 'button' });
-  doneBtn.append(icon('check'), 'Done');
-  head.append(create('h2', { class: 'modal-title', id: 'settings-title' }, 'Settings'), doneBtn);
-
-  const themeRow = create('div', { class: 'modal-row' });
+function themeRow() {
+  const row = create('div', { class: 'modal-row' });
   const toggle = create('div', { class: 'seg-toggle' });
-  const themeButtons = THEMES.map((t) => {
-    const b = labeledButton(t.icon, t.label);
-    b.addEventListener('click', () => applyTheme(t.id));
-    return [t.id, b];
-  });
-  toggle.append(...themeButtons.map(([, b]) => b));
-  themeRow.append(create('span', { class: 'modal-label' }, 'Theme'), toggle);
+  const buttons = THEMES.map((t) => [t.id, labeledButton(t.icon, t.label)]);
 
-  const backupRow = create('div', { class: 'modal-row' });
+  function apply(theme) {
+    setTheme(theme);
+    for (const [id, b] of buttons) b.classList.toggle('active', id === theme);
+  }
+
+  for (const [id, b] of buttons) b.addEventListener('click', () => apply(id));
+  toggle.append(...buttons.map(([, b]) => b));
+  row.append(create('span', { class: 'modal-label' }, 'Theme'), toggle);
+  apply(getTheme());
+  return row;
+}
+
+function tagsRow() {
+  const row = create('div', { class: 'modal-row' });
+  const chips = create('div', { class: 'chips' });
+  const shown = new Set(getShownTags());
+
+  for (const t of TAGS) {
+    const b = create('button', { class: 'btn chip', type: 'button' }, t.label);
+    const sync = () => {
+      b.classList.toggle('active', shown.has(t.id));
+      b.setAttribute('aria-pressed', String(shown.has(t.id)));
+    };
+    b.addEventListener('click', () => {
+      if (shown.has(t.id)) shown.delete(t.id);
+      else shown.add(t.id);
+      setShownTags(TAGS.filter((x) => shown.has(x.id)).map((x) => x.id));
+      sync();
+    });
+    sync();
+    chips.append(b);
+  }
+
+  row.append(create('span', { class: 'modal-label' }, 'Show in Live'), chips);
+  return row;
+}
+
+function backupRows(onImport) {
+  const row = create('div', { class: 'modal-row' });
   const exportBtn = labeledButton('file-export', 'Export');
   const importBtn = labeledButton('file-import', 'Import');
   const fileInput = create('input', {
@@ -46,16 +74,8 @@ export function openSettings({ onImport } = {}) {
     accept: '.json,.md,.txt,application/json,text/plain',
     hidden: '',
   });
-  backupRow.append(create('span', { class: 'modal-label' }, 'Backup'), exportBtn, importBtn, fileInput);
+  row.append(create('span', { class: 'modal-label' }, 'Backup'), exportBtn, importBtn, fileInput);
   const note = create('p', { class: 'modal-note', hidden: '' });
-
-  dialog.append(head, themeRow, backupRow, note);
-  document.body.append(dialog);
-
-  function applyTheme(theme) {
-    setTheme(theme);
-    for (const [id, b] of themeButtons) b.classList.toggle('active', id === theme);
-  }
 
   function setNote(text) {
     note.textContent = text;
@@ -83,12 +103,10 @@ export function openSettings({ onImport } = {}) {
       onImport?.();
     });
   });
-  doneBtn.addEventListener('click', () => dialog.close());
-  dialog.addEventListener('click', (e) => {
-    if (e.target === dialog) dialog.close();
-  });
-  dialog.addEventListener('close', () => dialog.remove());
 
-  applyTheme(getTheme());
-  dialog.showModal();
+  return [row, note];
+}
+
+export function openSettings({ onImport } = {}) {
+  openModal('Settings', themeRow(), tagsRow(), ...backupRows(onImport));
 }

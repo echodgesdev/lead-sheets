@@ -7,7 +7,7 @@ const MODE_KEY = 'tabs.mode';
 const QUERY_KEY = 'tabs.q';
 const ORDER_KEY = 'tabs.order';
 const GROUP_KEY = 'tabs.group';
-const EMPTY_HINT = 'Tap Edit, then New, or import a backup from Settings';
+const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 
 function create(tag, attrs = {}, text) {
   const node = document.createElement(tag);
@@ -54,7 +54,8 @@ export function mount(el) {
   let mode = getMode();
   let groupBy = getGroup();
 
-  const screen = create('div', { class: 'screen' });
+  const screen = create('div');
+  const top = create('div', { class: 'list-top' });
 
   const header = create('header', { class: 'hdr' });
   const liveBtn = labeled(create('button', { class: 'btn', type: 'button' }), 'play', 'Live');
@@ -63,7 +64,9 @@ export function mount(el) {
   modeToggle.append(liveBtn, editBtn);
   const gearBtn = create('button', { class: 'btn icon', type: 'button', 'aria-label': 'Settings', title: 'Settings' });
   gearBtn.append(icon('gear'));
-  header.append(create('h1', { class: 'hdr-title brand' }, 'Lead Sheets'), modeToggle, gearBtn);
+  const newLink = create('a', { class: 'btn icon', href: '#/edit/new', 'aria-label': 'New song', title: 'New song' });
+  newLink.append(icon('plus'));
+  header.append(create('h1', { class: 'hdr-title brand' }, 'Lead Sheets'), modeToggle, newLink, gearBtn);
 
   const searchBar = create('div', { class: 'toolbar' });
   const searchBox = create('label', { class: 'input-icon' });
@@ -85,14 +88,12 @@ export function mount(el) {
   groupBox.append(icon('layer-group'), groupSelect, icon('chevron-down'));
   searchBar.append(searchBox, groupBox);
 
-  const editBar = create('div', { class: 'toolbar' });
-  const newLink = labeled(create('a', { class: 'btn primary', href: '#/edit/new' }), 'plus', 'New');
-  editBar.append(newLink);
 
   const groupsEl = create('div', { class: 'groups' });
   const empty = create('p', { class: 'status', hidden: '' });
 
-  screen.append(header, searchBar, editBar, groupsEl, empty);
+  top.append(header, searchBar);
+  screen.append(top, groupsEl, empty);
   el.append(screen);
 
   function rowFor(rec, ids) {
@@ -129,7 +130,7 @@ export function mount(el) {
     editBtn.classList.toggle('active', !live);
     liveBtn.setAttribute('aria-pressed', String(live));
     editBtn.setAttribute('aria-pressed', String(!live));
-    editBar.hidden = live;
+    newLink.hidden = live;
     renderList();
   }
 

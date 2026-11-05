@@ -30,6 +30,7 @@ function makeRecord(id, text, updatedAt, scrollSpeed) {
     capo: meta.capo,
     tempo: meta.tempo,
     tuning: meta.tuning,
+    notes: meta.notes,
     meta: splitTags(meta.meta),
     setlist: splitTags(meta.setlist),
     extra: meta.extra,

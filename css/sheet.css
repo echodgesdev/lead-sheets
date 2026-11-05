@@ -74,6 +74,10 @@
   line-height: 1.3;
 }
 
+.sheet .mark {
+  color: var(--muted);
+}
+
 .sheet .lyric {
   white-space: pre-wrap;
 }

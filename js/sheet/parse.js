@@ -1,14 +1,15 @@
 import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
 
-export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist'];
+export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist', 'notes'];
 export const LIST_FIELDS = ['meta', 'setlist'];
 
-const ALIASES = { bpm: 'tempo', tags: 'meta', setlists: 'setlist' };
+const ALIASES = { bpm: 'tempo', tags: 'meta', setlists: 'setlist', note: 'notes' };
 const FIELDS = new Set([...META_FIELDS, ...Object.keys(ALIASES)]);
 const HEADER_RE = /^([A-Za-z][\w -]{0,20}):\s*(.*)$/;
 const KNOWN = '(?:intro|verse|pre-?chorus|pre chorus|chorus|bridge|solo|outro|interlude|instrumental|riff|tag|coda|refrain|break|hook)';
 const BARE_RE = new RegExp(`^${KNOWN}(?:\\s*\\d+)?(?:\\s*x\\d+)?$`, 'i');
 const NOTE_RE = /^\(.*\)$/;
+const NOTES_RE = /^notes?\s*:\s*(.*)$/i;
 
 function titleCase(s) {
   if (s !== s.toLowerCase() && s !== s.toUpperCase()) return s;
@@ -111,6 +112,7 @@ function isLyricLine(line) {
     !sectionName(line) &&
     asChordLine(line) === null &&
     !NOTE_RE.test(s) &&
+    !NOTES_RE.test(s) &&
     !hasInlineChords(line)
   );
 }
@@ -172,6 +174,12 @@ function parseBody(lines) {
       const tab = [];
       while (i < lines.length && isTabLine(lines[i])) tab.push(lines[i++]);
       blocks.push({ type: 'tab', lines: tab });
+      continue;
+    }
+    const notes = NOTES_RE.exec(line.trim());
+    if (notes) {
+      blocks.push(notes[1] ? { type: 'note', text: notes[1] } : { type: 'section', name: 'Notes' });
+      i++;
       continue;
     }
     const name = sectionName(line);

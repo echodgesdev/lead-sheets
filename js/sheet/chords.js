@@ -1,6 +1,6 @@
 const ROOT = '[A-Ga-g][#b]?';
 const PART = '(?:maj|min|dim|aug|add|sus|m|M|ø|°|\\+|[#b]?\\d{1,2}|\\([#b+\\-\\w]*\\))';
-const CHORD_RE = new RegExp(`^${ROOT}${PART}*(?:\\/${ROOT})?$`);
+const CHORD_RE = new RegExp(`^${ROOT}${PART}*(?:\\/${ROOT})?\\**$`);
 const NC_RE = /^N\.?C\.?$/;
 const FILLER_RE = /^(?:\(?x\d+\)?|\d+x|[-/%:.()*~]+)$/i;
 const LONE_WORD_RE = /^[a-g][#b]?m?$/;
@@ -17,6 +17,10 @@ function tokensOf(line) {
 export function isChord(token) {
   if (typeof token !== 'string') return false;
   return NC_RE.test(token) || CHORD_RE.test(token);
+}
+
+export function chordName(token) {
+  return token.replace(/\*+$/, '');
 }
 
 export function isChordLine(line) {
@@ -74,10 +78,10 @@ export function chordsIn(text) {
   };
   for (const line of String(text).split(/\r?\n/)) {
     if (isTabLine(line)) continue;
-    if (isChordLine(line)) chordTokens(line).forEach((t) => add(t.chord));
+    if (isChordLine(line)) chordTokens(line).forEach((t) => add(chordName(t.chord)));
     for (const m of line.matchAll(/\[([^\]]+)\]/g)) {
       const c = m[1].trim();
-      if (isChord(c)) add(c);
+      if (isChord(c)) add(chordName(c));
     }
   }
   return out;
