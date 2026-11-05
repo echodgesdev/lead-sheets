@@ -54,3 +54,10 @@ export function groupSongs(songs, by) {
   for (const g of out) g.songs.sort(byTitle);
   return out;
 }
+
+export function groupSetlists(songs, sets, keepEmpty) {
+  const byId = new Map(songs.map((rec) => [rec.id, rec]));
+  return sets
+    .map((set) => ({ name: set.name || 'Untitled setlist', set, songs: set.entries.map((e) => byId.get(e.songId)).filter(Boolean) }))
+    .filter((g) => keepEmpty || g.songs.length);
+}

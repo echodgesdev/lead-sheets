@@ -1,6 +1,8 @@
 import * as store from './store.js';
+import * as setlists from './setlists.js';
 
-const FORMAT = { app: 'tabs', version: 1 };
+const FORMAT = { app: 'tabs', version: 2 };
+const VERSIONS = [1, 2];
 
 function localDate() {
   const d = new Date();
@@ -20,7 +22,7 @@ function download(blob, name) {
 }
 
 export async function exportAll() {
-  const body = JSON.stringify({ ...FORMAT, songs: store.all() }, null, 2);
+  const body = JSON.stringify({ ...FORMAT, songs: store.all(), setlists: setlists.all() }, null, 2);
   const name = `lead-sheets-backup-${localDate()}.json`;
   const file = new File([body], name, { type: 'application/json' });
   if (navigator.canShare?.({ files: [file] })) {
@@ -36,10 +38,11 @@ export async function exportAll() {
 
 async function importBackup(text) {
   const data = JSON.parse(text);
-  if (data?.app !== FORMAT.app || data.version !== FORMAT.version || !Array.isArray(data.songs)) {
+  if (data?.app !== FORMAT.app || !VERSIONS.includes(data.version) || !Array.isArray(data.songs)) {
     throw new Error('Not a Lead Sheets backup file');
   }
-  return store.merge(data.songs);
+  const songs = await store.merge(data.songs);
+  return songs + await setlists.merge(Array.isArray(data.setlists) ? data.setlists : []);
 }
 
 export async function importFile(file) {

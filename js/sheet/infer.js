@@ -3,11 +3,11 @@ import { META_FIELDS, LIST_FIELDS, sectionName, normalizeLines, fieldName, split
 
 const WINDOW = 15;
 const MAX_PASSES = 4;
-const KNOWN_KEYS = new Set([...META_FIELDS, 'bpm', 'tags', 'setlists']);
+const KNOWN_KEYS = new Set([...META_FIELDS, 'bpm', 'tags']);
 const HEADER_RE = /^([A-Za-z][\w -]{0,20}):\s*(.*)$/;
 const DIRECTIVE_RE = /^\{\s*([A-Za-z_]+)(?:\s*:\s*|\s+)?(.*?)\s*\}$/;
 const JUNK_RE = /^(?:chords?|tabs?|ukulele chords|ultimate[- ]guitar(?:\.com)?)$|^(?:difficulty|author|tabbed by)\s*:/i;
-const META_LINE_RE = /^(artist|album|genre|key|tuning|capo|tempo|bpm|meta|tags|setlists?)\s*:\s*(\S.*)$/i;
+const META_LINE_RE = /^(artist|album|genre|key|tuning|capo|tempo|bpm|meta|tags)\s*:\s*(\S.*)$/i;
 const LOOSE_META_RE = /^(capo|tempo|bpm)\s+(\S.*)$/i;
 const CAPO_VALUE_RE = /^(\d+)\s*(?:st|nd|rd|th)?(?:\s*fret)?$/i;
 const TEMPO_VALUE_RE = /^(\d+)\s*(?:bpm)?$/i;

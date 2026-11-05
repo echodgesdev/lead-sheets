@@ -126,7 +126,6 @@ test('step 4: title and header metadata', () => {
   same('Foo by Bar\n\nhi', 'Foo\nArtist: Bar\n\nhi');
   same('Stay by the Water\nArtist: \n\nhi', 'Stay by the Water\nArtist:\n\nhi');
   same('Song\nTags: slow ,opener,, drop D\n\nhi', 'Song\nMeta: slow, opener, drop D\n\nhi');
-  same('Song\nSetlists: Fri gig ,Sat\n\nhi', 'Song\nSetlist: Fri gig, Sat\n\nhi');
   same('Foo - Bar\nArtist: Baz\n\nhi', 'Foo - Bar\nArtist: Baz\n\nhi');
   same('# Heading\nAlbum: X\n\nhi', 'Heading\nAlbum: X\n\nhi');
   same('S\nMood: sad\nartist: X\n\nhi', 'S\nArtist: X\nMood: sad\n\nhi');

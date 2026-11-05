@@ -1,17 +1,21 @@
 import './theme.js';
 import * as store from './store.js';
+import * as setlists from './setlists.js';
 import { mount as mountList } from './views/list.js';
 import { mount as mountLive } from './views/live.js';
 import { mount as mountEdit } from './views/edit.js';
+import { mount as mountSetlist } from './views/setlist.js';
 
 const app = document.getElementById('app');
 let cleanup = null;
 
 function currentRoute() {
-  const [, view = '', id = ''] = location.hash.slice(1).split('/');
+  const [, view = '', id = '', songId = ''] = location.hash.slice(1).split('/');
   if (view === 'live' && id) return { mount: mountLive, params: { id } };
   if (view === 'preview' && id) return { mount: mountLive, params: { id, preview: true } };
+  if (view === 'set' && id && songId) return { mount: mountLive, params: { id: songId, setId: id } };
   if (view === 'edit' && id) return { mount: mountEdit, params: { id } };
+  if (view === 'setlist' && id) return { mount: mountSetlist, params: { id } };
   return { mount: mountList, params: {} };
 }
 
@@ -33,7 +37,7 @@ function showStatus(text) {
 async function start() {
   showStatus('Loading...');
   try {
-    await store.load();
+    await Promise.all([store.load(), setlists.load()]);
   } catch (err) {
     showStatus(`Could not open the song library: ${err.message}`);
     return;

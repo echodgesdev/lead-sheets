@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { groupSongs } from '../js/group.js';
+import { groupSongs, groupSetlists } from '../js/group.js';
 
 const songs = [
   { id: '1', title: 'Bright Harbor', artist: 'The Driftwood Kites', meta: ['opener', 'Fast'] },
@@ -30,12 +30,13 @@ test('group by meta lists a song under each term, case-insensitive', () => {
   ]);
 });
 
-test('group by setlist lists a song under each setlist', () => {
+test('setlist groups keep set order and skip missing songs', () => {
   const sets = [
-    { id: 'a', title: 'B', setlist: ['Fri', 'Sat'] },
-    { id: 'b', title: 'A', setlist: ['Fri'] },
+    { id: 's1', name: 'Fri', entries: [{ songId: '4' }, { songId: 'gone' }, { songId: '1' }] },
+    { id: 's2', name: '', entries: [] },
   ];
-  eq(shape(groupSongs(sets, 'setlist')), [['Fri', ['b', 'a']], ['Sat', ['a']]]);
+  eq(shape(groupSetlists(songs, sets, false)), [['Fri', ['4', '1']]]);
+  eq(shape(groupSetlists(songs, sets, true)), [['Fri', ['4', '1']], ['Untitled setlist', []]]);
 });
 
 test('group by title uses first letter, non-letters last', () => {

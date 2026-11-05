@@ -14,7 +14,7 @@ export const PEDAL_MODES = [
 ];
 
 export const EDITOR_OPTIONS = [
-  { id: 'autofix', label: 'Fix format on Done' },
+  { id: 'autofix', label: 'Fix Format On Preview' },
 ];
 
 export const NUMBER_STYLES = [
@@ -31,7 +31,6 @@ export const TAGS = [
   { id: 'tempo', label: 'Tempo', prefix: true },
   { id: 'tuning', label: 'Tuning', prefix: true },
   { id: 'meta', label: 'Meta' },
-  { id: 'setlist', label: 'Setlist' },
   { id: 'notes', label: 'Notes' },
 ];
 

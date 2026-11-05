@@ -1,13 +1,16 @@
 import * as store from '../store.js';
+import * as setlists from '../setlists.js';
 import { openSettings } from './settings.js';
 import { icon } from '../icons.js';
-import { GROUPS, groupSongs } from '../group.js';
+import { GROUPS, groupSongs, groupSetlists } from '../group.js';
+import { transposeKey } from '../sheet/transpose.js';
 
 const MODE_KEY = 'tabs.mode';
 const QUERY_KEY = 'tabs.q';
 const ORDER_KEY = 'tabs.order';
 const GROUP_KEY = 'tabs.group';
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
+const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
 
 function create(tag, attrs = {}, text) {
   const node = document.createElement(tag);
@@ -96,14 +99,19 @@ export function mount(el) {
   screen.append(top, groupsEl, empty);
   el.append(screen);
 
-  function rowFor(rec, ids) {
-    const row = create('a', { class: 'row', href: `#/${mode}/${rec.id}` });
+  function hrefFor(rec, set) {
+    return set && mode === 'live' ? `#/set/${set.id}/${rec.id}` : `#/${mode}/${rec.id}`;
+  }
+
+  function rowFor(rec, ids, set) {
+    const row = create('a', { class: 'row', href: hrefFor(rec, set) });
     const main = create('div', { class: 'row-main' });
     main.append(create('div', { class: 'row-title' }, rec.title || 'Untitled'));
     const sub = subtitleOf(rec, groupBy);
     if (sub) main.append(create('div', { class: 'row-sub' }, sub));
     row.append(main);
-    if (rec.key) row.append(create('span', { class: 'badge' }, rec.key));
+    const shift = set?.entries.find((e) => e.songId === rec.id)?.shift ?? 0;
+    if (rec.key) row.append(create('span', { class: 'badge' }, transposeKey(rec.key, shift)));
     row.addEventListener('click', () => writeValue(sessionStorage, ORDER_KEY, JSON.stringify(ids)));
     return row;
   }
@@ -111,17 +119,39 @@ export function mount(el) {
   function renderGroup(group) {
     const ids = group.songs.map((rec) => rec.id);
     const label = create('div', { class: group.empty ? 'section-label muted-group' : 'section-label' });
-    label.append(create('span', {}, group.name), create('span', { class: 'group-count' }, String(ids.length)));
+    label.append(create('span', { class: 'group-name' }, group.name), create('span', { class: 'group-count' }, String(ids.length)));
+    if (group.set && mode === 'edit') {
+      const pen = create('a', { class: 'group-edit', href: `#/setlist/${group.set.id}`, 'aria-label': `Edit ${group.name}`, title: 'Edit setlist' });
+      pen.append(icon('pen-to-square'));
+      label.append(pen);
+    }
     const list = create('div', { class: 'list' });
-    list.append(...group.songs.map((rec) => rowFor(rec, ids)));
+    list.append(...group.songs.map((rec) => rowFor(rec, ids, group.set)));
     return [label, list];
+  }
+
+  function newSetRow() {
+    const row = create('a', { class: 'row new-row', href: '#/setlist/new' });
+    row.append(icon('plus'), create('span', { class: 'row-title' }, 'New setlist'));
+    const list = create('div', { class: 'list' });
+    list.append(row);
+    return list;
+  }
+
+  function emptyText(bySet) {
+    if (store.all().length === 0) return EMPTY_HINT;
+    return bySet && !search.value.trim() ? NO_SETS_HINT : 'No matches';
   }
 
   function renderList() {
     const songs = store.search(search.value);
-    groupsEl.replaceChildren(...groupSongs(songs, groupBy).flatMap(renderGroup));
-    empty.hidden = songs.length > 0;
-    empty.textContent = store.all().length === 0 ? EMPTY_HINT : 'No matches';
+    const bySet = groupBy === 'setlist';
+    const groups = bySet ? groupSetlists(songs, setlists.all(), !search.value.trim()) : groupSongs(songs, groupBy);
+    const nodes = groups.flatMap(renderGroup);
+    if (bySet && mode === 'edit') nodes.push(newSetRow());
+    groupsEl.replaceChildren(...nodes);
+    empty.hidden = bySet ? groups.length > 0 || mode === 'edit' : songs.length > 0;
+    empty.textContent = emptyText(bySet);
   }
 
   function applyMode() {

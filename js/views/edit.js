@@ -5,7 +5,7 @@ import { icon } from '../icons.js';
 import { toast } from '../toast.js';
 import { getEditorOptions } from '../prefs.js';
 
-const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nSetlist: \nNotes: \n\nVerse 1:\n\nChorus:\n';
+const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
 
 function create(tag, attrs = {}, text) {
@@ -36,8 +36,8 @@ export function mount(el, { id }) {
 
   const screen = create('div', { class: 'screen' });
   const header = create('header', { class: 'hdr' });
-  const doneBtn = create('button', { class: 'btn primary', type: 'button' });
-  doneBtn.append(icon('check'), 'Done');
+  const previewBtn = create('button', { class: 'btn primary', type: 'button' });
+  previewBtn.append(icon('play'), 'Preview');
   const title = create('h1', { class: 'hdr-title' });
   const status = create('span', { class: 'hdr-alert' });
   const inferBtn = iconButton('wand-magic-sparkles', 'Infer format');
@@ -50,7 +50,7 @@ export function mount(el, { id }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  header.append(deleteBtn, title, status, inferBtn, doneBtn);
+  header.append(deleteBtn, title, status, inferBtn, previewBtn);
   screen.append(header, editor);
   el.append(screen);
 
@@ -117,7 +117,7 @@ export function mount(el, { id }) {
     dismissToast = toast('Format fixed', { label: 'Undo', run: () => replaceText(before) });
   }
 
-  async function onDone() {
+  async function onPreview() {
     const untouched = !currentId && editor.value === NEW_TEMPLATE;
     if (!untouched && getEditorOptions().includes('autofix')) {
       const after = infer(editor.value);
@@ -151,7 +151,7 @@ export function mount(el, { id }) {
   }
 
   editor.addEventListener('input', onInput);
-  doneBtn.addEventListener('click', onDone);
+  previewBtn.addEventListener('click', onPreview);
   inferBtn.addEventListener('click', onInfer);
   deleteBtn.addEventListener('click', onDelete);
   document.addEventListener('visibilitychange', onVisibility);

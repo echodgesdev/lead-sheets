@@ -1,9 +1,9 @@
 import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
 
-export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist', 'notes'];
-export const LIST_FIELDS = ['meta', 'setlist'];
+export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'notes'];
+export const LIST_FIELDS = ['meta'];
 
-const ALIASES = { bpm: 'tempo', tags: 'meta', setlists: 'setlist', note: 'notes' };
+const ALIASES = { bpm: 'tempo', tags: 'meta', note: 'notes' };
 const FIELDS = new Set([...META_FIELDS, ...Object.keys(ALIASES)]);
 const HEADER_RE = /^([A-Za-z][\w -]{0,20}):\s*(.*)$/;
 const KNOWN = '(?:intro|verse|pre-?chorus|pre chorus|chorus|bridge|solo|outro|interlude|instrumental|riff|tag|coda|refrain|break|hook)';

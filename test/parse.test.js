@@ -95,7 +95,7 @@ test('sectionName rejects non-sections', () => {
 });
 
 test('META_FIELDS', () => {
-  eq(META_FIELDS, ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'setlist', 'notes']);
+  eq(META_FIELDS, ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'notes']);
 });
 
 test('chords with * marks', () => {

@@ -1,4 +1,5 @@
 import * as store from '../store.js';
+import * as setlists from '../setlists.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
 import { viewChords, transposeKey, hasKey, capoFret, placeCapo } from '../sheet/transpose.js';
@@ -55,7 +56,8 @@ function pixelsPerSecond(speed) {
   return 8 * Math.pow(speed, 1.35);
 }
 
-function songOrder() {
+function songOrder(set) {
+  if (set) return set.entries.map((e) => e.songId).filter((songId) => store.get(songId));
   try {
     const ids = JSON.parse(sessionStorage.getItem('tabs.order'));
     if (Array.isArray(ids) && ids.length) return ids;
@@ -88,9 +90,13 @@ function mountMissing(root) {
   return () => home.removeEventListener('click', onHome);
 }
 
-export function mount(root, { id, preview = false }) {
-  const rec = store.get(id);
-  if (!rec) return mountMissing(root);
+export function mount(root, { id, preview = false, setId = null }) {
+  const song = store.get(id);
+  if (!song) return mountMissing(root);
+  const set = setId ? setlists.get(setId) : null;
+  const entry = set?.entries.find((e) => e.songId === id);
+  const rec = entry?.tempo ? { ...song, tempo: entry.tempo } : song;
+  const baseShift = entry?.shift ?? 0;
 
   root.classList.add('with-bar', 'live-view');
 
@@ -100,7 +106,7 @@ export function mount(root, { id, preview = false }) {
   const capo = capoFret(rec.capo);
   const pedal = getPedalMode();
   const parsed = parse(rec.text);
-  let shift = 0;
+  let shift = baseShift;
   let numbers = controls.has('numbers') && keyed && getNumbers();
 
   const header = el('header', 'hdr live-hdr');
@@ -119,7 +125,7 @@ export function mount(root, { id, preview = false }) {
   numbersBtn.hidden = !controls.has('numbers');
   numbersBtn.disabled = !keyed;
   const infoBtn = iconButton('circle-info', 'Song info');
-  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), editBtn, transpose, numbersBtn, infoBtn);
+  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), transpose, numbersBtn, infoBtn, editBtn);
   const tags = el('div', 'live-tags');
 
   const sheet = el('div', 'sheet');
@@ -143,7 +149,7 @@ export function mount(root, { id, preview = false }) {
     fillTags(tags, { ...rec, key: transposeKey(rec.key, shift), capo: shift ? String(placed.capo) : rec.capo });
     const fret = placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo);
     keyBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', fret));
-    keyBtn.classList.toggle('active', shift !== 0);
+    keyBtn.classList.toggle('active', shift !== baseShift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
     numbersBtn.classList.toggle('active', numbers);
@@ -161,7 +167,7 @@ export function mount(root, { id, preview = false }) {
     renderContent();
   }
 
-  const order = songOrder();
+  const order = songOrder(set);
   const at = order.indexOf(id);
   const prevId = at > 0 ? order[at - 1] : null;
   const nextId = at >= 0 && at < order.length - 1 ? order[at + 1] : null;
@@ -242,7 +248,7 @@ export function mount(root, { id, preview = false }) {
   }
 
   function go(target) {
-    if (target) location.hash = `#/live/${target}`;
+    if (target) location.hash = set ? `#/set/${set.id}/${target}` : `#/live/${target}`;
   }
 
   function pageScroll(dir) {
@@ -333,7 +339,7 @@ export function mount(root, { id, preview = false }) {
 
   const onDown = () => setShift(shift - 1);
   const onUp = () => setShift(shift + 1);
-  const onReset = () => setShift(0);
+  const onReset = () => setShift(baseShift);
 
   editBtn.addEventListener('click', onEdit);
   downBtn.addEventListener('click', onDown);

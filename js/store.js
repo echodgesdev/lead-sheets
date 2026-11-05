@@ -1,16 +1,20 @@
 import { parse, splitTags, fieldName, LIST_FIELDS } from './sheet/parse.js';
-import { dbAll, dbPut, dbDelete } from './db.js';
+import { SONGS, dbAll, dbPut, dbDelete } from './db.js';
 
 const DEFAULT_SCROLL = 3;
-const FIELD_TOKEN = /^(title|artist|album|genre|key|meta|tags?|setlists?):(.+)$/;
-const PLAIN_FIELDS = ['title', 'artist', 'album', 'genre', ...LIST_FIELDS];
+const FIELD_TOKEN = /^(title|artist|album|genre|key|meta|tags?):(.+)$/;
+const SETLIST_LINE_RE = /^[ \t]*setlists?[ \t]*:.*(?:\r?\n|$)/gim;
+const PLAIN_FIELDS =['title', 'artist', 'album', 'genre', ...LIST_FIELDS];
 const songs = new Map();
 let loading = null;
 
 export function load() {
   loading ??= (async () => {
-    for (const rec of await dbAll()) {
-      songs.set(rec.id, makeRecord(rec.id, rec.text, rec.updatedAt, rec.scrollSpeed ?? DEFAULT_SCROLL));
+    for (const stored of await dbAll(SONGS)) {
+      const text = stored.text.replace(SETLIST_LINE_RE, '');
+      const rec = makeRecord(stored.id, text, stored.updatedAt, stored.scrollSpeed ?? DEFAULT_SCROLL);
+      if (text !== stored.text) await dbPut(SONGS, rec);
+      songs.set(rec.id, rec);
     }
     navigator.storage?.persist?.();
   })();
@@ -32,7 +36,6 @@ function makeRecord(id, text, updatedAt, scrollSpeed) {
     tuning: meta.tuning,
     notes: meta.notes,
     meta: splitTags(meta.meta),
-    setlist: splitTags(meta.setlist),
     extra: meta.extra,
     updatedAt,
     scrollSpeed,
@@ -52,14 +55,14 @@ export async function save(id, text) {
   const recId = id ?? crypto.randomUUID();
   const scrollSpeed = songs.get(recId)?.scrollSpeed ?? DEFAULT_SCROLL;
   const rec = makeRecord(recId, text, Date.now(), scrollSpeed);
-  await dbPut(rec);
+  await dbPut(SONGS, rec);
   songs.set(recId, rec);
   return rec;
 }
 
 export async function remove(id) {
   await load();
-  await dbDelete(id);
+  await dbDelete(SONGS, id);
   songs.delete(id);
 }
 
@@ -68,7 +71,7 @@ export async function setScrollSpeed(id, n) {
   const rec = songs.get(id);
   if (!rec) return;
   const next = { ...rec, scrollSpeed: n };
-  await dbPut(next);
+  await dbPut(SONGS, next);
   songs.set(id, next);
 }
 
@@ -103,7 +106,7 @@ export async function merge(records) {
     if (cur && cur.updatedAt >= updatedAt) continue;
     const scrollSpeed = r.scrollSpeed ?? cur?.scrollSpeed ?? DEFAULT_SCROLL;
     const rec = makeRecord(r.id, r.text, updatedAt, scrollSpeed);
-    await dbPut(rec);
+    await dbPut(SONGS, rec);
     songs.set(rec.id, rec);
     count++;
   }
