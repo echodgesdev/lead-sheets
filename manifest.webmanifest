@@ -1,0 +1,17 @@
+{
+  "name": "Lead Sheets",
+  "short_name": "Lead Sheets",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0a1219",
+  "theme_color": "#0a1219",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

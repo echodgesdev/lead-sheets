@@ -1,0 +1,12 @@
+{title: Harbor Light}
+{artist: The Driftwood Kites}
+{key: D}
+
+{soc}
+[D]Harbor light, [G]guide me [D]home
+[Em]Over the [A]water, [D]over the foam
+{eoc}
+
+{sov}
+[D]Salt on the wind and [G]rope in my hands
+{eov}

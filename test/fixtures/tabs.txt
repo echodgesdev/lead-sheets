@@ -1,0 +1,19 @@
+Riff Machine
+Artist: Test Band
+Key: C
+
+Verse 1:
+C            G
+Walking down the line
+
+Riff:
+e|-----0-----3-----|
+B|---1---1-----0---|
+G|-0-------0-------|
+D|-----------------|
+A|-3---------------|
+E|-----------------|
+
+Chorus:
+F      C
+Sing it back to me
