@@ -698,7 +698,14 @@ select.field {
 
 .set-row {
   flex-wrap: wrap;
-  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.set-row input {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .set-row.dragging {
@@ -751,5 +758,12 @@ select.field {
 }
 
 .set-add > .fa {
+  color: var(--accent);
+}
+
+.set-remove {
+  min-width: 36px;
+  border: 0;
+  background: transparent;
   color: var(--accent);
 }

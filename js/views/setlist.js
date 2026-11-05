@@ -1,10 +1,13 @@
 import * as store from '../store.js';
 import * as setlists from '../setlists.js';
-import { capoFret, placeCapo } from '../sheet/transpose.js';
+import { capoFret, placeCapo, transposeKey } from '../sheet/transpose.js';
 import { icon } from '../icons.js';
 
 const SAVE_DELAY_MS = 500;
 const MAX_SHIFT = 11;
+const DRAG_EDGE = 60;
+const DRAG_EDGE_TOP = 120;
+const DRAG_SCROLL = 12;
 
 function create(tag, attrs = {}, text) {
   const node = document.createElement(tag);
@@ -21,6 +24,11 @@ function iconButton(name, label, className = 'btn icon') {
 
 function signed(n) {
   return n > 0 ? `+${n}` : String(n);
+}
+
+function middle(node) {
+  const box = node.getBoundingClientRect();
+  return box.top + box.height / 2;
 }
 
 function mountMissing(el) {
@@ -138,12 +146,13 @@ export function mount(el, { id }) {
       class: 'field set-tempo',
       type: 'text',
       inputmode: 'numeric',
-      placeholder: song.tempo || 'Tempo',
+      placeholder: 'Tempo',
       'aria-label': 'Tempo',
     });
-    input.value = entry.tempo;
+    input.value = entry.tempo || song.tempo || '';
     input.addEventListener('input', () => {
-      entry.tempo = input.value.trim();
+      const value = input.value.trim();
+      entry.tempo = value === (song.tempo ?? '') ? '' : value;
       scheduleSave();
     });
     return input;
@@ -156,18 +165,22 @@ export function mount(el, { id }) {
     row.classList.add('dragging');
 
     function move(e) {
-      const target = [...entriesEl.children].find((r) => {
-        if (r === row) return false;
-        const box = r.getBoundingClientRect();
-        return e.clientY < box.top + box.height / 2;
-      });
-      entriesEl.insertBefore(row, target ?? null);
+      for (;;) {
+        const prev = row.previousElementSibling;
+        const next = row.nextElementSibling;
+        if (prev && e.clientY < middle(prev)) entriesEl.insertBefore(prev, next);
+        else if (next && e.clientY > middle(next)) entriesEl.insertBefore(next, row);
+        else break;
+      }
+      if (e.clientY < DRAG_EDGE_TOP) window.scrollBy(0, -DRAG_SCROLL);
+      else if (e.clientY > window.innerHeight - DRAG_EDGE) window.scrollBy(0, DRAG_SCROLL);
     }
 
     function end() {
       grip.removeEventListener('pointermove', move);
       grip.removeEventListener('pointerup', end);
       grip.removeEventListener('pointercancel', end);
+      grip.removeEventListener('lostpointercapture', end);
       row.classList.remove('dragging');
       const order = [...entriesEl.children].map((r) => r.dataset.songId);
       entries = order.map((songId) => entries.find((e) => e.songId === songId));
@@ -177,6 +190,7 @@ export function mount(el, { id }) {
     grip.addEventListener('pointermove', move);
     grip.addEventListener('pointerup', end);
     grip.addEventListener('pointercancel', end);
+    grip.addEventListener('lostpointercapture', end);
   }
 
   function entryRow(entry) {
@@ -188,13 +202,15 @@ export function mount(el, { id }) {
     const main = create('div', { class: 'row-main' });
     main.append(create('div', { class: 'row-title' }, song.title || 'Untitled'));
     if (song.artist) main.append(create('div', { class: 'row-sub' }, song.artist));
-    const remove = iconButton('xmark', 'Remove from setlist');
+    const remove = iconButton('xmark', 'Remove from setlist', 'btn icon set-remove');
     remove.addEventListener('click', () => {
       entries = entries.filter((e) => e !== entry);
       change();
     });
     const controls = create('div', { class: 'set-controls' });
-    controls.append(capoControl(entry, song), tempoField(entry, song));
+    controls.append(capoControl(entry, song));
+    if (song.key) controls.append(create('span', { class: 'badge' }, `Key ${transposeKey(song.key, entry.shift)}`));
+    controls.append(tempoField(entry, song));
     row.append(grip, main, remove, controls);
     return row;
   }
