@@ -252,6 +252,16 @@ input:focus-visible {
   min-height: 36px;
 }
 
+.modal-close {
+  min-width: 36px;
+  margin-right: -6px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--nav-fg);
+  font-size: 18px;
+}
+
 .modal-row {
   display: flex;
   flex-wrap: wrap;

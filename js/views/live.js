@@ -129,7 +129,8 @@ export function mount(root, { id, preview = false, setId = null }) {
   const tags = el('div', 'live-tags');
 
   const sheet = el('div', 'sheet');
-  sheet.style.setProperty('--sheet-size', `${getTextSize()}px`);
+  const setSize = (px) => sheet.style.setProperty('--sheet-size', `${px}px`);
+  setSize(getTextSize());
 
   const bar = el('div', 'bar');
   const prevBtn = iconButton('backward-step', 'Previous song');
@@ -330,7 +331,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   const onEdit = () => { location.hash = `#/edit/${id}`; };
   const onInfo = () => {
     pause();
-    openInfo(rec);
+    openInfo(rec, setSize);
   };
   const onPrev = () => go(prevId);
   const onNext = () => go(nextId);

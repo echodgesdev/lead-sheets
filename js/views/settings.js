@@ -6,7 +6,6 @@ import {
   NUMBER_STYLES,
   PEDAL_MODES,
   EDITOR_OPTIONS,
-  TEXT_SIZE,
   getShownTags,
   setShownTags,
   getShownControls,
@@ -15,12 +14,11 @@ import {
   setNumberStyle,
   getPedalMode,
   setPedalMode,
-  getTextSize,
-  setTextSize,
   getEditorOptions,
   setEditorOptions,
 } from '../prefs.js';
 import { openModal } from '../modal.js';
+import { textSizeRow } from './info.js';
 import { icon } from '../icons.js';
 
 const THEMES = [
@@ -85,26 +83,6 @@ function chipsRow(label, items, shownIds, save) {
   return row;
 }
 
-function sizeRow(label, range, value, save) {
-  const row = create('div', { class: 'modal-row' });
-  const slider = create('input', {
-    class: 'slider',
-    type: 'range',
-    min: range.min,
-    max: range.max,
-    step: 1,
-    'aria-label': label,
-  });
-  slider.value = value;
-  const out = create('span', { class: 'slider-value' }, String(value));
-  slider.addEventListener('input', () => {
-    out.textContent = slider.value;
-    save(Number(slider.value));
-  });
-  row.append(create('span', { class: 'modal-label' }, label), out, slider);
-  return row;
-}
-
 function backupRows(onImport) {
   const row = create('div', { class: 'modal-row' });
   const exportBtn = labeledButton('file-export', 'Export');
@@ -151,7 +129,7 @@ export function openSettings({ onImport } = {}) {
   openModal(
     'Settings',
     choiceRow('Theme', THEMES, getTheme(), setTheme),
-    sizeRow('Live text size', TEXT_SIZE, getTextSize(), setTextSize),
+    textSizeRow(),
     chipsRow('Live controls', CONTROLS, getShownControls(), setShownControls),
     choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle),
     choiceRow('Page turner', PEDAL_MODES, getPedalMode(), setPedalMode),

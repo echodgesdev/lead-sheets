@@ -10,14 +10,14 @@ function create(tag, attrs = {}, text) {
 export function openModal(title, ...rows) {
   const dialog = create('dialog', { class: 'modal', 'aria-labelledby': 'modal-title' });
   const head = create('div', { class: 'modal-head' });
-  const doneBtn = create('button', { class: 'btn primary', type: 'button' });
-  doneBtn.append(icon('check'), 'Done');
-  head.append(create('h2', { class: 'modal-title', id: 'modal-title' }, title), doneBtn);
+  const closeBtn = create('button', { class: 'btn icon modal-close', type: 'button', 'aria-label': 'Close', title: 'Close' });
+  closeBtn.append(icon('xmark'));
+  head.append(create('h2', { class: 'modal-title', id: 'modal-title' }, title), closeBtn);
 
   dialog.append(head, ...rows);
   document.body.append(dialog);
 
-  doneBtn.addEventListener('click', () => dialog.close());
+  closeBtn.addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close();
   });
