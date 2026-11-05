@@ -1,10 +1,13 @@
-const CACHE = 'tabs-v22';
+const CACHE = 'tabs-v23';
 
 const ASSETS = [
   './',
   './index.html',
   './manifest.webmanifest',
   './icons/icon.svg',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/apple-touch-icon.png',
   './css/app.css',
   './css/sheet.css',
   './css/keybar.css',
