@@ -16,6 +16,9 @@ import {
   setPedalMode,
   getEditorOptions,
   setEditorOptions,
+  FEATURES,
+  getFeatures,
+  setFeatures,
 } from '../prefs.js';
 import { openModal } from '../modal.js';
 import { labeledButton, choiceRow, chipsRow, textSizeRow } from './rows.js';
@@ -88,8 +91,8 @@ function versionRow() {
   return row;
 }
 
-export function openSettings({ onImport } = {}) {
-  openModal(
+export function openSettings({ onImport, onClose } = {}) {
+  const dialog = openModal(
     'Settings',
     choiceRow('Theme', THEMES, getTheme(), setTheme),
     textSizeRow(),
@@ -99,6 +102,8 @@ export function openSettings({ onImport } = {}) {
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
     chipsRow('Editor', EDITOR_OPTIONS, getEditorOptions(), setEditorOptions),
     ...backupRows(onImport),
+    chipsRow('Experimental', FEATURES, getFeatures(), setFeatures),
     versionRow(),
   );
+  if (onClose) dialog.addEventListener('close', onClose);
 }

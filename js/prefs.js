@@ -5,6 +5,7 @@ const NUMBER_STYLE_KEY = 'tabs.numberStyle';
 const PEDAL_KEY = 'tabs.pedal';
 const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
+const FEATURES_KEY = 'tabs.features';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
@@ -15,6 +16,10 @@ export const PEDAL_MODES = [
 
 export const EDITOR_OPTIONS = [
   { id: 'autofix', label: 'Fix Format On Preview' },
+];
+
+export const FEATURES = [
+  { id: 'share', label: 'Share & Paste Songs' },
 ];
 
 export const NUMBER_STYLES = [
@@ -118,6 +123,18 @@ export function getEditorOptions() {
 
 export function setEditorOptions(ids) {
   write(EDITOR_KEY, ids);
+}
+
+export function getFeatures() {
+  return shownIds(FEATURES_KEY, FEATURES, []);
+}
+
+export function setFeatures(ids) {
+  write(FEATURES_KEY, ids);
+}
+
+export function hasFeature(id) {
+  return getFeatures().includes(id);
 }
 
 export function tagValue(rec, id) {

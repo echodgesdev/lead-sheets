@@ -5,6 +5,7 @@ import { icon } from '../icons.js';
 import { GROUPS, groupSongs, groupSetlists } from '../group.js';
 import { transposeKey } from '../sheet/transpose.js';
 import { importText } from '../backup.js';
+import { hasFeature } from '../prefs.js';
 import { toast } from '../toast.js';
 
 const MODE_KEY = 'tabs.mode';
@@ -165,7 +166,7 @@ export function mount(el) {
     liveBtn.setAttribute('aria-pressed', String(live));
     editBtn.setAttribute('aria-pressed', String(!live));
     newLink.hidden = live;
-    pasteBtn.hidden = live;
+    pasteBtn.hidden = live || !hasFeature('share');
     renderList();
   }
 
@@ -211,7 +212,7 @@ export function mount(el) {
   liveBtn.addEventListener('click', () => setMode('live'));
   editBtn.addEventListener('click', () => setMode('edit'));
   pasteBtn.addEventListener('click', onPaste);
-  gearBtn.addEventListener('click', () => openSettings({ onImport: renderList }));
+  gearBtn.addEventListener('click', () => openSettings({ onImport: renderList, onClose: applyMode }));
 
   applyMode();
 

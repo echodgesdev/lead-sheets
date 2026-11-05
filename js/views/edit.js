@@ -3,7 +3,7 @@ import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../edit/keybar.js';
 import { icon } from '../icons.js';
 import { toast } from '../toast.js';
-import { getEditorOptions } from '../prefs.js';
+import { getEditorOptions, hasFeature } from '../prefs.js';
 import { shareText } from '../share.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';
@@ -66,7 +66,7 @@ export function mount(el, { id }) {
 
   function syncChrome() {
     deleteBtn.hidden = !currentId;
-    shareBtn.hidden = !currentId;
+    shareBtn.hidden = !currentId || !hasFeature('share');
   }
 
   function adopt(newId) {
