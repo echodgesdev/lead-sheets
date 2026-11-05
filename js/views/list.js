@@ -4,6 +4,8 @@ import { openSettings } from './settings.js';
 import { icon } from '../icons.js';
 import { GROUPS, groupSongs, groupSetlists } from '../group.js';
 import { transposeKey } from '../sheet/transpose.js';
+import { importText } from '../backup.js';
+import { toast } from '../toast.js';
 
 const MODE_KEY = 'tabs.mode';
 const QUERY_KEY = 'tabs.q';
@@ -69,7 +71,9 @@ export function mount(el) {
   gearBtn.append(icon('gear'));
   const newLink = create('a', { class: 'btn icon', href: '#/edit/new', 'aria-label': 'New song', title: 'New song' });
   newLink.append(icon('plus'));
-  header.append(create('h1', { class: 'hdr-title brand' }, 'Lead Sheets'), modeToggle, newLink, gearBtn);
+  const pasteBtn = create('button', { class: 'btn icon', type: 'button', 'aria-label': 'Paste song', title: 'Paste song' });
+  pasteBtn.append(icon('paste'));
+  header.append(create('h1', { class: 'hdr-title brand' }, 'Lead Sheets'), modeToggle, pasteBtn, newLink, gearBtn);
 
   const searchBar = create('div', { class: 'toolbar' });
   const searchBox = create('label', { class: 'input-icon' });
@@ -161,7 +165,32 @@ export function mount(el) {
     liveBtn.setAttribute('aria-pressed', String(live));
     editBtn.setAttribute('aria-pressed', String(!live));
     newLink.hidden = live;
+    pasteBtn.hidden = live;
     renderList();
+  }
+
+  async function onPaste() {
+    let text = '';
+    try {
+      text = (await navigator.clipboard.readText()).trim();
+    } catch {
+      text = '';
+    }
+    if (!text) {
+      toast('Nothing to paste');
+      return;
+    }
+    try {
+      const { count, id } = await importText(text);
+      if (id) {
+        location.hash = `#/edit/${id}`;
+        return;
+      }
+      toast(`Imported ${count}`);
+      renderList();
+    } catch (err) {
+      toast(err.message);
+    }
   }
 
   function setMode(next) {
@@ -181,6 +210,7 @@ export function mount(el) {
   });
   liveBtn.addEventListener('click', () => setMode('live'));
   editBtn.addEventListener('click', () => setMode('edit'));
+  pasteBtn.addEventListener('click', onPaste);
   gearBtn.addEventListener('click', () => openSettings({ onImport: renderList }));
 
   applyMode();

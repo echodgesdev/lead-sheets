@@ -36,8 +36,7 @@ export async function exportAll() {
   download(file, name);
 }
 
-async function importBackup(text) {
-  const data = JSON.parse(text);
+async function applyBackup(data) {
   if (data?.app !== FORMAT.app || !VERSIONS.includes(data.version) || !Array.isArray(data.songs)) {
     throw new Error('Not a Lead Sheets backup file');
   }
@@ -45,9 +44,24 @@ async function importBackup(text) {
   return songs + await setlists.merge(Array.isArray(data.setlists) ? data.setlists : []);
 }
 
+function parseJson(text) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
+
+export async function importText(text) {
+  const data = parseJson(text);
+  if (data?.app === FORMAT.app) return { count: await applyBackup(data) };
+  const rec = await store.save(null, text);
+  return { count: 1, id: rec.id };
+}
+
 export async function importFile(file) {
   if (/\.json$/i.test(file.name) || file.type === 'application/json') {
-    return importBackup(await file.text());
+    return applyBackup(JSON.parse(await file.text()));
   }
   if (/\.(md|txt)$/i.test(file.name)) {
     await store.save(null, await file.text());

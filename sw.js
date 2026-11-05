@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v18';
+const CACHE = 'tabs-v19';
 
 const ASSETS = [
   './',
@@ -16,6 +16,7 @@ const ASSETS = [
   './js/setlists.js',
   './js/group.js',
   './js/backup.js',
+  './js/share.js',
   './js/modal.js',
   './js/prefs.js',
   './js/toast.js',

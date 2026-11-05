@@ -85,7 +85,7 @@ function chipsRow(label, items, shownIds, save) {
 
 function backupRows(onImport) {
   const row = create('div', { class: 'modal-row' });
-  const exportBtn = labeledButton('file-export', 'Export');
+  const exportBtn = labeledButton('arrow-up-from-bracket', 'Share library');
   const importBtn = labeledButton('file-import', 'Import');
   const fileInput = create('input', {
     type: 'file',

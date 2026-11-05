@@ -4,6 +4,7 @@ import { attachKeybar } from '../edit/keybar.js';
 import { icon } from '../icons.js';
 import { toast } from '../toast.js';
 import { getEditorOptions } from '../prefs.js';
+import { shareText } from '../share.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
@@ -41,6 +42,7 @@ export function mount(el, { id }) {
   const title = create('h1', { class: 'hdr-title' });
   const status = create('span', { class: 'hdr-alert' });
   const inferBtn = iconButton('wand-magic-sparkles', 'Infer format');
+  const shareBtn = iconButton('arrow-up-from-bracket', 'Share');
   const deleteBtn = iconButton('trash-can', 'Delete', 'btn icon danger');
   const editor = create('textarea', {
     class: 'editor',
@@ -50,7 +52,7 @@ export function mount(el, { id }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  header.append(deleteBtn, title, status, inferBtn, previewBtn);
+  header.append(deleteBtn, title, status, inferBtn, shareBtn, previewBtn);
   screen.append(header, editor);
   el.append(screen);
 
@@ -64,6 +66,7 @@ export function mount(el, { id }) {
 
   function syncChrome() {
     deleteBtn.hidden = !currentId;
+    shareBtn.hidden = !currentId;
   }
 
   function adopt(newId) {
@@ -130,6 +133,10 @@ export function mount(el, { id }) {
     location.hash = currentId ? `#/preview/${currentId}` : '#/';
   }
 
+  function onShare() {
+    shareText(titleOf(editor.value), editor.value);
+  }
+
   async function onDelete() {
     if (!currentId || !confirm('Delete this song?')) return;
     clearTimeout(timer);
@@ -153,6 +160,7 @@ export function mount(el, { id }) {
   editor.addEventListener('input', onInput);
   previewBtn.addEventListener('click', onPreview);
   inferBtn.addEventListener('click', onInfer);
+  shareBtn.addEventListener('click', onShare);
   deleteBtn.addEventListener('click', onDelete);
   document.addEventListener('visibilitychange', onVisibility);
   document.addEventListener('keydown', onKeydown);
