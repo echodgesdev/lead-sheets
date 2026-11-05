@@ -1,6 +1,16 @@
 import * as backup from '../backup.js';
 import { getTheme, setTheme } from '../theme.js';
-import { TAGS, getShownTags, setShownTags } from '../tags.js';
+import {
+  TAGS,
+  CONTROLS,
+  NUMBER_STYLES,
+  getShownTags,
+  setShownTags,
+  getShownControls,
+  setShownControls,
+  getNumberStyle,
+  setNumberStyle,
+} from '../prefs.js';
 import { openModal } from '../modal.js';
 import { icon } from '../icons.js';
 
@@ -19,33 +29,34 @@ function create(tag, attrs = {}, text) {
 
 function labeledButton(name, text) {
   const b = create('button', { class: 'btn', type: 'button' });
-  b.append(icon(name), text);
+  if (name) b.append(icon(name));
+  b.append(text);
   return b;
 }
 
-function themeRow() {
+function choiceRow(label, options, value, save) {
   const row = create('div', { class: 'modal-row' });
   const toggle = create('div', { class: 'seg-toggle' });
-  const buttons = THEMES.map((t) => [t.id, labeledButton(t.icon, t.label)]);
+  const buttons = options.map((o) => [o.id, labeledButton(o.icon, o.label)]);
 
-  function apply(theme) {
-    setTheme(theme);
-    for (const [id, b] of buttons) b.classList.toggle('active', id === theme);
+  function apply(id) {
+    save(id);
+    for (const [bid, b] of buttons) b.classList.toggle('active', bid === id);
   }
 
   for (const [id, b] of buttons) b.addEventListener('click', () => apply(id));
   toggle.append(...buttons.map(([, b]) => b));
-  row.append(create('span', { class: 'modal-label' }, 'Theme'), toggle);
-  apply(getTheme());
+  row.append(create('span', { class: 'modal-label' }, label), toggle);
+  apply(value);
   return row;
 }
 
-function tagsRow() {
+function chipsRow(label, items, shownIds, save) {
   const row = create('div', { class: 'modal-row' });
   const chips = create('div', { class: 'chips' });
-  const shown = new Set(getShownTags());
+  const shown = new Set(shownIds);
 
-  for (const t of TAGS) {
+  for (const t of items) {
     const b = create('button', { class: 'btn chip', type: 'button' }, t.label);
     const sync = () => {
       b.classList.toggle('active', shown.has(t.id));
@@ -54,14 +65,14 @@ function tagsRow() {
     b.addEventListener('click', () => {
       if (shown.has(t.id)) shown.delete(t.id);
       else shown.add(t.id);
-      setShownTags(TAGS.filter((x) => shown.has(x.id)).map((x) => x.id));
+      save(items.filter((x) => shown.has(x.id)).map((x) => x.id));
       sync();
     });
     sync();
     chips.append(b);
   }
 
-  row.append(create('span', { class: 'modal-label' }, 'Show in Live'), chips);
+  row.append(create('span', { class: 'modal-label' }, label), chips);
   return row;
 }
 
@@ -108,5 +119,12 @@ function backupRows(onImport) {
 }
 
 export function openSettings({ onImport } = {}) {
-  openModal('Settings', themeRow(), tagsRow(), ...backupRows(onImport));
+  openModal(
+    'Settings',
+    choiceRow('Theme', THEMES, getTheme(), setTheme),
+    chipsRow('Live controls', CONTROLS, getShownControls(), setShownControls),
+    choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle),
+    chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
+    ...backupRows(onImport),
+  );
 }

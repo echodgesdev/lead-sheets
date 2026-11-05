@@ -6,8 +6,6 @@
   font-family: var(--font);
   font-size: 20px;
   line-height: 1.4;
-  -webkit-user-select: none;
-  user-select: none;
 }
 
 .sheet .sec {

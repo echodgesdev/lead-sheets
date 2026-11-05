@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v12';
+const CACHE = 'tabs-v14';
 
 const ASSETS = [
   './',
@@ -16,12 +16,13 @@ const ASSETS = [
   './js/group.js',
   './js/backup.js',
   './js/modal.js',
-  './js/tags.js',
+  './js/prefs.js',
   './js/toast.js',
   './js/sheet/chords.js',
   './js/sheet/parse.js',
   './js/sheet/infer.js',
   './js/sheet/render.js',
+  './js/sheet/transpose.js',
   './js/views/list.js',
   './js/views/live.js',
   './js/views/edit.js',

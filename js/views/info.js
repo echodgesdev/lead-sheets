@@ -1,4 +1,4 @@
-import { TAGS, tagValue } from '../tags.js';
+import { TAGS, tagValue } from '../prefs.js';
 import { openModal } from '../modal.js';
 
 function create(tag, attrs = {}, text) {

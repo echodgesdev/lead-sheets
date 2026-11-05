@@ -1,7 +1,17 @@
 import * as store from '../store.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
-import { TAGS, getShownTags, tagValue } from '../tags.js';
+import { viewChords, transposeKey, hasKey } from '../sheet/transpose.js';
+import {
+  TAGS,
+  NUMBER_STYLES,
+  getShownTags,
+  getShownControls,
+  getNumbers,
+  setNumbers,
+  getNumberStyle,
+  tagValue,
+} from '../prefs.js';
 import { openInfo } from './info.js';
 import { icon } from '../icons.js';
 
@@ -10,6 +20,7 @@ const MAX_SPEED = 10;
 const TAP_SLOP = 10;
 const MAX_FRAME_MS = 100;
 const PAGE_FRACTION = 0.85;
+const MAX_SHIFT = 11;
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -46,16 +57,16 @@ function songOrder() {
   return store.all().map((r) => r.id);
 }
 
-function tagStrip(rec) {
-  const strip = el('div', 'live-tags');
+function fillTags(strip, rec) {
   const shown = new Set(getShownTags());
+  const nodes = [];
   for (const t of TAGS) {
     const value = shown.has(t.id) ? tagValue(rec, t.id) : '';
     if (!value) continue;
-    if (t.id === 'notes') strip.append(el('p', 'live-notes', value));
-    else strip.append(el('span', 'badge', t.prefix ? `${t.label} ${value}` : value));
+    if (t.id === 'notes') nodes.push(el('p', 'live-notes', value));
+    else nodes.push(el('span', 'badge', t.prefix ? `${t.label} ${value}` : value));
   }
-  return strip;
+  strip.replaceChildren(...nodes);
 }
 
 function mountMissing(root) {
@@ -73,19 +84,35 @@ export function mount(root, { id, preview = false }) {
   const rec = store.get(id);
   if (!rec) return mountMissing(root);
 
-  root.classList.add('with-bar');
+  root.classList.add('with-bar', 'live-view');
+
+  const controls = new Set(getShownControls());
+  const autoscroll = controls.has('autoscroll');
+  const keyed = hasKey(rec.key);
+  const parsed = parse(rec.text);
+  let shift = 0;
+  let numbers = controls.has('numbers') && keyed && getNumbers();
 
   const header = el('header', 'hdr live-hdr');
-  const editBtn = button('', 'Edit song');
-  editBtn.append(icon('pen-to-square'), 'Edit');
-  editBtn.hidden = !preview;
-  const infoBtn = iconButton('circle-info', 'Song info');
   const homeBtn = iconButton('chevron-left', 'Back to songs');
-  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), editBtn, infoBtn);
-  const tags = tagStrip(rec);
+  const editBtn = iconButton('pen-to-square', 'Edit song');
+  editBtn.hidden = !preview;
+  const transpose = el('div', 'seg-toggle');
+  const downBtn = iconButton('minus', 'Transpose down');
+  const keyBtn = button('', 'Reset transpose');
+  keyBtn.classList.add('live-key');
+  const upBtn = iconButton('plus', 'Transpose up');
+  transpose.append(downBtn, keyBtn, upBtn);
+  transpose.hidden = !controls.has('transpose');
+  const style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
+  const numbersBtn = button(style.short, keyed ? style.title : 'Add a Key to see numbers');
+  numbersBtn.hidden = !controls.has('numbers');
+  numbersBtn.disabled = !keyed;
+  const infoBtn = iconButton('circle-info', 'Song info');
+  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), editBtn, transpose, numbersBtn, infoBtn);
+  const tags = el('div', 'live-tags');
 
   const sheet = el('div', 'sheet');
-  renderSheet(parse(rec.text), sheet);
 
   const bar = el('div', 'bar');
   const prevBtn = iconButton('backward-step', 'Previous song');
@@ -94,9 +121,34 @@ export function mount(root, { id, preview = false }) {
   const fastBtn = iconButton('plus', 'Faster');
   const nextBtn = iconButton('forward-step', 'Next song');
   const speedLabel = el('span', 'live-bar-speed');
+  for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
   root.replaceChildren(header, tags, sheet, bar);
+
+  function renderContent() {
+    const key = transposeKey(rec.key, shift);
+    const offset = shift > 0 ? `+${shift}` : String(shift);
+    renderSheet(viewChords(parsed, { key: rec.key, shift, numbers: numbers ? style.id : null }), sheet);
+    fillTags(tags, { ...rec, key });
+    keyBtn.textContent = keyed ? (shift ? `${key} ${offset}` : key) : offset;
+    keyBtn.classList.toggle('active', shift !== 0);
+    downBtn.disabled = shift <= -MAX_SHIFT;
+    upBtn.disabled = shift >= MAX_SHIFT;
+    numbersBtn.classList.toggle('active', numbers);
+    numbersBtn.setAttribute('aria-pressed', String(numbers));
+  }
+
+  function setShift(n) {
+    shift = Math.min(MAX_SHIFT, Math.max(-MAX_SHIFT, n));
+    renderContent();
+  }
+
+  function toggleNumbers() {
+    numbers = !numbers;
+    setNumbers(numbers);
+    renderContent();
+  }
 
   const order = songOrder();
   const at = order.indexOf(id);
@@ -167,6 +219,7 @@ export function mount(root, { id, preview = false }) {
   }
 
   function toggle() {
+    if (!autoscroll) return;
     if (playing) pause();
     else play();
   }
@@ -277,7 +330,15 @@ export function mount(root, { id, preview = false }) {
   const onSlow = () => setSpeed(speed - 1);
   const onFast = () => setSpeed(speed + 1);
 
+  const onDown = () => setShift(shift - 1);
+  const onUp = () => setShift(shift + 1);
+  const onReset = () => setShift(0);
+
   editBtn.addEventListener('click', onEdit);
+  downBtn.addEventListener('click', onDown);
+  upBtn.addEventListener('click', onUp);
+  keyBtn.addEventListener('click', onReset);
+  numbersBtn.addEventListener('click', toggleNumbers);
   infoBtn.addEventListener('click', onInfo);
   homeBtn.addEventListener('click', onHome);
   prevBtn.addEventListener('click', onPrev);
@@ -296,6 +357,7 @@ export function mount(root, { id, preview = false }) {
   window.addEventListener('keydown', onKey);
   document.addEventListener('visibilitychange', onVisibility);
 
+  renderContent();
   window.scrollTo(0, 0);
   renderControls();
   requestWakeLock();
@@ -304,6 +366,10 @@ export function mount(root, { id, preview = false }) {
     disposed = true;
     pause();
     editBtn.removeEventListener('click', onEdit);
+    downBtn.removeEventListener('click', onDown);
+    upBtn.removeEventListener('click', onUp);
+    keyBtn.removeEventListener('click', onReset);
+    numbersBtn.removeEventListener('click', toggleNumbers);
     infoBtn.removeEventListener('click', onInfo);
     homeBtn.removeEventListener('click', onHome);
     prevBtn.removeEventListener('click', onPrev);
@@ -321,7 +387,7 @@ export function mount(root, { id, preview = false }) {
     window.removeEventListener('scroll', onScroll);
     window.removeEventListener('keydown', onKey);
     document.removeEventListener('visibilitychange', onVisibility);
-    root.classList.remove('with-bar');
+    root.classList.remove('with-bar', 'live-view');
     wakeLock?.release().catch(() => {});
     wakeLock = null;
   };

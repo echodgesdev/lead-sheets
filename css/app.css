@@ -474,8 +474,29 @@ select.field {
   white-space: nowrap;
 }
 
+.live-view {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
 .live-hdr {
   position: static;
+  gap: 6px;
+}
+
+.live-hdr .btn {
+  min-width: 36px;
+  padding: 0 8px;
+}
+
+.live-hdr .seg-toggle .btn {
+  min-width: 32px;
+}
+
+.live-key {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .live-tags {
