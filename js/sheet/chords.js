@@ -6,6 +6,7 @@ const FILLER_RE = /^(?:\(?x\d+\)?|\d+x|[-/%:.()*~]+)$/i;
 const LONE_WORD_RE = /^[a-g][#b]?m?$/;
 
 export const NATURAL = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+export const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
 const MAJOR = { steps: [0, 2, 4, 5, 7, 9, 11], quals: ['', 'm', 'm', '', '', 'm', 'dim'] };
 const MINOR = { steps: [0, 2, 3, 5, 7, 8, 10], quals: ['m', 'dim', '', 'm', 'm', '', ''] };

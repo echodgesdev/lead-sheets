@@ -1,0 +1,9 @@
+export const strings = Object.freeze({
+  untitled: 'Untitled',
+  untitledSetlist: 'Untitled setlist',
+  notSaved: 'Not saved',
+  searchSongs: 'Search songs',
+  backToSongs: 'Back to songs',
+  songNotFound: 'Song not found.',
+  setlistNotFound: 'Setlist not found.',
+});

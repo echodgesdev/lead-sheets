@@ -1,3 +1,5 @@
+import { evt } from './events.js';
+
 const SHOW_MS = 4000;
 let current = null;
 
@@ -20,7 +22,7 @@ export function toast(text, action) {
     b.type = 'button';
     b.className = 'toast-action';
     b.textContent = action.label;
-    b.addEventListener('click', () => {
+    b.addEventListener(evt.click, () => {
       dismiss();
       action.run();
     });

@@ -1,4 +1,5 @@
-import { GROUPS } from './group.js';
+import { GROUPS, groupId } from './group.js';
+import { clamp } from './math.js';
 
 const MODE_KEY = 'tabs.mode';
 const GROUP_KEY = 'tabs.group';
@@ -15,44 +16,89 @@ const FEATURES_KEY = 'tabs.features';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
+export const modeId = Object.freeze({
+  live: 'live',
+  edit: 'edit',
+});
+
+export const pedalId = Object.freeze({
+  page: 'page',
+  song: 'song',
+});
+
+export const editorId = Object.freeze({
+  autofix: 'autofix',
+});
+
+export const featureId = Object.freeze({
+  share: 'share',
+});
+
+export const numberStyleId = Object.freeze({
+  nashville: 'nashville',
+  roman: 'roman',
+});
+
+export const tagId = Object.freeze({
+  artist: 'artist',
+  album: 'album',
+  genre: 'genre',
+  key: 'key',
+  capo: 'capo',
+  tempo: 'tempo',
+  tuning: 'tuning',
+  meta: 'meta',
+  notes: 'notes',
+});
+
+export const controlId = Object.freeze({
+  autoscroll: 'autoscroll',
+  capo: 'capo',
+  transpose: 'transpose',
+  numbers: 'numbers',
+  details: 'details',
+  tuner: 'tuner',
+  metronome: 'metronome',
+});
+
 export const PEDAL_MODES = [
-  { id: 'page', label: 'Page' },
-  { id: 'song', label: 'Song' },
+  { id: pedalId.page, label: 'Page' },
+  { id: pedalId.song, label: 'Song' },
 ];
 
 export const EDITOR_OPTIONS = [
-  { id: 'autofix', label: 'Fix Format On Preview' },
+  { id: editorId.autofix, label: 'Fix Format On Preview' },
 ];
 
 export const FEATURES = [
-  { id: 'share', label: 'Share & Paste Songs' },
+  { id: featureId.share, label: 'Share & Paste Songs' },
 ];
 
 export const NUMBER_STYLES = [
-  { id: 'nashville', label: 'Nashville', short: '123', title: 'Nashville numbers' },
-  { id: 'roman', label: 'Roman', short: 'I–V', title: 'Roman numerals' },
+  { id: numberStyleId.nashville, label: 'Nashville', short: '123', title: 'Nashville numbers' },
+  { id: numberStyleId.roman, label: 'Roman', short: 'I–V', title: 'Roman numerals' },
 ];
 
 export const TAGS = [
-  { id: 'artist', label: 'Artist' },
-  { id: 'album', label: 'Album' },
-  { id: 'genre', label: 'Genre' },
-  { id: 'key', label: 'Key', prefix: true },
-  { id: 'capo', label: 'Capo', prefix: true },
-  { id: 'tempo', label: 'Tempo', prefix: true },
-  { id: 'tuning', label: 'Tuning', prefix: true },
-  { id: 'meta', label: 'Meta' },
-  { id: 'notes', label: 'Notes' },
+  { id: tagId.artist, label: 'Artist' },
+  { id: tagId.album, label: 'Album' },
+  { id: tagId.genre, label: 'Genre' },
+  { id: tagId.key, label: 'Key', prefix: true },
+  { id: tagId.capo, label: 'Capo', prefix: true },
+  { id: tagId.tempo, label: 'Tempo', prefix: true },
+  { id: tagId.tuning, label: 'Tuning', prefix: true },
+  { id: tagId.meta, label: 'Meta' },
+  { id: tagId.notes, label: 'Notes' },
 ];
 
 export const CONTROLS = [
-  { id: 'autoscroll', label: 'Auto-scroll' },
-  { id: 'capo', label: 'Capo' },
-  { id: 'transpose', label: 'Transpose' },
-  { id: 'numbers', label: 'Numbers' },
-  { id: 'details', label: 'Details' },
-  { id: 'tuner', label: 'Tuner' },
-  { id: 'metronome', label: 'Metronome' },
+  { id: controlId.autoscroll, label: 'Auto-scroll' },
+  { id: controlId.capo, label: 'Capo' },
+  { id: controlId.transpose, label: 'Transpose' },
+  { id: controlId.numbers, label: 'Numbers' },
+  { id: controlId.details, label: 'Details' },
+  { id: controlId.tuner, label: 'Tuner' },
+  { id: controlId.metronome, label: 'Metronome' },
 ];
 
 function read(key) {
@@ -93,7 +139,7 @@ function shownIds(key, items, fallback) {
 }
 
 export function getListMode() {
-  return readRaw(localStorage, MODE_KEY) === 'edit' ? 'edit' : 'live';
+  return readRaw(localStorage, MODE_KEY) === modeId.edit ? modeId.edit : modeId.live;
 }
 
 export function setListMode(mode) {
@@ -102,7 +148,7 @@ export function setListMode(mode) {
 
 export function getListGroup() {
   const id = readRaw(localStorage, GROUP_KEY);
-  return GROUPS.some((g) => g.id === id) ? id : 'title';
+  return GROUPS.some((g) => g.id === id) ? id : groupId.title;
 }
 
 export function setListGroup(id) {
@@ -131,7 +177,7 @@ export function setSongOrder(ids) {
 }
 
 export function getShownTags() {
-  return shownIds(TAGS_KEY, TAGS, ['key', 'capo']);
+  return shownIds(TAGS_KEY, TAGS, [tagId.key, tagId.capo]);
 }
 
 export function setShownTags(ids) {
@@ -156,7 +202,7 @@ export function setNumbers(on) {
 
 export function getNumberStyle() {
   const id = read(NUMBER_STYLE_KEY);
-  return NUMBER_STYLES.some((s) => s.id === id) ? id : 'nashville';
+  return NUMBER_STYLES.some((s) => s.id === id) ? id : numberStyleId.nashville;
 }
 
 export function setNumberStyle(id) {
@@ -165,7 +211,7 @@ export function setNumberStyle(id) {
 
 export function getPedalMode() {
   const id = read(PEDAL_KEY);
-  return PEDAL_MODES.some((m) => m.id === id) ? id : 'page';
+  return PEDAL_MODES.some((m) => m.id === id) ? id : pedalId.page;
 }
 
 export function setPedalMode(id) {
@@ -174,7 +220,7 @@ export function setPedalMode(id) {
 
 export function getTextSize() {
   const n = read(TEXT_SIZE_KEY);
-  return Number.isFinite(n) ? Math.min(TEXT_SIZE.max, Math.max(TEXT_SIZE.min, n)) : TEXT_SIZE.fallback;
+  return Number.isFinite(n) ? clamp(n, TEXT_SIZE.min, TEXT_SIZE.max) : TEXT_SIZE.fallback;
 }
 
 export function setTextSize(n) {

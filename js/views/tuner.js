@@ -1,7 +1,8 @@
 import { listen } from '../audio/listen.js';
-import { openModal } from '../modal.js';
+import { attachDialog } from '../modal.js';
 import { signed } from '../sheet/transpose.js';
-import { el, iconButton } from '../dom.js';
+import { el, iconButton, cls } from '../dom.js';
+import { clamp } from '../math.js';
 
 const IN_TUNE_CENTS = 5;
 const MAX_CENTS = 50;
@@ -10,11 +11,9 @@ const MIC_ERROR = 'Microphone unavailable. Check permission in your browser sett
 export function createTunerControl() {
   const button = iconButton('guitar', 'Tuner');
 
-  let dialog = null;
-  let stopListening = null;
-
   function buildDisplay() {
-    const root = el('div', 'modal-row tuner idle');
+    const root = el('div', 'modal-row tuner');
+    root.classList.add(cls.idle);
     const name = el('div', 'tuner-note');
     const noteName = el('span', '', '–');
     const octave = el('small', 'tuner-oct');
@@ -28,11 +27,11 @@ export function createTunerControl() {
     root.append(name, meter, cents, hz);
 
     function render(note) {
-      root.classList.toggle('idle', !note);
-      root.classList.toggle('in-tune', !!note && Math.abs(note.cents) <= IN_TUNE_CENTS);
+      root.classList.toggle(cls.idle, !note);
+      root.classList.toggle(cls.inTune, !!note && Math.abs(note.cents) <= IN_TUNE_CENTS);
       noteName.textContent = note ? note.name : '–';
       octave.textContent = note ? String(note.octave) : '';
-      const offset = note ? Math.min(MAX_CENTS, Math.max(-MAX_CENTS, note.cents)) : 0;
+      const offset = note ? clamp(note.cents, -MAX_CENTS, MAX_CENTS) : 0;
       needle.style.left = `${50 + offset}%`;
       cents.textContent = note ? `${signed(note.cents)} cents` : '';
       hz.textContent = note ? `${note.freq.toFixed(1)} Hz` : '';
@@ -41,47 +40,30 @@ export function createTunerControl() {
     return { root, render };
   }
 
-  function stop() {
-    const fn = stopListening;
-    stopListening = null;
-    if (fn) fn();
-  }
-
-  function onClose() {
-    dialog.removeEventListener('close', onClose);
-    dialog = null;
-    stop();
-  }
-
-  const onOpen = () => {
-    if (dialog) return;
+  function open() {
     const display = buildDisplay();
     const status = el('p', 'modal-note', 'Play a single string');
-    const current = openModal('Tuner', display.root, status);
-    dialog = current;
-    current.addEventListener('close', onClose);
+    let closed = false;
+    let stopListening = null;
     listen(display.render).then(
-      (stopFn) => {
-        if (dialog === current) stopListening = stopFn;
-        else stopFn();
+      (stop) => {
+        if (closed) stop();
+        else stopListening = stop;
       },
       () => {
-        if (dialog === current) status.textContent = MIC_ERROR;
+        if (!closed) status.textContent = MIC_ERROR;
       },
     );
-  };
-
-  button.addEventListener('click', onOpen);
-
-  function dispose() {
-    const current = dialog;
-    if (current) {
-      current.removeEventListener('close', onClose);
-      dialog = null;
-      current.close();
-    }
-    stop();
+    return {
+      rows: [display.root, status],
+      onClose: () => {
+        closed = true;
+        stopListening?.();
+      },
+    };
   }
+
+  const dispose = attachDialog(button, 'Tuner', open);
 
   return { button, dispose };
 }

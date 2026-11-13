@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v26';
+const CACHE = 'tabs-v31';
 
 const ASSETS = [
   './',
@@ -15,6 +15,14 @@ const ASSETS = [
   './js/theme.js',
   './js/icons.js',
   './js/dom.js',
+  './js/events.js',
+  './js/routes.js',
+  './js/autosave.js',
+  './js/math.js',
+  './js/strings.js',
+  './js/views/parts.js',
+  './js/live/autoscroll.js',
+  './js/live/wakelock.js',
   './js/db.js',
   './js/store.js',
   './js/setlists.js',

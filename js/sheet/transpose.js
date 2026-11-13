@@ -1,6 +1,6 @@
-import { NATURAL, chordTokens } from './chords.js';
+import { NATURAL, SHARPS, chordTokens } from './chords.js';
+import { clamp, mod12 } from '../math.js';
 
-const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const MAJOR_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
 const MINOR_KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
@@ -25,10 +25,6 @@ export const MAX_SHIFT = 11;
 
 export function signed(n) {
   return n > 0 ? `+${n}` : String(n);
-}
-
-function mod12(n) {
-  return ((n % 12) + 12) % 12;
 }
 
 function pitch(letter, acc) {
@@ -111,14 +107,14 @@ export function capoFret(capo) {
 }
 
 export function placeCapo(capo, shift) {
-  const fret = Math.min(Math.max(MAX_CAPO, capo), Math.max(0, capo + shift));
+  const fret = clamp(capo + shift, 0, Math.max(MAX_CAPO, capo));
   return { capo: fret, shift: capo + shift - fret };
 }
 
 function fit(gap, over) {
   if (over < 0) return ' '.repeat(-over) + gap;
   const lead = gap.length - gap.trimStart().length;
-  return gap.slice(Math.min(over, Math.max(0, lead - 1)));
+  return gap.slice(clamp(lead - 1, 0, over));
 }
 
 function mapLine(line, fn) {

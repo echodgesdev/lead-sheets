@@ -3,30 +3,31 @@ import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../edit/keybar.js';
 import { icon } from '../icons.js';
 import { toast } from '../toast.js';
-import { getEditorOptions, hasFeature } from '../prefs.js';
+import { editorId, featureId, getEditorOptions, hasFeature } from '../prefs.js';
 import { shareText } from '../share.js';
-import { create, iconButton } from '../dom.js';
+import { create, iconButton, labeledButton } from '../dom.js';
+import { evt, keys } from '../events.js';
+import { routes, NEW_ID } from '../routes.js';
+import { createAutosave } from '../autosave.js';
+import { strings } from '../strings.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
 
 function titleOf(text) {
   const line = text.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
-  return line.replace(/^#\s*/, '') || 'Untitled';
+  return line.replace(/^#\s*/, '') || strings.untitled;
 }
 
 export function mount(el, { id, back = null }) {
-  let currentId = id === 'new' ? null : id;
-  let dirty = false;
+  let currentId = id === NEW_ID ? null : id;
   let disposed = false;
-  let timer = null;
-  let queue = Promise.resolve();
   let dismissToast = null;
+  const listening = new AbortController();
 
   const screen = create('div', { class: 'screen' });
   const header = create('header', { class: 'hdr' });
-  const previewBtn = create('button', { class: 'btn primary', type: 'button' });
-  previewBtn.append(icon('play'), 'Preview');
+  const previewBtn = labeledButton('play', 'Preview', 'btn primary');
   const title = create('h1', { class: 'hdr-title' });
   const status = create('span', { class: 'hdr-alert' });
   const inferBtn = iconButton('wand-magic-sparkles', 'Infer format');
@@ -54,13 +55,13 @@ export function mount(el, { id, back = null }) {
 
   function syncChrome() {
     deleteBtn.hidden = !currentId;
-    shareBtn.hidden = !currentId || !hasFeature('share');
+    shareBtn.hidden = !currentId || !hasFeature(featureId.share);
   }
 
   function adopt(newId) {
     currentId = newId;
     syncChrome();
-    if (!disposed) history.replaceState(null, '', `#/edit/${newId}`);
+    if (!disposed) history.replaceState(null, '', routes.edit(newId));
   }
 
   async function persist(text) {
@@ -70,31 +71,22 @@ export function mount(el, { id, back = null }) {
     setStatus('');
   }
 
-  function flush() {
-    clearTimeout(timer);
-    timer = null;
-    if (dirty) {
-      dirty = false;
-      const text = editor.value;
-      queue = queue.then(() => persist(text)).catch(() => setStatus('Not saved'));
-    }
-    return queue;
-  }
-
-  function scheduleSave() {
-    dirty = true;
-    clearTimeout(timer);
-    timer = setTimeout(flush, SAVE_DELAY_MS);
-  }
+  const autosave = createAutosave({
+    snapshot: () => editor.value,
+    persist,
+    delayMs: SAVE_DELAY_MS,
+    onError: () => setStatus(strings.notSaved),
+    signal: listening.signal,
+  });
 
   function onInput() {
     refreshTitle();
-    scheduleSave();
+    autosave.schedule();
   }
 
   function replaceText(text) {
     editor.setRangeText(text, 0, editor.value.length);
-    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    editor.dispatchEvent(new Event(evt.input, { bubbles: true }));
   }
 
   function onInfer() {
@@ -110,15 +102,15 @@ export function mount(el, { id, back = null }) {
 
   async function onPreview() {
     const untouched = !currentId && editor.value === NEW_TEMPLATE;
-    if (!untouched && getEditorOptions().includes('autofix')) {
+    if (!untouched && getEditorOptions().includes(editorId.autofix)) {
       const after = infer(editor.value);
       if (after !== editor.value) {
         replaceText(after);
         toast('Format fixed');
       }
     }
-    await flush();
-    location.hash = currentId ? (back ?? `#/preview/${currentId}`) : '#/';
+    await autosave.flush();
+    location.hash = currentId ? (back ?? routes.preview(currentId)) : routes.home;
   }
 
   function onShare() {
@@ -127,32 +119,24 @@ export function mount(el, { id, back = null }) {
 
   async function onDelete() {
     if (!currentId || !confirm('Delete this song?')) return;
-    clearTimeout(timer);
-    dirty = false;
-    await queue;
+    await autosave.cancel();
     await store.remove(currentId);
-    location.hash = '#/';
-  }
-
-  function onVisibility() {
-    if (document.hidden) flush();
+    location.hash = routes.home;
   }
 
   function onKeydown(event) {
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === keys.s) {
       event.preventDefault();
-      flush();
+      autosave.flush();
     }
   }
 
-  editor.addEventListener('input', onInput);
-  previewBtn.addEventListener('click', onPreview);
-  inferBtn.addEventListener('click', onInfer);
-  shareBtn.addEventListener('click', onShare);
-  deleteBtn.addEventListener('click', onDelete);
-  const listening = new AbortController();
-  document.addEventListener('visibilitychange', onVisibility, { signal: listening.signal });
-  document.addEventListener('keydown', onKeydown, { signal: listening.signal });
+  editor.addEventListener(evt.input, onInput);
+  previewBtn.addEventListener(evt.click, onPreview);
+  inferBtn.addEventListener(evt.click, onInfer);
+  shareBtn.addEventListener(evt.click, onShare);
+  deleteBtn.addEventListener(evt.click, onDelete);
+  document.addEventListener(evt.keydown, onKeydown, { signal: listening.signal });
 
   editor.value = currentId ? (store.get(currentId)?.text ?? '') : NEW_TEMPLATE;
   refreshTitle();
@@ -168,7 +152,7 @@ export function mount(el, { id, back = null }) {
   return () => {
     disposed = true;
     dismissToast?.();
-    flush();
+    autosave.flush();
     detachKeybar();
     listening.abort();
   };

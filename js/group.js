@@ -1,18 +1,30 @@
+import { strings } from './strings.js';
+
+export const groupId = Object.freeze({
+  title: 'title',
+  artist: 'artist',
+  album: 'album',
+  genre: 'genre',
+  key: 'key',
+  meta: 'meta',
+  setlist: 'setlist',
+});
+
 export const GROUPS = [
-  { id: 'title', label: 'Title' },
-  { id: 'artist', label: 'Artist' },
-  { id: 'album', label: 'Album' },
-  { id: 'genre', label: 'Genre' },
-  { id: 'key', label: 'Key' },
-  { id: 'meta', label: 'Meta' },
-  { id: 'setlist', label: 'Setlist' },
+  { id: groupId.title, label: 'Title' },
+  { id: groupId.artist, label: 'Artist' },
+  { id: groupId.album, label: 'Album' },
+  { id: groupId.genre, label: 'Genre' },
+  { id: groupId.key, label: 'Key' },
+  { id: groupId.meta, label: 'Meta' },
+  { id: groupId.setlist, label: 'Setlist' },
 ];
 
 const OTHER = '#';
 
 function keysOf(rec, by) {
   if (Array.isArray(rec[by])) return rec[by];
-  if (by === 'title') {
+  if (by === groupId.title) {
     const c = (rec.title ?? '').trim().charAt(0).toUpperCase();
     return [/[A-Z]/.test(c) ? c : OTHER];
   }
@@ -58,6 +70,6 @@ export function groupSongs(songs, by) {
 export function groupSetlists(songs, sets, keepEmpty) {
   const byId = new Map(songs.map((rec) => [rec.id, rec]));
   return sets
-    .map((set) => ({ name: set.name || 'Untitled setlist', set, songs: set.entries.map((e) => byId.get(e.songId)).filter(Boolean) }))
+    .map((set) => ({ name: set.name || strings.untitledSetlist, set, songs: set.entries.map((e) => byId.get(e.songId)).filter(Boolean) }))
     .filter((g) => keepEmpty || g.songs.length);
 }

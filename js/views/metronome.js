@@ -1,12 +1,11 @@
-import { MIN_BPM, MAX_BPM, DEFAULT_BPM, parseBpm, createTapper, createMetronome } from '../audio/click.js';
-import { openModal } from '../modal.js';
-import { labeledButton } from './rows.js';
+import { MIN_BPM, MAX_BPM, DEFAULT_BPM, clampBpm, parseBpm, createTapper, createMetronome } from '../audio/click.js';
+import { attachDialog } from '../modal.js';
 import { icon } from '../icons.js';
-import { el, button, iconButton } from '../dom.js';
+import { el, button, iconButton, labeledButton, cls } from '../dom.js';
+import { evt } from '../events.js';
 
 export function createMetronomeControl(tempo) {
   let bpm = parseBpm(tempo) ?? DEFAULT_BPM;
-  let dialog = null;
   let sync = null;
   let disposed = false;
 
@@ -17,20 +16,20 @@ export function createMetronomeControl(tempo) {
 
   function onBeat(beat) {
     if (disposed) return;
-    headerBtn.classList.remove('beat', 'down');
+    headerBtn.classList.remove(cls.beat, cls.down);
     void headerBtn.offsetWidth;
-    headerBtn.classList.add('beat');
-    headerBtn.classList.toggle('down', beat === 0);
+    headerBtn.classList.add(cls.beat);
+    headerBtn.classList.toggle(cls.down, beat === 0);
   }
 
   function renderButton() {
     headerBtn.replaceChildren(el('small', '', 'BPM'), el('span', '', String(bpm)));
-    headerBtn.classList.toggle('active', metronome.running);
-    if (!metronome.running) headerBtn.classList.remove('beat', 'down');
+    headerBtn.classList.toggle(cls.active, metronome.running);
+    if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
   }
 
   function setBpm(n) {
-    bpm = Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(n)));
+    bpm = clampBpm(n);
     if (metronome.running) metronome.setBpm(bpm);
     renderButton();
     sync?.();
@@ -43,14 +42,7 @@ export function createMetronomeControl(tempo) {
     sync?.();
   }
 
-  function onClose() {
-    dialog.removeEventListener('close', onClose);
-    dialog = null;
-    sync = null;
-  }
-
-  const onOpen = () => {
-    if (dialog) return;
+  function open() {
     const downBtn = iconButton('minus', 'Slower');
     const value = el('span', 'metro-bpm');
     const upBtn = iconButton('plus', 'Faster');
@@ -81,32 +73,25 @@ export function createMetronomeControl(tempo) {
       startBtn.title = running ? 'Stop' : 'Start';
       startBtn.setAttribute('aria-label', startBtn.title);
       startBtn.setAttribute('aria-pressed', String(running));
-      startBtn.classList.toggle('active', running);
+      startBtn.classList.toggle(cls.active, running);
     };
 
-    downBtn.addEventListener('click', onDown);
-    upBtn.addEventListener('click', onUp);
-    tapBtn.addEventListener('click', onTap);
-    startBtn.addEventListener('click', toggleRunning);
+    downBtn.addEventListener(evt.click, onDown);
+    upBtn.addEventListener(evt.click, onUp);
+    tapBtn.addEventListener(evt.click, onTap);
+    startBtn.addEventListener(evt.click, toggleRunning);
 
-    dialog = openModal('Metronome', tempoRow, actions);
-    dialog.addEventListener('close', onClose);
     sync();
-  };
+    return { rows: [tempoRow, actions], onClose: () => { sync = null; } };
+  }
 
-  headerBtn.addEventListener('click', onOpen);
+  const closeDialog = attachDialog(headerBtn, 'Metronome', open);
   renderButton();
 
   function dispose() {
     disposed = true;
     metronome.stop();
-    const current = dialog;
-    if (current) {
-      current.removeEventListener('close', onClose);
-      dialog = null;
-      sync = null;
-      current.close();
-    }
+    closeDialog();
   }
 
   return { button: headerBtn, dispose };

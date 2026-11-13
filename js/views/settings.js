@@ -21,8 +21,9 @@ import {
   setFeatures,
 } from '../prefs.js';
 import { openModal } from '../modal.js';
-import { labeledButton, choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { create } from '../dom.js';
+import { choiceRow, chipsRow, textSizeRow } from './rows.js';
+import { create, labeledButton } from '../dom.js';
+import { evt } from '../events.js';
 
 const THEMES = [
   { id: 'system', icon: 'circle-half-stroke', label: 'Auto' },
@@ -56,9 +57,9 @@ function backupRows(onImport) {
     }
   }
 
-  exportBtn.addEventListener('click', () => runAction(() => backup.exportAll()));
-  importBtn.addEventListener('click', () => fileInput.click());
-  fileInput.addEventListener('change', () => {
+  exportBtn.addEventListener(evt.click, () => runAction(() => backup.exportAll()));
+  importBtn.addEventListener(evt.click, () => fileInput.click());
+  fileInput.addEventListener(evt.change, () => {
     const file = fileInput.files[0];
     fileInput.value = '';
     if (!file) return;
@@ -99,5 +100,5 @@ export function openSettings({ onImport, onClose } = {}) {
     chipsRow('Experimental', FEATURES, getFeatures(), setFeatures),
     versionRow(),
   );
-  if (onClose) dialog.addEventListener('close', onClose);
+  if (onClose) dialog.addEventListener(evt.close, onClose);
 }

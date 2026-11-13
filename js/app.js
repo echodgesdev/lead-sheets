@@ -5,19 +5,23 @@ import { mount as mountList } from './views/list.js';
 import { mount as mountLive } from './views/live.js';
 import { mount as mountEdit } from './views/edit.js';
 import { mount as mountSetlist } from './views/setlist.js';
+import { evt } from './events.js';
+import { views, parseRoute } from './routes.js';
+
+const MOUNTS = {
+  [views.live]: mountLive,
+  [views.preview]: mountLive,
+  [views.set]: mountLive,
+  [views.edit]: mountEdit,
+  [views.setlist]: mountSetlist,
+};
 
 const app = document.getElementById('app');
 let cleanup = null;
 
 function currentRoute() {
-  const parts = location.hash.slice(1).split('/');
-  const [, view = '', id = '', songId = ''] = parts;
-  if (view === 'live' && id) return { mount: mountLive, params: { id } };
-  if (view === 'preview' && id) return { mount: mountLive, params: { id, preview: true } };
-  if (view === 'set' && id && songId) return { mount: mountLive, params: { id: songId, setId: id } };
-  if (view === 'edit' && id) return { mount: mountEdit, params: { id, back: songId ? `#/${parts.slice(3).join('/')}` : null } };
-  if (view === 'setlist' && id) return { mount: mountSetlist, params: { id } };
-  return { mount: mountList, params: {} };
+  const { view, params } = parseRoute(location.hash);
+  return { mount: MOUNTS[view] ?? mountList, params };
 }
 
 function swap() {
@@ -48,7 +52,7 @@ async function start() {
     showStatus(`Could not open the song library: ${err.message}`);
     return;
   }
-  window.addEventListener('hashchange', render);
+  window.addEventListener(evt.hashchange, render);
   render();
 }
 

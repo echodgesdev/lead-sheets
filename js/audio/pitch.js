@@ -1,4 +1,5 @@
-export const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+import { SHARPS } from '../sheet/chords.js';
+import { mod12 } from '../math.js';
 
 const MIN_FREQ = 60;
 const MAX_FREQ = 1100;
@@ -7,10 +8,6 @@ const PEAK_RATIO = 0.9;
 const MIN_CLARITY = 0.9;
 const A4_FREQ = 440;
 const A4_MIDI = 69;
-
-function mod12(n) {
-  return ((n % 12) + 12) % 12;
-}
 
 function centered(buf) {
   let mean = 0;
@@ -80,7 +77,7 @@ export function noteOf(freq) {
   const exact = A4_MIDI + 12 * Math.log2(freq / A4_FREQ);
   const midi = Math.round(exact);
   return {
-    name: NOTE_NAMES[mod12(midi)],
+    name: SHARPS[mod12(midi)],
     octave: Math.floor(midi / 12) - 1,
     cents: Math.round((exact - midi) * 100),
     midi,

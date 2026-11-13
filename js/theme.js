@@ -1,3 +1,5 @@
+import { evt } from './events.js';
+
 const KEY = 'tabs.theme';
 const BAR_COLOR = { dark: '#0a1219', light: '#0f1923' };
 const CHOICES = ['system', 'dark', 'light'];
@@ -33,5 +35,5 @@ export function setTheme(choice) {
   apply(choice);
 }
 
-prefersLight.addEventListener('change', () => apply(getTheme()));
+prefersLight.addEventListener(evt.change, () => apply(getTheme()));
 apply(getTheme());

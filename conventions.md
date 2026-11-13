@@ -12,14 +12,21 @@ How code in this repo is written. Read this before changing anything; match it r
 
 | Path | Job |
 |---|---|
-| `js/app.js` | Hash router. Maps `#/live/:id`, `#/preview/:id`, `#/set/:setId/:songId`, `#/edit/:id/...`, `#/setlist/:id` to a view's `mount`. |
+| `js/app.js` | Router. Maps each view name from `parseRoute` to that view's `mount`. |
+| `js/routes.js` | Hash URL format: `routes.*` builders, `parseRoute`, `views`, and `NEW_ID` for unsaved records. Nothing else builds or parses `#/...` strings. |
 | `js/views/*.js` | Screens and dialogs. UI only. |
 | `js/sheet/*.js` | Pure song logic: parse, infer, transpose, render. No storage, no prefs. |
 | `js/edit/*.js` | Editor helpers (keybar). |
+| `js/live/*.js` | Live-mode behaviour with no UI: `autoscroll.js` (scroll engine, paging, touch/wheel sync), `wakelock.js` (screen wake lock). `views/live.js` builds the screen and wires these together. |
 | `js/db.js` | IndexedDB wrapper (`dbAll`, `dbPut`, `dbDelete`; stores `songs`, `setlists`). |
 | `js/store.js`, `js/setlists.js` | In-memory caches over `db.js`; `load()` at start, then sync `all()` / `get(id)` and async writes. |
 | `js/prefs.js` | All localStorage preferences. |
-| `js/dom.js` | DOM builders: `create`, `el`, `button`, `iconButton`. |
+| `js/dom.js` | DOM builders (`create`, `el`, `button`, `iconButton`, `labeledButton`) and `cls`, the state class names. |
+| `js/events.js` | `evt` (DOM event names) and `keys` (`KeyboardEvent.key` values). |
+| `js/autosave.js` | `createAutosave`: debounced, queued saves that also flush when the app is hidden. Used by every editing screen. |
+| `js/math.js` | `clamp`, `mod12`. |
+| `js/strings.js` | `strings`: UI text used in more than one place. |
+| `js/views/parts.js` | Shared screen pieces: `searchBox`, `rowMain`, `mountNotFound`. |
 | `js/modal.js`, `js/toast.js`, `js/icons.js`, `js/theme.js` | Shared UI primitives. |
 | `js/audio/*.js` | Web Audio: shared context, pitch detection, mic input, metronome clicks. |
 | `css/app.css` | App chrome, tokens, components. `sheet.css` is the song sheet; `keybar.css` the editor keybar. |
@@ -31,16 +38,25 @@ New logic that isn't UI gets its own module outside `views/` (as `sheet/` does),
 ## Views
 
 - A view exports `mount(root, params)` and returns a cleanup function. The router calls cleanup before the next mount.
+- No magic strings for event names, keys or state classes:
+  - Event names come from `evt` (`evt.click`, `evt.pointercancel`). `sw.js` is the exception; it is a classic worker and can't import modules.
+  - Keys come from `keys` (`e.key === keys.escape`).
+  - State classes toggled at runtime come from `cls` (`classList.toggle(cls.active, on)`).
+  - Navigation uses `routes.*` (`location.hash = routes.live(id)`), never a hand-built `#/...` string.
+  - Option ids come from the id map next to their option list: `controlId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, and `groupId` in `group.js`. The list entries reference the map, so each id is written once.
+  - Add a new entry to the frozen map rather than writing the literal. Structural class names passed to `create`/`el`/`button` stay as plain strings, as do CSS selectors.
 - Handlers are named `const onX = () => ...` and added with `addEventListener`. Listeners on the view's own elements need no removal; they go when the router replaces the view. Listeners on anything that outlives the view (`window`, `document`, `visualViewport`) take `{ signal }` from one `AbortController`, and cleanup calls `abort()`. Cleanup also releases anything held (wake lock, rAF, timers, audio, media streams) and sets a `disposed` flag that async callbacks check.
 - Build DOM imperatively with `js/dom.js`: `create(tag, attrs, text)` or `el(tag, className, text)`. Don't redefine these locally.
-- Buttons: `button(label, title, className)` or `iconButton(name, title, className)` from `dom.js`; both set `type="button"`, `title` and `aria-label`. Toggled state is `.active` plus `aria-pressed`.
+- Buttons always come from `dom.js`, never `create('button', …)`: `button(label, title, className)` or `iconButton(name, title, className)` (both set `type="button"`, `title` and `aria-label`), or `labeledButton(icon, text, className)` for a visible text label. The one exception is a whole-row button whose rich content is its label (setlist's add-song row); it uses `create('button', …)` so no `aria-label` hides that content. Toggled state is `.active` plus `aria-pressed`.
 - Re-render by replacing children (`replaceChildren`) from state, in a `renderX()` function, not by patching nodes ad hoc.
 - Live view keyboard and tap handlers ignore input while a `dialog[open]` exists; anything modal must be a `<dialog>`.
 
 ## Dialogs
 
 - `openModal(title, ...rows)` from `modal.js` builds, shows and removes on close. Listen for `close` on the returned dialog for teardown.
-- Rows are `div.modal-row` with a `span.modal-label` first. Reuse `views/rows.js` helpers: `labeledButton`, `choiceRow`, `chipsRow`, `textSizeRow`.
+- A button that opens a dialog and owns state across opens (tuner, metronome) uses `attachDialog(button, title, open)`. `open()` returns `{ rows, onClose }`, and the returned function disposes it. Don't track the dialog by hand.
+- Rows are `div.modal-row` with a `span.modal-label` first. Reuse `views/rows.js` helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
+- Screen pieces built in more than one view (search box, song row title/subtitle, not-found screen) come from `views/parts.js`.
 
 ## Live controls
 
@@ -79,7 +95,9 @@ New logic that isn't UI gets its own module outside `views/` (as `sheet/` does),
 - 2-space indent, single quotes, semicolons, trailing commas in multi-line literals.
 - Named `function` declarations for module-level and inner functions; arrow functions for handlers and callbacks.
 - Module constants in `UPPER_SNAKE` at the top of the file.
-- Clamp numeric state with `Math.min(MAX, Math.max(MIN, n))`.
+- Clamp numeric state with `clamp(n, min, max)` from `math.js`.
+- Text that appears in more than one place goes in `strings.js`; one-off labels stay inline.
+- A screen that edits a record saves through `createAutosave`, never its own timer and queue.
 - A constant or helper used by more than one module lives in the module that owns its domain (for example `MAX_SHIFT` and `signed` in `sheet/transpose.js`), never copied.
 - Comments are rare: only where code can't speak for itself (for example `// wake lock is best effort` in an empty `catch`). Never narrate history.
 - Best-effort browser APIs (wake lock, storage, share) are wrapped in `try/catch` and degrade silently.

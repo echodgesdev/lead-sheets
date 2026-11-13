@@ -15,6 +15,9 @@ import {
 import {
   TAGS,
   NUMBER_STYLES,
+  tagId,
+  controlId,
+  pedalId,
   getShownTags,
   getShownControls,
   getNumbers,
@@ -30,19 +33,18 @@ import { openSongDetails } from './details.js';
 import { createTunerControl } from './tuner.js';
 import { createMetronomeControl } from './metronome.js';
 import { icon } from '../icons.js';
-import { el, button, iconButton } from '../dom.js';
+import { el, button, iconButton, cls } from '../dom.js';
+import { evt, keys } from '../events.js';
+import { routes } from '../routes.js';
+import { clamp } from '../math.js';
+import { strings } from '../strings.js';
+import { mountNotFound } from './parts.js';
+import { createAutoscroll, MIN_SPEED, MAX_SPEED, DEFAULT_SPEED } from '../live/autoscroll.js';
+import { holdWakeLock } from '../live/wakelock.js';
 
-const MIN_SPEED = 1;
-const MAX_SPEED = 10;
 const TAP_SLOP = 10;
-const MAX_FRAME_MS = 100;
-const PAGE_FRACTION = 0.85;
-const FORWARD_KEYS = new Set(['PageDown', 'ArrowDown', 'ArrowRight']);
-const BACK_KEYS = new Set(['PageUp', 'ArrowUp', 'ArrowLeft']);
-
-function pixelsPerSecond(speed) {
-  return 8 * Math.pow(speed, 1.35);
-}
+const FORWARD_KEYS = new Set([keys.pageDown, keys.arrowDown, keys.arrowRight]);
+const BACK_KEYS = new Set([keys.pageUp, keys.arrowUp, keys.arrowLeft]);
 
 function songOrder(set) {
   if (set) return set.entries.map((e) => e.songId).filter((songId) => store.get(songId));
@@ -56,25 +58,15 @@ function fillTags(strip, rec) {
   for (const t of TAGS) {
     const value = shown.has(t.id) ? tagValue(rec, t.id) : '';
     if (!value) continue;
-    if (t.id === 'notes') nodes.push(el('p', 'live-notes', value));
+    if (t.id === tagId.notes) nodes.push(el('p', 'live-notes', value));
     else nodes.push(el('span', 'badge', t.prefix ? `${t.label} ${value}` : value));
   }
   strip.replaceChildren(...nodes);
 }
 
-function mountMissing(root) {
-  const msg = el('p', 'status', 'Song not found.');
-  const home = iconButton('house', 'Home');
-  home.addEventListener('click', () => { location.hash = '#/'; });
-  const wrap = el('div', 'status');
-  wrap.append(msg, home);
-  root.replaceChildren(wrap);
-  return () => {};
-}
-
 export function mount(root, { id, preview = false, setId = null }) {
   const song = store.get(id);
-  if (!song) return mountMissing(root);
+  if (!song) return mountNotFound(root, strings.songNotFound);
   const set = setId ? setlists.get(setId) : null;
   const entry = set?.entries.find((e) => e.songId === id);
   const rec = entry?.tempo ? { ...song, tempo: entry.tempo } : song;
@@ -92,6 +84,9 @@ export function mount(root, { id, preview = false, setId = null }) {
   let numbers;
   let fret = base.capo;
   let shift = base.shift;
+  let disposed = false;
+  let tap = null;
+  const listening = new AbortController();
 
   const header = el('header', 'hdr live-hdr');
   const homeBtn = iconButton('chevron-left', 'Back to songs');
@@ -99,14 +94,12 @@ export function mount(root, { id, preview = false, setId = null }) {
   editBtn.hidden = !preview;
   const capoToggle = el('div', 'seg-toggle');
   const capoDownBtn = iconButton('minus', 'Capo down');
-  const capoBtn = button('', 'Reset capo');
-  capoBtn.classList.add('live-key');
+  const capoBtn = button('', 'Reset capo', 'btn live-key');
   const capoUpBtn = iconButton('plus', 'Capo up');
   capoToggle.append(capoDownBtn, capoBtn, capoUpBtn);
   const transpose = el('div', 'seg-toggle');
   const downBtn = iconButton('minus', 'Transpose down');
-  const shiftBtn = button('', 'Reset transpose');
-  shiftBtn.classList.add('live-key');
+  const shiftBtn = button('', 'Reset transpose', 'btn live-key');
   const upBtn = iconButton('plus', 'Transpose up');
   transpose.append(downBtn, shiftBtn, upBtn);
   const numbersBtn = button('', '');
@@ -117,7 +110,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   const metronome = createMetronomeControl(rec.tempo);
   header.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
   const tags = el('div', 'live-tags');
-  const title = el('h1', 'live-title', rec.title || 'Untitled');
+  const title = el('h1', 'live-title', rec.title || strings.untitled);
 
   const sheet = el('div', 'sheet');
   const setSize = (px) => sheet.style.setProperty('--sheet-size', `${px}px`);
@@ -134,6 +127,12 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   root.replaceChildren(header, tags, title, sheet, bar);
 
+  const scroll = createAutoscroll({
+    speed: Math.round(Number(rec.scrollSpeed) || DEFAULT_SPEED),
+    onChange: renderControls,
+    signal: listening.signal,
+  });
+
   function shownRec() {
     return { ...rec, key: transposeKey(rec.key, fret - capo + shift), capo: fret !== capo ? String(fret) : rec.capo };
   }
@@ -143,24 +142,34 @@ export function mount(root, { id, preview = false, setId = null }) {
     renderSheet(viewChords(parsed, view), sheet);
     fillTags(tags, shownRec());
     capoBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', String(fret)));
-    capoBtn.classList.toggle('active', fret !== base.capo);
+    capoBtn.classList.toggle(cls.active, fret !== base.capo);
     capoDownBtn.disabled = fret <= 0;
     capoUpBtn.disabled = fret >= maxFret;
     shiftBtn.replaceChildren(el('small', '', 'Shift'), el('span', '', signed(shift)));
-    shiftBtn.classList.toggle('active', shift !== base.shift);
+    shiftBtn.classList.toggle(cls.active, shift !== base.shift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
-    numbersBtn.classList.toggle('active', numbers);
+    numbersBtn.classList.toggle(cls.active, numbers);
     numbersBtn.setAttribute('aria-pressed', String(numbers));
   }
 
+  function renderControls() {
+    playBtn.replaceChildren(icon(scroll.playing ? 'pause' : 'play'), speedLabel);
+    speedLabel.textContent = String(scroll.speed);
+    playBtn.classList.toggle(cls.active, scroll.playing);
+    bar.classList.toggle(cls.away, scroll.playing);
+    bar.inert = scroll.playing;
+    slowBtn.disabled = scroll.speed <= MIN_SPEED;
+    fastBtn.disabled = scroll.speed >= MAX_SPEED;
+  }
+
   function setFret(n) {
-    fret = Math.min(maxFret, Math.max(0, n));
+    fret = clamp(n, 0, maxFret);
     renderContent();
   }
 
   function setShift(n) {
-    shift = Math.min(MAX_SHIFT, Math.max(-MAX_SHIFT, n));
+    shift = clamp(n, -MAX_SHIFT, MAX_SHIFT);
     renderContent();
   }
 
@@ -177,151 +186,46 @@ export function mount(root, { id, preview = false, setId = null }) {
   prevBtn.disabled = prevId === null;
   nextBtn.disabled = nextId === null;
 
-  let speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, Math.round(Number(rec.scrollSpeed) || 3)));
-  let playing = false;
-  let raf = 0;
-  let lastTs = 0;
-  let pos = 0;
-  let touching = false;
-  let disposed = false;
-  let wakeLock = null;
-  let tap = null;
-
-  const scroller = () => document.scrollingElement || document.documentElement;
-  const maxScroll = () => Math.max(0, scroller().scrollHeight - window.innerHeight);
-
-  function syncPos() {
-    pos = scroller().scrollTop;
-  }
-
-  function renderControls() {
-    playBtn.replaceChildren(icon(playing ? 'pause' : 'play'), speedLabel);
-    speedLabel.textContent = String(speed);
-    playBtn.classList.toggle('active', playing);
-    bar.classList.toggle('away', playing);
-    bar.inert = playing;
-    slowBtn.disabled = speed <= MIN_SPEED;
-    fastBtn.disabled = speed >= MAX_SPEED;
-  }
-
-  function frame(ts) {
-    raf = 0;
-    if (!playing) return;
-    const dt = Math.min(MAX_FRAME_MS, ts - lastTs);
-    lastTs = ts;
-    if (!touching) {
-      pos += (pixelsPerSecond(speed) * dt) / 1000;
-      const limit = maxScroll();
-      if (pos >= limit) {
-        scroller().scrollTop = limit;
-        pause();
-        return;
-      }
-      scroller().scrollTop = pos;
-    }
-    raf = requestAnimationFrame(frame);
-  }
-
-  function play() {
-    if (playing) return;
-    playing = true;
-    syncPos();
-    lastTs = performance.now();
-    raf = requestAnimationFrame(frame);
-    renderControls();
-  }
-
-  function pause() {
-    playing = false;
-    if (raf) cancelAnimationFrame(raf);
-    raf = 0;
-    renderControls();
-  }
-
   function toggle() {
     if (!autoscroll) return;
-    if (playing) pause();
-    else play();
+    if (scroll.playing) scroll.pause();
+    else scroll.play();
   }
 
   function applyPrefs() {
     const controls = new Set(getShownControls());
-    autoscroll = controls.has('autoscroll');
+    autoscroll = controls.has(controlId.autoscroll);
     style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
     pedal = getPedalMode();
-    numbers = controls.has('numbers') && keyed && getNumbers();
-    capoToggle.hidden = !controls.has('capo');
-    transpose.hidden = !controls.has('transpose');
-    numbersBtn.hidden = !controls.has('numbers');
-    detailsBtn.hidden = !controls.has('details');
-    tuner.button.hidden = !controls.has('tuner');
-    metronome.button.hidden = !controls.has('metronome');
+    numbers = controls.has(controlId.numbers) && keyed && getNumbers();
+    capoToggle.hidden = !controls.has(controlId.capo);
+    transpose.hidden = !controls.has(controlId.transpose);
+    numbersBtn.hidden = !controls.has(controlId.numbers);
+    detailsBtn.hidden = !controls.has(controlId.details);
+    tuner.button.hidden = !controls.has(controlId.tuner);
+    metronome.button.hidden = !controls.has(controlId.metronome);
     numbersBtn.textContent = style.short;
     numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
     numbersBtn.setAttribute('aria-label', numbersBtn.title);
     for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
-    if (!autoscroll) pause();
+    if (!autoscroll) scroll.pause();
     renderContent();
   }
 
   function setSpeed(n) {
-    speed = Math.min(MAX_SPEED, Math.max(MIN_SPEED, n));
-    renderControls();
-    store.setScrollSpeed(id, speed).catch(() => {});
+    scroll.setSpeed(n);
+    store.setScrollSpeed(id, scroll.speed).catch(() => {});
   }
 
   function go(target) {
-    if (target) location.hash = set ? `#/set/${set.id}/${target}` : `#/live/${target}`;
-  }
-
-  function pageScroll(dir) {
-    const next = Math.min(maxScroll(), Math.max(0, scroller().scrollTop + dir * PAGE_FRACTION * window.innerHeight));
-    scroller().scrollTop = next;
-    pos = next;
+    if (target) location.hash = set ? routes.set(set.id, target) : routes.live(target);
   }
 
   function turn(dir) {
-    const top = scroller().scrollTop;
-    if (pedal === 'song') go(dir > 0 ? nextId : prevId);
-    else if (dir > 0 && top >= maxScroll() - 1) go(nextId);
-    else if (dir < 0 && top <= 0) go(prevId);
-    else pageScroll(dir);
-  }
-
-  async function requestWakeLock() {
-    try {
-      const lock = await navigator.wakeLock?.request('screen');
-      if (!lock) return;
-      if (disposed) {
-        lock.release().catch(() => {});
-        return;
-      }
-      wakeLock = lock;
-    } catch {
-      // wake lock is best effort
-    }
-  }
-
-  function onVisibility() {
-    if (document.visibilityState === 'visible') requestWakeLock();
-  }
-
-  function onScroll() {
-    if (Math.abs(scroller().scrollTop - pos) > 1.5) syncPos();
-  }
-
-  function onTouchStart() {
-    touching = true;
-    syncPos();
-  }
-
-  function onTouchEnd() {
-    touching = false;
-    syncPos();
-  }
-
-  function onWheel() {
-    syncPos();
+    if (pedal === pedalId.song) go(dir > 0 ? nextId : prevId);
+    else if (dir > 0 && scroll.atEnd()) go(nextId);
+    else if (dir < 0 && scroll.atStart()) go(prevId);
+    else scroll.page(dir);
   }
 
   function onPointerDown(e) {
@@ -341,22 +245,22 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   function onKey(e) {
     if (e.ctrlKey || e.metaKey || e.altKey || document.querySelector('dialog[open]')) return;
-    if (e.key === ' ' || e.key === 'k') toggle();
-    else if (e.key === 'Escape') onHome();
+    if (e.key === keys.space || e.key === keys.k) toggle();
+    else if (e.key === keys.escape) onHome();
     else if (FORWARD_KEYS.has(e.key)) turn(1);
     else if (BACK_KEYS.has(e.key)) turn(-1);
     else return;
     e.preventDefault();
   }
 
-  const onHome = () => { location.hash = '#/'; };
-  const onEdit = () => { location.hash = `#/edit/${id}/${location.hash.slice(2)}`; };
+  const onHome = () => { location.hash = routes.home; };
+  const onEdit = () => { location.hash = routes.edit(id, location.hash); };
   const onDetails = () => {
-    pause();
+    scroll.pause();
     openSongDetails(shownRec());
   };
   const onMenu = () => {
-    pause();
+    scroll.pause();
     openSongMenu(rec, {
       onSize: setSize,
       onClose: () => {
@@ -367,8 +271,8 @@ export function mount(root, { id, preview = false, setId = null }) {
   };
   const onPrev = () => go(prevId);
   const onNext = () => go(nextId);
-  const onSlow = () => setSpeed(speed - 1);
-  const onFast = () => setSpeed(speed + 1);
+  const onSlow = () => setSpeed(scroll.speed - 1);
+  const onFast = () => setSpeed(scroll.speed + 1);
 
   const onCapoDown = () => setFret(fret - 1);
   const onCapoUp = () => setFret(fret + 1);
@@ -377,48 +281,37 @@ export function mount(root, { id, preview = false, setId = null }) {
   const onUp = () => setShift(shift + 1);
   const onReset = () => setShift(base.shift);
 
-  editBtn.addEventListener('click', onEdit);
-  capoDownBtn.addEventListener('click', onCapoDown);
-  capoUpBtn.addEventListener('click', onCapoUp);
-  capoBtn.addEventListener('click', onCapoReset);
-  downBtn.addEventListener('click', onDown);
-  upBtn.addEventListener('click', onUp);
-  shiftBtn.addEventListener('click', onReset);
-  numbersBtn.addEventListener('click', toggleNumbers);
-  detailsBtn.addEventListener('click', onDetails);
-  menuBtn.addEventListener('click', onMenu);
-  homeBtn.addEventListener('click', onHome);
-  prevBtn.addEventListener('click', onPrev);
-  nextBtn.addEventListener('click', onNext);
-  slowBtn.addEventListener('click', onSlow);
-  fastBtn.addEventListener('click', onFast);
-  playBtn.addEventListener('click', toggle);
-  sheet.addEventListener('pointerdown', onPointerDown);
-  sheet.addEventListener('pointerup', onPointerUp);
-  sheet.addEventListener('pointercancel', onPointerCancel);
-  const listening = new AbortController();
-  const passive = { passive: true, signal: listening.signal };
-  window.addEventListener('touchstart', onTouchStart, passive);
-  window.addEventListener('touchend', onTouchEnd, passive);
-  window.addEventListener('touchcancel', onTouchEnd, passive);
-  window.addEventListener('wheel', onWheel, passive);
-  window.addEventListener('scroll', onScroll, passive);
-  window.addEventListener('keydown', onKey, { signal: listening.signal });
-  document.addEventListener('visibilitychange', onVisibility, { signal: listening.signal });
+  editBtn.addEventListener(evt.click, onEdit);
+  capoDownBtn.addEventListener(evt.click, onCapoDown);
+  capoUpBtn.addEventListener(evt.click, onCapoUp);
+  capoBtn.addEventListener(evt.click, onCapoReset);
+  downBtn.addEventListener(evt.click, onDown);
+  upBtn.addEventListener(evt.click, onUp);
+  shiftBtn.addEventListener(evt.click, onReset);
+  numbersBtn.addEventListener(evt.click, toggleNumbers);
+  detailsBtn.addEventListener(evt.click, onDetails);
+  menuBtn.addEventListener(evt.click, onMenu);
+  homeBtn.addEventListener(evt.click, onHome);
+  prevBtn.addEventListener(evt.click, onPrev);
+  nextBtn.addEventListener(evt.click, onNext);
+  slowBtn.addEventListener(evt.click, onSlow);
+  fastBtn.addEventListener(evt.click, onFast);
+  playBtn.addEventListener(evt.click, toggle);
+  sheet.addEventListener(evt.pointerdown, onPointerDown);
+  sheet.addEventListener(evt.pointerup, onPointerUp);
+  sheet.addEventListener(evt.pointercancel, onPointerCancel);
+  window.addEventListener(evt.keydown, onKey, { signal: listening.signal });
 
   applyPrefs();
   window.scrollTo(0, 0);
   renderControls();
-  requestWakeLock();
+  holdWakeLock(listening.signal);
 
   return () => {
     disposed = true;
-    pause();
     tuner.dispose();
     metronome.dispose();
     listening.abort();
     root.classList.remove('with-bar', 'live-view');
-    wakeLock?.release().catch(() => {});
-    wakeLock = null;
   };
 }

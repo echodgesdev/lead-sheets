@@ -1,6 +1,7 @@
 import { chordsIn, diatonic } from '../sheet/chords.js';
 import { parse } from '../sheet/parse.js';
 import { el } from '../dom.js';
+import { evt } from '../events.js';
 
 const SYMBOLS = [':', '#', 'b', '/', '|', 'x2'];
 const SECTIONS = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro'];
@@ -47,7 +48,7 @@ function nextVerseNumber(text) {
 
 function insert(textarea, str) {
   textarea.setRangeText(str, textarea.selectionStart, textarea.selectionEnd, 'end');
-  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+  textarea.dispatchEvent(new Event(evt.input, { bubbles: true }));
 }
 
 function insertChord(textarea, chord) {
@@ -180,16 +181,16 @@ export function attachKeybar(textarea) {
 
   const listening = new AbortController();
   const { signal } = listening;
-  textarea.addEventListener('focus', show, { signal });
-  textarea.addEventListener('blur', hide, { signal });
-  textarea.addEventListener('input', onInput, { signal });
-  bar.addEventListener('pointerdown', onDown);
-  bar.addEventListener('pointerup', onUp);
-  bar.addEventListener('pointercancel', onCancel);
-  bar.addEventListener('mousedown', noFocus);
-  vv?.addEventListener('resize', position, { signal });
-  vv?.addEventListener('scroll', position, { signal });
-  window.addEventListener('resize', position, { signal });
+  textarea.addEventListener(evt.focus, show, { signal });
+  textarea.addEventListener(evt.blur, hide, { signal });
+  textarea.addEventListener(evt.input, onInput, { signal });
+  bar.addEventListener(evt.pointerdown, onDown);
+  bar.addEventListener(evt.pointerup, onUp);
+  bar.addEventListener(evt.pointercancel, onCancel);
+  bar.addEventListener(evt.mousedown, noFocus);
+  vv?.addEventListener(evt.resize, position, { signal });
+  vv?.addEventListener(evt.scroll, position, { signal });
+  window.addEventListener(evt.resize, position, { signal });
 
   if (document.activeElement === textarea) show();
 

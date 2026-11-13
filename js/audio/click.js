@@ -1,4 +1,5 @@
 import { audioContext } from './context.js';
+import { clamp } from '../math.js';
 
 export const MIN_BPM = 30;
 export const MAX_BPM = 250;
@@ -18,8 +19,8 @@ const ACCENT_GAIN = 0.9;
 const BEAT_GAIN = 0.6;
 const SILENT_GAIN = 0.0001;
 
-function clampBpm(n) {
-  return Math.min(MAX_BPM, Math.max(MIN_BPM, Math.round(n)));
+export function clampBpm(n) {
+  return clamp(Math.round(n), MIN_BPM, MAX_BPM);
 }
 
 export function parseBpm(tempo) {

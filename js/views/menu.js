@@ -13,15 +13,17 @@ import {
   setPedalMode,
 } from '../prefs.js';
 import { openModal } from '../modal.js';
-import { labeledButton, choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { create } from '../dom.js';
+import { choiceRow, chipsRow, textSizeRow } from './rows.js';
+import { create, labeledButton } from '../dom.js';
+import { evt } from '../events.js';
+import { strings } from '../strings.js';
 
 export function openSongMenu(rec, { onSize, onClose, onEdit }) {
   const editRow = create('div', { class: 'modal-row' });
   const editBtn = labeledButton('pen-to-square', 'Edit song');
   editRow.append(editBtn);
   const dialog = openModal(
-    rec.title || 'Untitled',
+    rec.title || strings.untitled,
     textSizeRow(onSize),
     chipsRow('Live controls', CONTROLS, getShownControls(), setShownControls),
     choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle),
@@ -29,8 +31,8 @@ export function openSongMenu(rec, { onSize, onClose, onEdit }) {
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
     editRow,
   );
-  dialog.addEventListener('close', onClose);
-  editBtn.addEventListener('click', () => {
+  dialog.addEventListener(evt.close, onClose);
+  editBtn.addEventListener(evt.click, () => {
     dialog.close();
     onEdit();
   });

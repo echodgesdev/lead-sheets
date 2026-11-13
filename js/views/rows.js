@@ -1,13 +1,6 @@
 import { TEXT_SIZE, getTextSize, setTextSize } from '../prefs.js';
-import { icon } from '../icons.js';
-import { create } from '../dom.js';
-
-export function labeledButton(name, text) {
-  const b = create('button', { class: 'btn', type: 'button' });
-  if (name) b.append(icon(name));
-  b.append(text);
-  return b;
-}
+import { create, labeledButton, cls } from '../dom.js';
+import { evt } from '../events.js';
 
 export function choiceRow(label, options, value, save) {
   const row = create('div', { class: 'modal-row' });
@@ -16,10 +9,10 @@ export function choiceRow(label, options, value, save) {
 
   function apply(id) {
     save(id);
-    for (const [bid, b] of buttons) b.classList.toggle('active', bid === id);
+    for (const [bid, b] of buttons) b.classList.toggle(cls.active, bid === id);
   }
 
-  for (const [id, b] of buttons) b.addEventListener('click', () => apply(id));
+  for (const [id, b] of buttons) b.addEventListener(evt.click, () => apply(id));
   toggle.append(...buttons.map(([, b]) => b));
   row.append(create('span', { class: 'modal-label' }, label), toggle);
   apply(value);
@@ -32,12 +25,12 @@ export function chipsRow(label, items, shownIds, save) {
   const shown = new Set(shownIds);
 
   for (const t of items) {
-    const b = create('button', { class: 'btn chip', type: 'button' }, t.label);
+    const b = labeledButton(null, t.label, 'btn chip');
     const sync = () => {
-      b.classList.toggle('active', shown.has(t.id));
+      b.classList.toggle(cls.active, shown.has(t.id));
       b.setAttribute('aria-pressed', String(shown.has(t.id)));
     };
-    b.addEventListener('click', () => {
+    b.addEventListener(evt.click, () => {
       if (shown.has(t.id)) shown.delete(t.id);
       else shown.add(t.id);
       save(items.filter((x) => shown.has(x.id)).map((x) => x.id));
@@ -63,7 +56,7 @@ export function textSizeRow(onSize) {
   });
   slider.value = getTextSize();
   const out = create('span', { class: 'slider-value' }, slider.value);
-  slider.addEventListener('input', () => {
+  slider.addEventListener(evt.input, () => {
     const size = Number(slider.value);
     out.textContent = slider.value;
     setTextSize(size);
