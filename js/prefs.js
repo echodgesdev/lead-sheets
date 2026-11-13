@@ -41,8 +41,10 @@ export const TAGS = [
 
 export const CONTROLS = [
   { id: 'autoscroll', label: 'Auto-scroll' },
+  { id: 'capo', label: 'Capo' },
   { id: 'transpose', label: 'Transpose' },
   { id: 'numbers', label: 'Numbers' },
+  { id: 'details', label: 'Details' },
 ];
 
 function read(key) {

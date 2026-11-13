@@ -2,7 +2,7 @@ import * as store from '../store.js';
 import * as setlists from '../setlists.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
-import { viewChords, transposeKey, hasKey, capoFret, placeCapo } from '../sheet/transpose.js';
+import { viewChords, transposeKey, hasKey, capoFret, placeCapo, MAX_CAPO } from '../sheet/transpose.js';
 import {
   TAGS,
   NUMBER_STYLES,
@@ -16,6 +16,7 @@ import {
   tagValue,
 } from '../prefs.js';
 import { openSongMenu } from './menu.js';
+import { openSongDetails } from './details.js';
 import { icon } from '../icons.js';
 
 const MIN_SPEED = 1;
@@ -96,34 +97,44 @@ export function mount(root, { id, preview = false, setId = null }) {
   const set = setId ? setlists.get(setId) : null;
   const entry = set?.entries.find((e) => e.songId === id);
   const rec = entry?.tempo ? { ...song, tempo: entry.tempo } : song;
-  const baseShift = entry?.shift ?? 0;
 
   root.classList.add('with-bar', 'live-view');
 
   const keyed = hasKey(rec.key);
   const capo = capoFret(rec.capo);
+  const maxFret = Math.max(MAX_CAPO, capo);
+  const base = placeCapo(capo, entry?.shift ?? 0);
   const parsed = parse(rec.text);
   let autoscroll;
   let style;
   let pedal;
   let numbers;
-  let shift = baseShift;
+  let fret = base.capo;
+  let shift = base.shift;
 
   const header = el('header', 'hdr live-hdr');
   const homeBtn = iconButton('chevron-left', 'Back to songs');
   const editBtn = iconButton('pen-to-square', 'Edit song');
   editBtn.hidden = !preview;
+  const capoToggle = el('div', 'seg-toggle');
+  const capoDownBtn = iconButton('minus', 'Capo down');
+  const capoBtn = button('', 'Reset capo');
+  capoBtn.classList.add('live-key');
+  const capoUpBtn = iconButton('plus', 'Capo up');
+  capoToggle.append(capoDownBtn, capoBtn, capoUpBtn);
   const transpose = el('div', 'seg-toggle');
   const downBtn = iconButton('minus', 'Transpose down');
-  const keyBtn = button('', 'Reset capo');
-  keyBtn.classList.add('live-key');
+  const shiftBtn = button('', 'Reset transpose');
+  shiftBtn.classList.add('live-key');
   const upBtn = iconButton('plus', 'Transpose up');
-  transpose.append(downBtn, keyBtn, upBtn);
+  transpose.append(downBtn, shiftBtn, upBtn);
   const numbersBtn = button('', '');
   numbersBtn.disabled = !keyed;
-  const menuBtn = iconButton('ellipsis', 'More options');
-  header.append(homeBtn, el('h1', 'hdr-title', rec.title || 'Untitled'), transpose, numbersBtn, menuBtn, editBtn);
+  const detailsBtn = iconButton('circle-info', 'Song details');
+  const menuBtn = iconButton('ellipsis-vertical', 'More options');
+  header.append(homeBtn, capoToggle, transpose, numbersBtn, detailsBtn, menuBtn, editBtn);
   const tags = el('div', 'live-tags');
+  const title = el('h1', 'live-title', rec.title || 'Untitled');
 
   const sheet = el('div', 'sheet');
   const setSize = (px) => sheet.style.setProperty('--sheet-size', `${px}px`);
@@ -138,19 +149,31 @@ export function mount(root, { id, preview = false, setId = null }) {
   const speedLabel = el('span', 'live-bar-speed');
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
-  root.replaceChildren(header, tags, sheet, bar);
+  root.replaceChildren(header, tags, title, sheet, bar);
+
+  function shownRec() {
+    return { ...rec, key: transposeKey(rec.key, fret - capo + shift), capo: fret !== capo ? String(fret) : rec.capo };
+  }
 
   function renderContent() {
-    const placed = placeCapo(capo, shift);
-    renderSheet(viewChords(parsed, { key: rec.key, capo, shift, numbers: numbers ? style.id : null }), sheet);
-    fillTags(tags, { ...rec, key: transposeKey(rec.key, shift), capo: shift ? String(placed.capo) : rec.capo });
-    const fret = placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo);
-    keyBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', fret));
-    keyBtn.classList.toggle('active', shift !== baseShift);
+    const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
+    renderSheet(viewChords(parsed, view), sheet);
+    fillTags(tags, shownRec());
+    capoBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', String(fret)));
+    capoBtn.classList.toggle('active', fret !== base.capo);
+    capoDownBtn.disabled = fret <= 0;
+    capoUpBtn.disabled = fret >= maxFret;
+    shiftBtn.replaceChildren(el('small', '', 'Shift'), el('span', '', signed(shift)));
+    shiftBtn.classList.toggle('active', shift !== base.shift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
     numbersBtn.classList.toggle('active', numbers);
     numbersBtn.setAttribute('aria-pressed', String(numbers));
+  }
+
+  function setFret(n) {
+    fret = Math.min(maxFret, Math.max(0, n));
+    renderContent();
   }
 
   function setShift(n) {
@@ -244,8 +267,10 @@ export function mount(root, { id, preview = false, setId = null }) {
     style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
     pedal = getPedalMode();
     numbers = controls.has('numbers') && keyed && getNumbers();
+    capoToggle.hidden = !controls.has('capo');
     transpose.hidden = !controls.has('transpose');
     numbersBtn.hidden = !controls.has('numbers');
+    detailsBtn.hidden = !controls.has('details');
     numbersBtn.textContent = style.short;
     numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
     numbersBtn.setAttribute('aria-label', numbersBtn.title);
@@ -340,7 +365,11 @@ export function mount(root, { id, preview = false, setId = null }) {
   }
 
   const onHome = () => { location.hash = '#/'; };
-  const onEdit = () => { location.hash = `#/edit/${id}`; };
+  const onEdit = () => { location.hash = `#/edit/${id}/${location.hash.slice(2)}`; };
+  const onDetails = () => {
+    pause();
+    openSongDetails(shownRec());
+  };
   const onMenu = () => {
     pause();
     openSongMenu(rec, {
@@ -356,15 +385,22 @@ export function mount(root, { id, preview = false, setId = null }) {
   const onSlow = () => setSpeed(speed - 1);
   const onFast = () => setSpeed(speed + 1);
 
+  const onCapoDown = () => setFret(fret - 1);
+  const onCapoUp = () => setFret(fret + 1);
+  const onCapoReset = () => setFret(base.capo);
   const onDown = () => setShift(shift - 1);
   const onUp = () => setShift(shift + 1);
-  const onReset = () => setShift(baseShift);
+  const onReset = () => setShift(base.shift);
 
   editBtn.addEventListener('click', onEdit);
+  capoDownBtn.addEventListener('click', onCapoDown);
+  capoUpBtn.addEventListener('click', onCapoUp);
+  capoBtn.addEventListener('click', onCapoReset);
   downBtn.addEventListener('click', onDown);
   upBtn.addEventListener('click', onUp);
-  keyBtn.addEventListener('click', onReset);
+  shiftBtn.addEventListener('click', onReset);
   numbersBtn.addEventListener('click', toggleNumbers);
+  detailsBtn.addEventListener('click', onDetails);
   menuBtn.addEventListener('click', onMenu);
   homeBtn.addEventListener('click', onHome);
   prevBtn.addEventListener('click', onPrev);
@@ -392,10 +428,14 @@ export function mount(root, { id, preview = false, setId = null }) {
     disposed = true;
     pause();
     editBtn.removeEventListener('click', onEdit);
+    capoDownBtn.removeEventListener('click', onCapoDown);
+    capoUpBtn.removeEventListener('click', onCapoUp);
+    capoBtn.removeEventListener('click', onCapoReset);
     downBtn.removeEventListener('click', onDown);
     upBtn.removeEventListener('click', onUp);
-    keyBtn.removeEventListener('click', onReset);
+    shiftBtn.removeEventListener('click', onReset);
     numbersBtn.removeEventListener('click', toggleNumbers);
+    detailsBtn.removeEventListener('click', onDetails);
     menuBtn.removeEventListener('click', onMenu);
     homeBtn.removeEventListener('click', onHome);
     prevBtn.removeEventListener('click', onPrev);

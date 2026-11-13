@@ -85,10 +85,17 @@ test('capoFret and placeCapo', () => {
   eq(placeCapo(9, 0), { capo: 9, shift: 0 });
 });
 
-test('viewChords moves the capo before changing shapes', () => {
+test('viewChords capoShift keeps shapes and shift changes them', () => {
   const parsed = parse('T\nKey: G\n\nG    C\nHello world');
-  eq(chordsOf(viewChords(parsed, { key: 'G', shift: 2 })), [['G', 'C']]);
+  eq(chordsOf(viewChords(parsed, { key: 'G', capoShift: 2 })), [['G', 'C']]);
+  eq(chordsOf(viewChords(parsed, { key: 'G', shift: 2 })), [['A', 'D']]);
   eq(chordsOf(viewChords(parsed, { key: 'G', shift: -1 })), [['F#', 'B']]);
+});
+
+test('viewChords transpose keeps numbers on the shapes', () => {
+  const parsed = parse('T\nKey: D\nCapo: 2\n\nC    G\nHello world');
+  eq(chordsOf(viewChords(parsed, { key: 'D', capo: 2, shift: 3, numbers: 'nashville' })), [['1', '5']]);
+  eq(chordsOf(viewChords(parsed, { key: 'D', capo: 2, shift: 3 })), [['Eb', 'Bb']]);
 });
 
 test('viewChords numbers follow the capo shapes', () => {
@@ -100,4 +107,5 @@ test('viewChords key change restarts numbers and transposes the marker', () => {
   const parsed = parse('T\nKey: G\n\nG    C\nHello\nKey change: A\nA    D\nHello');
   eq(chordsOf(viewChords(parsed, { key: 'G', numbers: 'nashville' })), [['1', '4'], ['1', '4']]);
   eq(viewChords(parsed, { key: 'G', shift: 2 }).blocks.find((b) => b.type === 'key'), { type: 'key', key: 'B' });
+  eq(viewChords(parsed, { key: 'G', capoShift: 1, shift: 1 }).blocks.find((b) => b.type === 'key'), { type: 'key', key: 'B' });
 });

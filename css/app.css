@@ -108,8 +108,8 @@ input:focus-visible {
 .screen {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - env(safe-area-inset-bottom));
-  height: calc(100dvh - env(safe-area-inset-bottom));
+  height: calc(100vh - max(env(safe-area-inset-bottom), var(--keybar-inset, 0px)));
+  height: calc(100dvh - max(env(safe-area-inset-bottom), var(--keybar-inset, 0px)));
 }
 
 .with-bar {
@@ -582,7 +582,23 @@ button.row:active {
 
 .live-hdr {
   position: static;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
+}
+
+.live-hdr > :first-child {
+  margin-right: auto;
+}
+
+.live-title {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 0;
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
 }
 
 .live-hdr .btn {
@@ -759,7 +775,7 @@ button.row:active {
   width: 100%;
   min-height: 0;
   margin: 0;
-  padding: 14px 16px;
+  padding: 14px 16px calc(14px + 40dvh);
   border: 0;
   outline: none;
   resize: none;

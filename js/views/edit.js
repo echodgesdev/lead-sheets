@@ -27,7 +27,7 @@ function titleOf(text) {
   return line.replace(/^#\s*/, '') || 'Untitled';
 }
 
-export function mount(el, { id }) {
+export function mount(el, { id, back = null }) {
   let currentId = id === 'new' ? null : id;
   let dirty = false;
   let disposed = false;
@@ -130,7 +130,7 @@ export function mount(el, { id }) {
       }
     }
     await flush();
-    location.hash = currentId ? `#/preview/${currentId}` : '#/';
+    location.hash = currentId ? (back ?? `#/preview/${currentId}`) : '#/';
   }
 
   function onShare() {

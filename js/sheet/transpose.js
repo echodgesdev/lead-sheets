@@ -20,7 +20,7 @@ const INVERSIONS = {
 };
 const CHORD_RE = /^([A-Ga-g])([#b]?)(.*?)(?:\/([A-Ga-g])([#b]?))?(\**)$/;
 const KEY_RE = /^([A-G])([#b]?)\s*(m(?!aj)|-)?/i;
-const MAX_CAPO = 7;
+export const MAX_CAPO = 7;
 
 function mod12(n) {
   return ((n % 12) + 12) % 12;
@@ -142,13 +142,12 @@ function chordView(key, capo, shift, numbers) {
   return (c) => transposeChord(c, shift, flats);
 }
 
-export function viewChords(parsed, { key, capo = 0, shift = 0, numbers = null }) {
-  const placed = placeCapo(capo, shift);
-  let fn = chordView(key, capo, placed.shift, numbers);
+export function viewChords(parsed, { key, capo = 0, capoShift = 0, shift = 0, numbers = null }) {
+  let fn = chordView(key, capo, shift, numbers);
   const blocks = parsed.blocks.map((b) => {
     if (b.type !== 'key') return mapBlock(b, fn);
-    fn = chordView(b.key, capo, placed.shift, numbers);
-    return { ...b, key: transposeKey(b.key, shift) };
+    fn = chordView(b.key, capo, shift, numbers);
+    return { ...b, key: transposeKey(b.key, capoShift + shift) };
   });
   return { ...parsed, blocks };
 }

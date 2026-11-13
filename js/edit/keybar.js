@@ -85,7 +85,8 @@ export function attachKeybar(textarea) {
   let chipNodes = [];
   let timer = 0;
   let visible = false;
-  const basePad = textarea.style.paddingBottom;
+  let inset = 0;
+  const root = document.documentElement;
   const vv = window.visualViewport;
 
   SYMBOLS.forEach((s) => bar.appendChild(makeButton('symbol', s, s)));
@@ -102,19 +103,40 @@ export function attachKeybar(textarea) {
     chipNodes.forEach((n) => bar.appendChild(n));
   }
 
+  function revealCaret() {
+    const style = getComputedStyle(textarea);
+    const line = parseFloat(style.lineHeight);
+    const row = textarea.value.slice(0, textarea.selectionEnd).split('\n').length - 1;
+    const top = parseFloat(style.paddingTop) + row * line;
+    const bottom = top + line * 2 - textarea.clientHeight;
+    if (textarea.scrollTop < bottom) textarea.scrollTop = bottom;
+    else if (textarea.scrollTop > top) textarea.scrollTop = top;
+  }
+
+  function setInset(px) {
+    inset = px;
+    if (px) root.style.setProperty('--keybar-inset', px + 'px');
+    else root.style.removeProperty('--keybar-inset');
+  }
+
   function position() {
     if (!visible) return;
     const h = bar.offsetHeight;
+    let covered = h;
     if (vv) {
+      const bottom = vv.offsetTop + vv.height;
       bar.style.top = '0';
       bar.style.bottom = 'auto';
-      bar.style.transform = 'translateY(' + (vv.offsetTop + vv.height - h) + 'px)';
+      bar.style.transform = 'translateY(' + (bottom - h) + 'px)';
+      covered = Math.max(h, Math.round(window.innerHeight - bottom + h));
     } else {
       bar.style.top = 'auto';
       bar.style.bottom = '0';
       bar.style.transform = '';
     }
-    textarea.style.paddingBottom = 'calc(' + (basePad || '0px') + ' + ' + h + 'px)';
+    if (covered === inset) return;
+    setInset(covered);
+    revealCaret();
   }
 
   function show() {
@@ -127,7 +149,7 @@ export function attachKeybar(textarea) {
   function hide() {
     visible = false;
     bar.hidden = true;
-    textarea.style.paddingBottom = basePad;
+    setInset(0);
   }
 
   function onInput() {
@@ -188,6 +210,6 @@ export function attachKeybar(textarea) {
     }
     window.removeEventListener('resize', position);
     bar.remove();
-    textarea.style.paddingBottom = basePad;
+    setInset(0);
   };
 }

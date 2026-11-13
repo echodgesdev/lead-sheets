@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v23';
+const CACHE = 'tabs-v24';
 
 const ASSETS = [
   './',
@@ -34,6 +34,7 @@ const ASSETS = [
   './js/views/setlist.js',
   './js/views/settings.js',
   './js/views/menu.js',
+  './js/views/details.js',
   './js/views/rows.js',
   './js/edit/keybar.js',
 ];
