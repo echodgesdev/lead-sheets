@@ -1,17 +1,11 @@
 import { chordsIn, diatonic } from '../sheet/chords.js';
 import { parse } from '../sheet/parse.js';
+import { el } from '../dom.js';
 
 const SYMBOLS = [':', '#', 'b', '/', '|', 'x2'];
 const SECTIONS = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro'];
 const TAP_SLOP = 8;
 const DEBOUNCE_MS = 300;
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 function makeButton(kind, label, value) {
   const b = el('button', 'kb-btn kb-' + kind, label);
@@ -184,31 +178,24 @@ export function attachKeybar(textarea) {
     if (e.target.closest('.kb-btn')) e.preventDefault();
   }
 
-  textarea.addEventListener('focus', show);
-  textarea.addEventListener('blur', hide);
-  textarea.addEventListener('input', onInput);
+  const listening = new AbortController();
+  const { signal } = listening;
+  textarea.addEventListener('focus', show, { signal });
+  textarea.addEventListener('blur', hide, { signal });
+  textarea.addEventListener('input', onInput, { signal });
   bar.addEventListener('pointerdown', onDown);
   bar.addEventListener('pointerup', onUp);
   bar.addEventListener('pointercancel', onCancel);
   bar.addEventListener('mousedown', noFocus);
-  if (vv) {
-    vv.addEventListener('resize', position);
-    vv.addEventListener('scroll', position);
-  }
-  window.addEventListener('resize', position);
+  vv?.addEventListener('resize', position, { signal });
+  vv?.addEventListener('scroll', position, { signal });
+  window.addEventListener('resize', position, { signal });
 
   if (document.activeElement === textarea) show();
 
   return function detach() {
     clearTimeout(timer);
-    textarea.removeEventListener('focus', show);
-    textarea.removeEventListener('blur', hide);
-    textarea.removeEventListener('input', onInput);
-    if (vv) {
-      vv.removeEventListener('resize', position);
-      vv.removeEventListener('scroll', position);
-    }
-    window.removeEventListener('resize', position);
+    listening.abort();
     bar.remove();
     setInset(0);
   };

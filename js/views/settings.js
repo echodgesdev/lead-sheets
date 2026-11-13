@@ -22,19 +22,13 @@ import {
 } from '../prefs.js';
 import { openModal } from '../modal.js';
 import { labeledButton, choiceRow, chipsRow, textSizeRow } from './rows.js';
+import { create } from '../dom.js';
 
 const THEMES = [
   { id: 'system', icon: 'circle-half-stroke', label: 'Auto' },
   { id: 'dark', icon: 'moon', label: 'Dark' },
   { id: 'light', icon: 'sun', label: 'Light' },
 ];
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
 
 function backupRows(onImport) {
   const row = create('div', { class: 'modal-row' });

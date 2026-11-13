@@ -5,22 +5,10 @@ import { icon } from '../icons.js';
 import { toast } from '../toast.js';
 import { getEditorOptions, hasFeature } from '../prefs.js';
 import { shareText } from '../share.js';
+import { create, iconButton } from '../dom.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';
 const SAVE_DELAY_MS = 800;
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function iconButton(name, label, className = 'btn icon') {
-  const b = create('button', { class: className, type: 'button', 'aria-label': label, title: label });
-  b.append(icon(name));
-  return b;
-}
 
 function titleOf(text) {
   const line = text.split('\n').map((l) => l.trim()).find(Boolean) ?? '';
@@ -162,8 +150,9 @@ export function mount(el, { id, back = null }) {
   inferBtn.addEventListener('click', onInfer);
   shareBtn.addEventListener('click', onShare);
   deleteBtn.addEventListener('click', onDelete);
-  document.addEventListener('visibilitychange', onVisibility);
-  document.addEventListener('keydown', onKeydown);
+  const listening = new AbortController();
+  document.addEventListener('visibilitychange', onVisibility, { signal: listening.signal });
+  document.addEventListener('keydown', onKeydown, { signal: listening.signal });
 
   editor.value = currentId ? (store.get(currentId)?.text ?? '') : NEW_TEMPLATE;
   refreshTitle();
@@ -181,7 +170,6 @@ export function mount(el, { id, back = null }) {
     dismissToast?.();
     flush();
     detachKeybar();
-    document.removeEventListener('visibilitychange', onVisibility);
-    document.removeEventListener('keydown', onKeydown);
+    listening.abort();
   };
 }

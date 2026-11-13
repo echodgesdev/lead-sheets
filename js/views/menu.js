@@ -14,13 +14,7 @@ import {
 } from '../prefs.js';
 import { openModal } from '../modal.js';
 import { labeledButton, choiceRow, chipsRow, textSizeRow } from './rows.js';
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+import { create } from '../dom.js';
 
 export function openSongMenu(rec, { onSize, onClose, onEdit }) {
   const editRow = create('div', { class: 'modal-row' });

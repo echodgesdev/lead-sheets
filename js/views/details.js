@@ -1,12 +1,6 @@
 import { TAGS, tagValue } from '../prefs.js';
 import { openModal } from '../modal.js';
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+import { create } from '../dom.js';
 
 function capitalize(name) {
   return name.replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase());

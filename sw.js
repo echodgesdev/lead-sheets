@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v24';
+const CACHE = 'tabs-v26';
 
 const ASSETS = [
   './',
@@ -14,6 +14,7 @@ const ASSETS = [
   './js/app.js',
   './js/theme.js',
   './js/icons.js',
+  './js/dom.js',
   './js/db.js',
   './js/store.js',
   './js/setlists.js',
@@ -37,6 +38,12 @@ const ASSETS = [
   './js/views/details.js',
   './js/views/rows.js',
   './js/edit/keybar.js',
+  './js/audio/context.js',
+  './js/audio/pitch.js',
+  './js/audio/listen.js',
+  './js/audio/click.js',
+  './js/views/tuner.js',
+  './js/views/metronome.js',
 ];
 
 const URLS = ASSETS.map((path) => new URL(path, self.location.href).href);

@@ -5,51 +5,25 @@ import { icon } from '../icons.js';
 import { GROUPS, groupSongs, groupSetlists } from '../group.js';
 import { transposeKey } from '../sheet/transpose.js';
 import { importText } from '../backup.js';
-import { hasFeature } from '../prefs.js';
+import {
+  hasFeature,
+  getListMode,
+  setListMode,
+  getListGroup,
+  setListGroup,
+  getListQuery,
+  setListQuery,
+  setSongOrder,
+} from '../prefs.js';
 import { toast } from '../toast.js';
+import { create } from '../dom.js';
 
-const MODE_KEY = 'tabs.mode';
-const QUERY_KEY = 'tabs.q';
-const ORDER_KEY = 'tabs.order';
-const GROUP_KEY = 'tabs.group';
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function readValue(storage, key, fallback) {
-  try {
-    return storage.getItem(key) ?? fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function writeValue(storage, key, value) {
-  try {
-    storage.setItem(key, value);
-  } catch {
-    return;
-  }
-}
 
 function labeled(el, name, text) {
   el.replaceChildren(icon(name), text);
   return el;
-}
-
-function getMode() {
-  return readValue(localStorage, MODE_KEY, 'live') === 'edit' ? 'edit' : 'live';
-}
-
-function getGroup() {
-  const id = readValue(localStorage, GROUP_KEY, 'title');
-  return GROUPS.some((g) => g.id === id) ? id : 'title';
 }
 
 function subtitleOf(rec, by) {
@@ -57,8 +31,8 @@ function subtitleOf(rec, by) {
 }
 
 export function mount(el) {
-  let mode = getMode();
-  let groupBy = getGroup();
+  let mode = getListMode();
+  let groupBy = getListGroup();
 
   const screen = create('div');
   const top = create('div', { class: 'list-top' });
@@ -86,7 +60,7 @@ export function mount(el) {
     autocorrect: 'off',
     spellcheck: 'false',
   });
-  search.value = readValue(sessionStorage, QUERY_KEY, '');
+  search.value = getListQuery();
   searchBox.append(icon('magnifying-glass'), search);
 
   const groupBox = create('label', { class: 'input-icon compact' });
@@ -117,7 +91,7 @@ export function mount(el) {
     row.append(main);
     const shift = set?.entries.find((e) => e.songId === rec.id)?.shift ?? 0;
     if (rec.key) row.append(create('span', { class: 'badge' }, transposeKey(rec.key, shift)));
-    row.addEventListener('click', () => writeValue(sessionStorage, ORDER_KEY, JSON.stringify(ids)));
+    row.addEventListener('click', () => setSongOrder(ids));
     return row;
   }
 
@@ -196,17 +170,17 @@ export function mount(el) {
 
   function setMode(next) {
     mode = next;
-    writeValue(localStorage, MODE_KEY, next);
+    setListMode(next);
     applyMode();
   }
 
   search.addEventListener('input', () => {
-    writeValue(sessionStorage, QUERY_KEY, search.value);
+    setListQuery(search.value);
     renderList();
   });
   groupSelect.addEventListener('change', () => {
     groupBy = groupSelect.value;
-    writeValue(localStorage, GROUP_KEY, groupBy);
+    setListGroup(groupBy);
     renderList();
   });
   liveBtn.addEventListener('click', () => setMode('live'));

@@ -21,6 +21,11 @@ const INVERSIONS = {
 const CHORD_RE = /^([A-Ga-g])([#b]?)(.*?)(?:\/([A-Ga-g])([#b]?))?(\**)$/;
 const KEY_RE = /^([A-G])([#b]?)\s*(m(?!aj)|-)?/i;
 export const MAX_CAPO = 7;
+export const MAX_SHIFT = 11;
+
+export function signed(n) {
+  return n > 0 ? `+${n}` : String(n);
+}
 
 function mod12(n) {
   return ((n % 12) + 12) % 12;

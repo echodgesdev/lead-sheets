@@ -1,3 +1,9 @@
+import { GROUPS } from './group.js';
+
+const MODE_KEY = 'tabs.mode';
+const GROUP_KEY = 'tabs.group';
+const QUERY_KEY = 'tabs.q';
+const ORDER_KEY = 'tabs.order';
 const TAGS_KEY = 'tabs.liveTags';
 const CONTROLS_KEY = 'tabs.liveControls';
 const NUMBERS_KEY = 'tabs.numbers';
@@ -45,6 +51,8 @@ export const CONTROLS = [
   { id: 'transpose', label: 'Transpose' },
   { id: 'numbers', label: 'Numbers' },
   { id: 'details', label: 'Details' },
+  { id: 'tuner', label: 'Tuner' },
+  { id: 'metronome', label: 'Metronome' },
 ];
 
 function read(key) {
@@ -63,9 +71,63 @@ function write(key, value) {
   }
 }
 
+function readRaw(storage, key) {
+  try {
+    return storage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeRaw(storage, key, value) {
+  try {
+    storage.setItem(key, value);
+  } catch {
+    // not persisted in private mode
+  }
+}
+
 function shownIds(key, items, fallback) {
   const ids = read(key);
   return Array.isArray(ids) ? ids.filter((id) => items.some((t) => t.id === id)) : fallback;
+}
+
+export function getListMode() {
+  return readRaw(localStorage, MODE_KEY) === 'edit' ? 'edit' : 'live';
+}
+
+export function setListMode(mode) {
+  writeRaw(localStorage, MODE_KEY, mode);
+}
+
+export function getListGroup() {
+  const id = readRaw(localStorage, GROUP_KEY);
+  return GROUPS.some((g) => g.id === id) ? id : 'title';
+}
+
+export function setListGroup(id) {
+  writeRaw(localStorage, GROUP_KEY, id);
+}
+
+export function getListQuery() {
+  return readRaw(sessionStorage, QUERY_KEY) ?? '';
+}
+
+export function setListQuery(query) {
+  writeRaw(sessionStorage, QUERY_KEY, query);
+}
+
+export function getSongOrder() {
+  try {
+    const ids = JSON.parse(readRaw(sessionStorage, ORDER_KEY));
+    return Array.isArray(ids) ? ids : [];
+  } catch {
+    return [];
+  }
+}
+
+export function setSongOrder(ids) {
+  writeRaw(sessionStorage, ORDER_KEY, JSON.stringify(ids));
 }
 
 export function getShownTags() {

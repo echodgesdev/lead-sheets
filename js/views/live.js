@@ -2,7 +2,16 @@ import * as store from '../store.js';
 import * as setlists from '../setlists.js';
 import { parse } from '../sheet/parse.js';
 import { renderSheet } from '../sheet/render.js';
-import { viewChords, transposeKey, hasKey, capoFret, placeCapo, MAX_CAPO } from '../sheet/transpose.js';
+import {
+  viewChords,
+  transposeKey,
+  hasKey,
+  capoFret,
+  placeCapo,
+  signed,
+  MAX_CAPO,
+  MAX_SHIFT,
+} from '../sheet/transpose.js';
 import {
   TAGS,
   NUMBER_STYLES,
@@ -13,45 +22,23 @@ import {
   getNumberStyle,
   getPedalMode,
   getTextSize,
+  getSongOrder,
   tagValue,
 } from '../prefs.js';
 import { openSongMenu } from './menu.js';
 import { openSongDetails } from './details.js';
+import { createTunerControl } from './tuner.js';
+import { createMetronomeControl } from './metronome.js';
 import { icon } from '../icons.js';
+import { el, button, iconButton } from '../dom.js';
 
 const MIN_SPEED = 1;
 const MAX_SPEED = 10;
 const TAP_SLOP = 10;
 const MAX_FRAME_MS = 100;
 const PAGE_FRACTION = 0.85;
-const MAX_SHIFT = 11;
 const FORWARD_KEYS = new Set(['PageDown', 'ArrowDown', 'ArrowRight']);
 const BACK_KEYS = new Set(['PageUp', 'ArrowUp', 'ArrowLeft']);
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function button(label, title) {
-  const b = el('button', 'btn', label);
-  b.type = 'button';
-  b.title = title;
-  b.setAttribute('aria-label', title);
-  return b;
-}
-
-function iconButton(name, title) {
-  const b = button('', title);
-  b.append(icon(name));
-  return b;
-}
-
-function signed(n) {
-  return n > 0 ? `+${n}` : String(n);
-}
 
 function pixelsPerSecond(speed) {
   return 8 * Math.pow(speed, 1.35);
@@ -59,13 +46,8 @@ function pixelsPerSecond(speed) {
 
 function songOrder(set) {
   if (set) return set.entries.map((e) => e.songId).filter((songId) => store.get(songId));
-  try {
-    const ids = JSON.parse(sessionStorage.getItem('tabs.order'));
-    if (Array.isArray(ids) && ids.length) return ids;
-  } catch {
-    // fall through to store order
-  }
-  return store.all().map((r) => r.id);
+  const ids = getSongOrder();
+  return ids.length ? ids : store.all().map((r) => r.id);
 }
 
 function fillTags(strip, rec) {
@@ -83,12 +65,11 @@ function fillTags(strip, rec) {
 function mountMissing(root) {
   const msg = el('p', 'status', 'Song not found.');
   const home = iconButton('house', 'Home');
-  const onHome = () => { location.hash = '#/'; };
-  home.addEventListener('click', onHome);
+  home.addEventListener('click', () => { location.hash = '#/'; });
   const wrap = el('div', 'status');
   wrap.append(msg, home);
   root.replaceChildren(wrap);
-  return () => home.removeEventListener('click', onHome);
+  return () => {};
 }
 
 export function mount(root, { id, preview = false, setId = null }) {
@@ -132,7 +113,9 @@ export function mount(root, { id, preview = false, setId = null }) {
   numbersBtn.disabled = !keyed;
   const detailsBtn = iconButton('circle-info', 'Song details');
   const menuBtn = iconButton('ellipsis-vertical', 'More options');
-  header.append(homeBtn, capoToggle, transpose, numbersBtn, detailsBtn, menuBtn, editBtn);
+  const tuner = createTunerControl();
+  const metronome = createMetronomeControl(rec.tempo);
+  header.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
   const tags = el('div', 'live-tags');
   const title = el('h1', 'live-title', rec.title || 'Untitled');
 
@@ -271,6 +254,8 @@ export function mount(root, { id, preview = false, setId = null }) {
     transpose.hidden = !controls.has('transpose');
     numbersBtn.hidden = !controls.has('numbers');
     detailsBtn.hidden = !controls.has('details');
+    tuner.button.hidden = !controls.has('tuner');
+    metronome.button.hidden = !controls.has('metronome');
     numbersBtn.textContent = style.short;
     numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
     numbersBtn.setAttribute('aria-label', numbersBtn.title);
@@ -411,13 +396,15 @@ export function mount(root, { id, preview = false, setId = null }) {
   sheet.addEventListener('pointerdown', onPointerDown);
   sheet.addEventListener('pointerup', onPointerUp);
   sheet.addEventListener('pointercancel', onPointerCancel);
-  window.addEventListener('touchstart', onTouchStart, { passive: true });
-  window.addEventListener('touchend', onTouchEnd, { passive: true });
-  window.addEventListener('touchcancel', onTouchEnd, { passive: true });
-  window.addEventListener('wheel', onWheel, { passive: true });
-  window.addEventListener('scroll', onScroll, { passive: true });
-  window.addEventListener('keydown', onKey);
-  document.addEventListener('visibilitychange', onVisibility);
+  const listening = new AbortController();
+  const passive = { passive: true, signal: listening.signal };
+  window.addEventListener('touchstart', onTouchStart, passive);
+  window.addEventListener('touchend', onTouchEnd, passive);
+  window.addEventListener('touchcancel', onTouchEnd, passive);
+  window.addEventListener('wheel', onWheel, passive);
+  window.addEventListener('scroll', onScroll, passive);
+  window.addEventListener('keydown', onKey, { signal: listening.signal });
+  document.addEventListener('visibilitychange', onVisibility, { signal: listening.signal });
 
   applyPrefs();
   window.scrollTo(0, 0);
@@ -427,32 +414,9 @@ export function mount(root, { id, preview = false, setId = null }) {
   return () => {
     disposed = true;
     pause();
-    editBtn.removeEventListener('click', onEdit);
-    capoDownBtn.removeEventListener('click', onCapoDown);
-    capoUpBtn.removeEventListener('click', onCapoUp);
-    capoBtn.removeEventListener('click', onCapoReset);
-    downBtn.removeEventListener('click', onDown);
-    upBtn.removeEventListener('click', onUp);
-    shiftBtn.removeEventListener('click', onReset);
-    numbersBtn.removeEventListener('click', toggleNumbers);
-    detailsBtn.removeEventListener('click', onDetails);
-    menuBtn.removeEventListener('click', onMenu);
-    homeBtn.removeEventListener('click', onHome);
-    prevBtn.removeEventListener('click', onPrev);
-    nextBtn.removeEventListener('click', onNext);
-    slowBtn.removeEventListener('click', onSlow);
-    fastBtn.removeEventListener('click', onFast);
-    playBtn.removeEventListener('click', toggle);
-    sheet.removeEventListener('pointerdown', onPointerDown);
-    sheet.removeEventListener('pointerup', onPointerUp);
-    sheet.removeEventListener('pointercancel', onPointerCancel);
-    window.removeEventListener('touchstart', onTouchStart);
-    window.removeEventListener('touchend', onTouchEnd);
-    window.removeEventListener('touchcancel', onTouchEnd);
-    window.removeEventListener('wheel', onWheel);
-    window.removeEventListener('scroll', onScroll);
-    window.removeEventListener('keydown', onKey);
-    document.removeEventListener('visibilitychange', onVisibility);
+    tuner.dispose();
+    metronome.dispose();
+    listening.abort();
     root.classList.remove('with-bar', 'live-view');
     wakeLock?.release().catch(() => {});
     wakeLock = null;

@@ -1,30 +1,13 @@
 import * as store from '../store.js';
 import * as setlists from '../setlists.js';
-import { capoFret, placeCapo, transposeKey } from '../sheet/transpose.js';
+import { capoFret, placeCapo, transposeKey, signed, MAX_SHIFT } from '../sheet/transpose.js';
 import { icon } from '../icons.js';
+import { create, iconButton } from '../dom.js';
 
 const SAVE_DELAY_MS = 500;
-const MAX_SHIFT = 11;
 const DRAG_EDGE = 60;
 const DRAG_EDGE_TOP = 120;
 const DRAG_SCROLL = 12;
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
-
-function iconButton(name, label, className = 'btn icon') {
-  const b = create('button', { class: className, type: 'button', 'aria-label': label, title: label });
-  b.append(icon(name));
-  return b;
-}
-
-function signed(n) {
-  return n > 0 ? `+${n}` : String(n);
-}
 
 function middle(node) {
   const box = node.getBoundingClientRect();
@@ -263,7 +246,8 @@ export function mount(el, { id }) {
   search.addEventListener('input', renderResults);
   doneBtn.addEventListener('click', onDone);
   deleteBtn.addEventListener('click', onDelete);
-  document.addEventListener('visibilitychange', onVisibility);
+  const listening = new AbortController();
+  document.addEventListener('visibilitychange', onVisibility, { signal: listening.signal });
 
   syncChrome();
   renderEntries();
@@ -273,10 +257,6 @@ export function mount(el, { id }) {
   return () => {
     disposed = true;
     flush();
-    nameInput.removeEventListener('input', scheduleSave);
-    search.removeEventListener('input', renderResults);
-    doneBtn.removeEventListener('click', onDone);
-    deleteBtn.removeEventListener('click', onDelete);
-    document.removeEventListener('visibilitychange', onVisibility);
+    listening.abort();
   };
 }

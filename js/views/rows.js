@@ -1,12 +1,6 @@
 import { TEXT_SIZE, getTextSize, setTextSize } from '../prefs.js';
 import { icon } from '../icons.js';
-
-function create(tag, attrs = {}, text) {
-  const node = document.createElement(tag);
-  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+import { create } from '../dom.js';
 
 export function labeledButton(name, text) {
   const b = create('button', { class: 'btn', type: 'button' });
