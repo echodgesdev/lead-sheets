@@ -7,6 +7,7 @@ import { mount as mountEdit } from './views/edit.js';
 import { mount as mountSetlist } from './views/setlist.js';
 import { evt } from './events.js';
 import { views, parseRoute } from './routes.js';
+import { p } from './dom.js';
 
 const MOUNTS = {
   [views.live]: mountLive,
@@ -38,10 +39,7 @@ function render() {
 }
 
 function showStatus(text) {
-  const p = document.createElement('p');
-  p.className = 'status';
-  p.textContent = text;
-  app.replaceChildren(p);
+  app.replaceChildren(p('status', text));
 }
 
 async function start() {

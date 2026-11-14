@@ -1,11 +1,11 @@
 import * as store from '../store.js';
 import { infer } from '../sheet/infer.js';
-import { attachKeybar } from '../edit/keybar.js';
-import { icon } from '../icons.js';
-import { toast } from '../toast.js';
+import { attachKeybar } from '../components/keybar.js';
+import { icon } from '../components/icons.js';
+import { toast } from '../components/toast.js';
 import { editorId, featureId, getEditorOptions, hasFeature } from '../prefs.js';
 import { shareText } from '../share.js';
-import { create, iconButton, labeledButton } from '../dom.js';
+import { div, h1, header, span, textarea, iconButton, labeledButton } from '../dom.js';
 import { evt, keys } from '../events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { createAutosave } from '../autosave.js';
@@ -25,15 +25,15 @@ export function mount(el, { id, back = null }) {
   let dismissToast = null;
   const listening = new AbortController();
 
-  const screen = create('div', { class: 'screen' });
-  const header = create('header', { class: 'hdr' });
+  const screen = div('screen');
+  const headerEl = header('hdr');
   const previewBtn = labeledButton('play', 'Preview', 'btn primary');
-  const title = create('h1', { class: 'hdr-title' });
-  const status = create('span', { class: 'hdr-alert' });
+  const title = h1('hdr-title');
+  const status = span('hdr-alert');
   const inferBtn = iconButton('wand-magic-sparkles', 'Infer format');
   const shareBtn = iconButton('arrow-up-from-bracket', 'Share');
   const deleteBtn = iconButton('trash-can', 'Delete', 'btn icon danger');
-  const editor = create('textarea', {
+  const editor = textarea({
     class: 'editor',
     autocapitalize: 'off',
     autocomplete: 'off',
@@ -41,8 +41,8 @@ export function mount(el, { id, back = null }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  header.append(deleteBtn, title, status, inferBtn, shareBtn, previewBtn);
-  screen.append(header, editor);
+  headerEl.append(deleteBtn, title, status, inferBtn, shareBtn, previewBtn);
+  screen.append(headerEl, editor);
   el.append(screen);
 
   function setStatus(text) {

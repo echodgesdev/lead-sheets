@@ -1,13 +1,13 @@
 import * as store from '../store.js';
 import * as setlists from '../setlists.js';
 import { capoFret, placeCapo, transposeKey, signed, MAX_SHIFT } from '../sheet/transpose.js';
-import { icon } from '../icons.js';
-import { create, iconButton, labeledButton, cls } from '../dom.js';
+import { icon } from '../components/icons.js';
+import { div, h1, header, input, p, small, span, iconButton, labeledButton, cls } from '../dom.js';
 import { evt } from '../events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { createAutosave } from '../autosave.js';
 import { strings } from '../strings.js';
-import { searchBox, rowMain, mountNotFound } from './parts.js';
+import { searchBox, rowMain, mountNotFound } from '../components/parts.js';
 
 const SAVE_DELAY_MS = 500;
 const DRAG_EDGE = 60;
@@ -28,30 +28,30 @@ export function mount(el, { id }) {
   let disposed = false;
   const listening = new AbortController();
 
-  const screen = create('div', { class: 'set-screen' });
-  const header = create('header', { class: 'hdr' });
+  const screen = div('set-screen');
+  const headerEl = header('hdr');
   const deleteBtn = iconButton('trash-can', 'Delete setlist', 'btn icon danger');
-  const status = create('span', { class: 'hdr-alert' });
+  const status = span('hdr-alert');
   const doneBtn = labeledButton('check', 'Done', 'btn primary');
-  header.append(deleteBtn, create('h1', { class: 'hdr-title' }, 'Setlist'), status, doneBtn);
+  headerEl.append(deleteBtn, h1('hdr-title', 'Setlist'), status, doneBtn);
 
-  const nameBar = create('div', { class: 'toolbar' });
-  const nameInput = create('input', { class: 'field', type: 'text', placeholder: 'Setlist name', 'aria-label': 'Setlist name' });
+  const nameBar = div('toolbar');
+  const nameInput = input({ class: 'field', type: 'text', placeholder: 'Setlist name', 'aria-label': 'Setlist name' });
   nameInput.value = existing?.name ?? '';
   nameBar.append(nameInput);
 
-  const entriesLabel = create('div', { class: 'section-label' });
-  const entriesEl = create('div', { class: 'list set-entries' });
-  const emptyEntries = create('p', { class: 'status' }, 'Add songs below');
+  const entriesLabel = div('section-label');
+  const entriesEl = div('list set-entries');
+  const emptyEntries = p('status', 'Add songs below');
 
-  const addLabel = create('div', { class: 'section-label' });
-  addLabel.append(create('span', {}, 'Add songs'));
-  const searchBar = create('div', { class: 'toolbar' });
+  const addLabel = div('section-label');
+  addLabel.append(span(null, 'Add songs'));
+  const searchBar = div('toolbar');
   const { box: searchField, input: search } = searchBox();
   searchBar.append(searchField);
-  const resultsEl = create('div', { class: 'list set-results' });
+  const resultsEl = div('list set-results');
 
-  screen.append(header, nameBar, entriesLabel, entriesEl, emptyEntries, addLabel, searchBar, resultsEl);
+  screen.append(headerEl, nameBar, entriesLabel, entriesEl, emptyEntries, addLabel, searchBar, resultsEl);
   el.append(screen);
 
   function syncChrome() {
@@ -84,12 +84,12 @@ export function mount(el, { id }) {
   }
 
   function capoControl(entry, song) {
-    const toggle = create('div', { class: 'seg-toggle' });
+    const toggle = div('seg-toggle');
     const down = iconButton('minus', 'Transpose down');
     const up = iconButton('plus', 'Transpose up');
     const placed = placeCapo(capoFret(song.capo), entry.shift);
-    const label = create('span', { class: 'btn live-key', title: 'Capo' });
-    label.append(create('small', {}, 'Capo'), create('span', {}, placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo)));
+    const label = span({ class: 'btn live-key', title: 'Capo' });
+    label.append(small(null, 'Capo'), span(null, placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo)));
     label.classList.toggle(cls.active, entry.shift !== 0);
     down.disabled = entry.shift <= -MAX_SHIFT;
     up.disabled = entry.shift >= MAX_SHIFT;
@@ -100,20 +100,20 @@ export function mount(el, { id }) {
   }
 
   function tempoField(entry, song) {
-    const input = create('input', {
+    const inputEl = input({
       class: 'field set-tempo',
       type: 'text',
       inputmode: 'numeric',
       placeholder: 'Tempo',
       'aria-label': 'Tempo',
     });
-    input.value = entry.tempo || song.tempo || '';
-    input.addEventListener(evt.input, () => {
-      const value = input.value.trim();
+    inputEl.value = entry.tempo || song.tempo || '';
+    inputEl.addEventListener(evt.input, () => {
+      const value = inputEl.value.trim();
       entry.tempo = value === (song.tempo ?? '') ? '' : value;
       autosave.schedule();
     });
-    return input;
+    return inputEl;
   }
 
   function startDrag(event, row) {
@@ -153,7 +153,7 @@ export function mount(el, { id }) {
 
   function entryRow(entry) {
     const song = store.get(entry.songId);
-    const row = create('div', { class: 'row set-row' });
+    const row = div('row set-row');
     row.dataset.songId = entry.songId;
     const grip = iconButton('grip-vertical', 'Drag to reorder', 'btn icon set-grip');
     grip.addEventListener(evt.pointerdown, (e) => startDrag(e, row));
@@ -163,9 +163,9 @@ export function mount(el, { id }) {
       entries = entries.filter((e) => e !== entry);
       change();
     });
-    const controls = create('div', { class: 'set-controls' });
+    const controls = div('set-controls');
     controls.append(capoControl(entry, song));
-    if (song.key) controls.append(create('span', { class: 'badge' }, `Key ${transposeKey(song.key, entry.shift)}`));
+    if (song.key) controls.append(span('badge', `Key ${transposeKey(song.key, entry.shift)}`));
     controls.append(tempoField(entry, song));
     row.append(grip, main, remove, controls);
     return row;
@@ -173,16 +173,14 @@ export function mount(el, { id }) {
 
   function renderEntries() {
     const shown = entries.filter((e) => store.get(e.songId));
-    entriesLabel.replaceChildren(create('span', {}, 'Songs'), create('span', { class: 'group-count' }, String(shown.length)));
+    entriesLabel.replaceChildren(span(null, 'Songs'), span('group-count', String(shown.length)));
     entriesEl.replaceChildren(...shown.map(entryRow));
     emptyEntries.hidden = shown.length > 0;
   }
 
   function resultRow(rec) {
-    const row = create('button', { class: 'row set-add', type: 'button' });
-    const main = rowMain(rec, rec.artist);
-    row.append(icon('plus'), main);
-    if (rec.key) row.append(create('span', { class: 'badge' }, rec.key));
+    const row = labeledButton('plus', rowMain(rec, rec.artist), 'row set-add');
+    if (rec.key) row.append(span('badge', rec.key));
     row.addEventListener(evt.click, () => {
       entries.push({ songId: rec.id, shift: 0, tempo: '' });
       change();

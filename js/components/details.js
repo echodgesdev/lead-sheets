@@ -1,6 +1,6 @@
 import { TAGS, tagValue } from '../prefs.js';
-import { openModal } from '../modal.js';
-import { create } from '../dom.js';
+import { openModal } from './modal.js';
+import { div, p, span } from '../dom.js';
 import { strings } from '../strings.js';
 
 function capitalize(name) {
@@ -8,8 +8,8 @@ function capitalize(name) {
 }
 
 function row(label, value) {
-  const r = create('div', { class: 'modal-row' });
-  r.append(create('span', { class: 'modal-label' }, label), create('span', { class: 'info-value' }, value));
+  const r = div('modal-row');
+  r.append(span('modal-label', label), span('info-value', value));
   return r;
 }
 
@@ -18,7 +18,7 @@ function infoRows(rec) {
     .concat(Object.entries(rec.extra ?? {}).map(([k, v]) => [capitalize(k), v]))
     .filter(([, value]) => value)
     .map(([label, value]) => row(label, value));
-  if (!rows.length) rows.push(create('p', { class: 'modal-note info-empty' }, 'No tags on this song'));
+  if (!rows.length) rows.push(p('modal-note info-empty', 'No tags on this song'));
   return rows;
 }
 

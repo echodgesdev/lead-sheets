@@ -7,14 +7,15 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px;
+  padding: 6px max(8px, env(safe-area-inset-right)) 6px max(8px, env(safe-area-inset-left));
   background: var(--glass-surface);
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
   border-top: 1px solid var(--glass-edge);
+  box-shadow: var(--shadow);
   overflow-x: auto;
   overflow-y: hidden;
+  scrollbar-width: none;
   touch-action: pan-x;
   -webkit-overflow-scrolling: touch;
   user-select: none;
@@ -22,8 +23,29 @@
   -webkit-touch-callout: none;
 }
 
+.keybar::-webkit-scrollbar {
+  display: none;
+}
+
 .keybar[hidden] {
   display: none;
+}
+
+.kb-group {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.kb-group:empty {
+  display: none;
+}
+
+.kb-group + .kb-group {
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line);
 }
 
 .kb-btn {
@@ -38,33 +60,38 @@
   background: var(--surface-2);
   box-shadow: var(--elev-1);
   border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
   touch-action: pan-x;
   user-select: none;
   -webkit-user-select: none;
   -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.15s, background-color 0.15s, transform 0.3s var(--spring);
 }
 
 .kb-btn:active {
   border-color: var(--accent);
-}
-
-.kb-symbol {
-  font-family: var(--mono);
-  font-weight: 700;
-}
-
-.kb-section {
-  color: var(--muted);
-  border-style: dashed;
-  border-color: var(--line);
-  background: transparent;
-  box-shadow: none;
+  transform: scale(0.94);
 }
 
 .kb-chord {
   font-family: var(--mono);
   font-weight: 700;
   color: var(--chord);
-  border-color: var(--chord);
+  background: var(--badge-bg);
+  border-color: var(--badge-line);
+  border-radius: 999px;
+}
+
+.kb-section {
+  color: var(--muted);
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.kb-symbol {
+  padding: 0 8px;
+  font-family: var(--mono);
+  font-weight: 700;
 }

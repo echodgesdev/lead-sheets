@@ -12,14 +12,14 @@ import {
   getPedalMode,
   setPedalMode,
 } from '../prefs.js';
-import { openModal } from '../modal.js';
+import { openModal } from './modal.js';
 import { choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { create, labeledButton } from '../dom.js';
+import { div, labeledButton } from '../dom.js';
 import { evt } from '../events.js';
 import { strings } from '../strings.js';
 
 export function openSongMenu(rec, { onSize, onClose, onEdit }) {
-  const editRow = create('div', { class: 'modal-row' });
+  const editRow = div('modal-row');
   const editBtn = labeledButton('pen-to-square', 'Edit song');
   editRow.append(editBtn);
   const dialog = openModal(

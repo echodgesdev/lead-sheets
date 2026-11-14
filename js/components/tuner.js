@@ -1,7 +1,7 @@
 import { listen } from '../audio/listen.js';
-import { attachDialog } from '../modal.js';
+import { attachDialog } from './modal.js';
 import { signed } from '../sheet/transpose.js';
-import { el, iconButton, cls } from '../dom.js';
+import { div, p, small, span, iconButton, cls } from '../dom.js';
 import { clamp } from '../math.js';
 
 const IN_TUNE_CENTS = 5;
@@ -12,18 +12,18 @@ export function createTunerControl() {
   const button = iconButton('guitar', 'Tuner');
 
   function buildDisplay() {
-    const root = el('div', 'modal-row tuner');
+    const root = div('modal-row tuner');
     root.classList.add(cls.idle);
-    const name = el('div', 'tuner-note');
-    const noteName = el('span', '', '–');
-    const octave = el('small', 'tuner-oct');
+    const name = div('tuner-note');
+    const noteName = span(null, '–');
+    const octave = small('tuner-oct');
     name.append(noteName, octave);
-    const meter = el('div', 'tuner-meter');
-    const needle = el('div', 'tuner-needle');
+    const meter = div('tuner-meter');
+    const needle = div('tuner-needle');
     needle.style.left = '50%';
     meter.append(needle);
-    const cents = el('div', 'tuner-cents');
-    const hz = el('div', 'tuner-hz');
+    const cents = div('tuner-cents');
+    const hz = div('tuner-hz');
     root.append(name, meter, cents, hz);
 
     function render(note) {
@@ -42,7 +42,7 @@ export function createTunerControl() {
 
   function open() {
     const display = buildDisplay();
-    const status = el('p', 'modal-note', 'Play a single string');
+    const status = p('modal-note', 'Play a single string');
     let closed = false;
     let stopListening = null;
     listen(display.render).then(

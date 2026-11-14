@@ -1,10 +1,10 @@
 import { TEXT_SIZE, getTextSize, setTextSize } from '../prefs.js';
-import { create, labeledButton, cls } from '../dom.js';
+import { div, input, span, labeledButton, cls } from '../dom.js';
 import { evt } from '../events.js';
 
 export function choiceRow(label, options, value, save) {
-  const row = create('div', { class: 'modal-row' });
-  const toggle = create('div', { class: 'seg-toggle' });
+  const row = div('modal-row');
+  const toggle = div('seg-toggle');
   const buttons = options.map((o) => [o.id, labeledButton(o.icon, o.label)]);
 
   function apply(id) {
@@ -14,14 +14,14 @@ export function choiceRow(label, options, value, save) {
 
   for (const [id, b] of buttons) b.addEventListener(evt.click, () => apply(id));
   toggle.append(...buttons.map(([, b]) => b));
-  row.append(create('span', { class: 'modal-label' }, label), toggle);
+  row.append(span('modal-label', label), toggle);
   apply(value);
   return row;
 }
 
 export function chipsRow(label, items, shownIds, save) {
-  const row = create('div', { class: 'modal-row' });
-  const chips = create('div', { class: 'chips' });
+  const row = div('modal-row');
+  const chips = div('chips');
   const shown = new Set(shownIds);
 
   for (const t of items) {
@@ -40,13 +40,13 @@ export function chipsRow(label, items, shownIds, save) {
     chips.append(b);
   }
 
-  row.append(create('span', { class: 'modal-label' }, label), chips);
+  row.append(span('modal-label', label), chips);
   return row;
 }
 
 export function textSizeRow(onSize) {
-  const r = create('div', { class: 'modal-row' });
-  const slider = create('input', {
+  const r = div('modal-row');
+  const slider = input({
     class: 'slider',
     type: 'range',
     min: TEXT_SIZE.min,
@@ -55,13 +55,13 @@ export function textSizeRow(onSize) {
     'aria-label': 'Text size',
   });
   slider.value = getTextSize();
-  const out = create('span', { class: 'slider-value' }, slider.value);
+  const out = span('slider-value', slider.value);
   slider.addEventListener(evt.input, () => {
     const size = Number(slider.value);
     out.textContent = slider.value;
     setTextSize(size);
     onSize?.(size);
   });
-  r.append(create('span', { class: 'modal-label' }, 'Text size'), out, slider);
+  r.append(span('modal-label', 'Text size'), out, slider);
   return r;
 }

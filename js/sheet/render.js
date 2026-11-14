@@ -1,15 +1,10 @@
-const NO_CHORD = '\u200B';
+import { b, div, pre, span } from '../dom.js';
 
-function make(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-  return node;
-}
+const NO_CHORD = '\u200B';
 
 function withMarks(node, text) {
   for (const part of text.split(/(\*+)/)) {
-    if (part) node.append(part[0] === '*' ? make('span', 'mark', part) : part);
+    if (part) node.append(part[0] === '*' ? span('mark', part) : part);
   }
   return node;
 }
@@ -17,32 +12,32 @@ function withMarks(node, text) {
 function renderSegment(segment) {
   if (segment.chord === null) return [segment.text];
   const [, anchor, rest] = /^(\S*)([\s\S]*)$/.exec(segment.text);
-  const seg = make('span', 'seg');
-  seg.append(withMarks(make('b'), segment.chord), make('span', '', anchor || NO_CHORD));
+  const seg = span('seg');
+  seg.append(withMarks(b(), segment.chord), span(null, anchor || NO_CHORD));
   return rest ? [seg, rest] : [seg];
 }
 
 function renderBlock(block) {
   switch (block.type) {
     case 'section':
-      return make('div', 'sec', block.name);
+      return div('sec', block.name);
     case 'pair': {
-      const pair = make('div', 'pair');
+      const pair = div('pair');
       pair.append(...block.segments.flatMap(renderSegment));
       return pair;
     }
     case 'chords':
-      return withMarks(make('div', 'chordline'), block.line);
+      return withMarks(div('chordline'), block.line);
     case 'lyric':
-      return make('div', 'lyric', block.text);
+      return div('lyric', block.text);
     case 'note':
-      return make('div', 'note', block.text);
+      return div('note', block.text);
     case 'key':
-      return make('div', 'keychange', `Key change: ${block.key}`);
+      return div('keychange', `Key change: ${block.key}`);
     case 'tab':
-      return make('pre', 'tab', block.lines.join('\n'));
+      return pre('tab', block.lines.join('\n'));
     case 'blank':
-      return make('div', 'gap');
+      return div('gap');
     default:
       return null;
   }

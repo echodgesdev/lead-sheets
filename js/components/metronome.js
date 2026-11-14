@@ -1,7 +1,7 @@
 import { MIN_BPM, MAX_BPM, DEFAULT_BPM, clampBpm, parseBpm, createTapper, createMetronome } from '../audio/click.js';
-import { attachDialog } from '../modal.js';
-import { icon } from '../icons.js';
-import { el, button, iconButton, labeledButton, cls } from '../dom.js';
+import { attachDialog } from './modal.js';
+import { icon } from './icons.js';
+import { div, small, span, button, iconButton, labeledButton, cls } from '../dom.js';
 import { evt } from '../events.js';
 
 export function createMetronomeControl(tempo) {
@@ -23,7 +23,7 @@ export function createMetronomeControl(tempo) {
   }
 
   function renderButton() {
-    headerBtn.replaceChildren(el('small', '', 'BPM'), el('span', '', String(bpm)));
+    headerBtn.replaceChildren(small(null, 'BPM'), span(null, String(bpm)));
     headerBtn.classList.toggle(cls.active, metronome.running);
     if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
   }
@@ -44,17 +44,17 @@ export function createMetronomeControl(tempo) {
 
   function open() {
     const downBtn = iconButton('minus', 'Slower');
-    const value = el('span', 'metro-bpm');
+    const value = span('metro-bpm');
     const upBtn = iconButton('plus', 'Faster');
-    const toggle = el('div', 'seg-toggle');
+    const toggle = div('seg-toggle');
     toggle.append(downBtn, value, upBtn);
-    const tempoRow = el('div', 'modal-row');
-    tempoRow.append(el('span', 'modal-label', 'Tempo'), toggle);
+    const tempoRow = div('modal-row');
+    tempoRow.append(span('modal-label', 'Tempo'), toggle);
 
     const tapBtn = labeledButton(null, 'Tap');
     tapBtn.title = 'Tap tempo';
     const startBtn = button('', 'Start');
-    const actions = el('div', 'modal-row metro-actions');
+    const actions = div('modal-row metro-actions');
     actions.append(tapBtn, startBtn);
 
     const onDown = () => setBpm(bpm - 1);

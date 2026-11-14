@@ -28,17 +28,17 @@ import {
   getSongOrder,
   tagValue,
 } from '../prefs.js';
-import { openSongMenu } from './menu.js';
-import { openSongDetails } from './details.js';
-import { createTunerControl } from './tuner.js';
-import { createMetronomeControl } from './metronome.js';
-import { icon } from '../icons.js';
-import { el, button, iconButton, cls } from '../dom.js';
+import { openSongMenu } from '../components/menu.js';
+import { openSongDetails } from '../components/details.js';
+import { createTunerControl } from '../components/tuner.js';
+import { createMetronomeControl } from '../components/metronome.js';
+import { icon } from '../components/icons.js';
+import { div, h1, header, p, small, span, button, iconButton, cls } from '../dom.js';
 import { evt, keys } from '../events.js';
 import { routes } from '../routes.js';
 import { clamp } from '../math.js';
 import { strings } from '../strings.js';
-import { mountNotFound } from './parts.js';
+import { mountNotFound } from '../components/parts.js';
 import { createAutoscroll, MIN_SPEED, MAX_SPEED, DEFAULT_SPEED } from '../live/autoscroll.js';
 import { holdWakeLock } from '../live/wakelock.js';
 
@@ -58,8 +58,8 @@ function fillTags(strip, rec) {
   for (const t of TAGS) {
     const value = shown.has(t.id) ? tagValue(rec, t.id) : '';
     if (!value) continue;
-    if (t.id === tagId.notes) nodes.push(el('p', 'live-notes', value));
-    else nodes.push(el('span', 'badge', t.prefix ? `${t.label} ${value}` : value));
+    if (t.id === tagId.notes) nodes.push(p('live-notes', value));
+    else nodes.push(span('badge', t.prefix ? `${t.label} ${value}` : value));
   }
   strip.replaceChildren(...nodes);
 }
@@ -88,16 +88,16 @@ export function mount(root, { id, preview = false, setId = null }) {
   let tap = null;
   const listening = new AbortController();
 
-  const header = el('header', 'hdr live-hdr');
+  const headerEl = header('hdr live-hdr');
   const homeBtn = iconButton('chevron-left', 'Back to songs');
   const editBtn = iconButton('pen-to-square', 'Edit song');
   editBtn.hidden = !preview;
-  const capoToggle = el('div', 'seg-toggle');
+  const capoToggle = div('seg-toggle');
   const capoDownBtn = iconButton('minus', 'Capo down');
   const capoBtn = button('', 'Reset capo', 'btn live-key');
   const capoUpBtn = iconButton('plus', 'Capo up');
   capoToggle.append(capoDownBtn, capoBtn, capoUpBtn);
-  const transpose = el('div', 'seg-toggle');
+  const transpose = div('seg-toggle');
   const downBtn = iconButton('minus', 'Transpose down');
   const shiftBtn = button('', 'Reset transpose', 'btn live-key');
   const upBtn = iconButton('plus', 'Transpose up');
@@ -108,24 +108,24 @@ export function mount(root, { id, preview = false, setId = null }) {
   const menuBtn = iconButton('ellipsis-vertical', 'More options');
   const tuner = createTunerControl();
   const metronome = createMetronomeControl(rec.tempo);
-  header.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
-  const tags = el('div', 'live-tags');
-  const title = el('h1', 'live-title', rec.title || strings.untitled);
+  headerEl.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
+  const tags = div('live-tags');
+  const title = h1('live-title', rec.title || strings.untitled);
 
-  const sheet = el('div', 'sheet');
+  const sheet = div('sheet');
   const setSize = (px) => sheet.style.setProperty('--sheet-size', `${px}px`);
   setSize(getTextSize());
 
-  const bar = el('div', 'bar');
+  const bar = div('bar');
   const prevBtn = iconButton('backward-step', 'Previous song');
   const slowBtn = iconButton('minus', 'Slower');
   const playBtn = button('', 'Play or pause');
   const fastBtn = iconButton('plus', 'Faster');
   const nextBtn = iconButton('forward-step', 'Next song');
-  const speedLabel = el('span', 'live-bar-speed');
+  const speedLabel = span('live-bar-speed');
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
-  root.replaceChildren(header, tags, title, sheet, bar);
+  root.replaceChildren(headerEl, tags, title, sheet, bar);
 
   const scroll = createAutoscroll({
     speed: Math.round(Number(rec.scrollSpeed) || DEFAULT_SPEED),
@@ -141,11 +141,11 @@ export function mount(root, { id, preview = false, setId = null }) {
     const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
     renderSheet(viewChords(parsed, view), sheet);
     fillTags(tags, shownRec());
-    capoBtn.replaceChildren(el('small', '', 'Capo'), el('span', '', String(fret)));
+    capoBtn.replaceChildren(small(null, 'Capo'), span(null, String(fret)));
     capoBtn.classList.toggle(cls.active, fret !== base.capo);
     capoDownBtn.disabled = fret <= 0;
     capoUpBtn.disabled = fret >= maxFret;
-    shiftBtn.replaceChildren(el('small', '', 'Shift'), el('span', '', signed(shift)));
+    shiftBtn.replaceChildren(small(null, 'Shift'), span(null, signed(shift)));
     shiftBtn.classList.toggle(cls.active, shift !== base.shift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;

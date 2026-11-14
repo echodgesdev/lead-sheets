@@ -1,14 +1,12 @@
-import { evt } from './events.js';
+import { div, button } from '../dom.js';
+import { evt } from '../events.js';
 
 const SHOW_MS = 4000;
 let current = null;
 
 export function toast(text, action) {
   current?.();
-  const node = document.createElement('div');
-  node.className = 'toast';
-  node.setAttribute('role', 'status');
-  node.append(text);
+  const node = div({ class: 'toast', role: 'status' }, text);
   const timer = setTimeout(dismiss, SHOW_MS);
 
   function dismiss() {
@@ -18,10 +16,7 @@ export function toast(text, action) {
   }
 
   if (action) {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'toast-action';
-    b.textContent = action.label;
+    const b = button(action.label, action.label, 'toast-action');
     b.addEventListener(evt.click, () => {
       dismiss();
       action.run();

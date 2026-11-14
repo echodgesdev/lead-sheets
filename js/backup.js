@@ -1,5 +1,6 @@
 import * as store from './store.js';
 import * as setlists from './setlists.js';
+import { a } from './dom.js';
 
 const FORMAT = { app: 'tabs', version: 2 };
 const VERSIONS = [1, 2];
@@ -12,12 +13,10 @@ function localDate() {
 
 function download(blob, name) {
   const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.append(a);
-  a.click();
-  a.remove();
+  const link = a({ href: url, download: name });
+  document.body.append(link);
+  link.click();
+  link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 

@@ -14,26 +14,26 @@ How code in this repo is written. Read this before changing anything; match it r
 |---|---|
 | `js/app.js` | Router. Maps each view name from `parseRoute` to that view's `mount`. |
 | `js/routes.js` | Hash URL format: `routes.*` builders, `parseRoute`, `views`, and `NEW_ID` for unsaved records. Nothing else builds or parses `#/...` strings. |
-| `js/views/*.js` | Screens and dialogs. UI only. |
+| `js/views/*.js` | Routed screens only: `list`, `live`, `edit`, `setlist`. Each exports `mount(root, params)` for the router. UI only. |
+| `js/components/*.js` | Everything UI that isn't a routed screen. Primitives: `modal.js` (`openModal`, `attachDialog`), `toast.js`, `icons.js`, `rows.js` (dialog rows), `parts.js` (search box, song row, not-found screen). Widgets: `keybar.js`, `tuner.js`, `metronome.js`. Dialogs: `menu.js`, `settings.js`, `details.js`. |
 | `js/sheet/*.js` | Pure song logic: parse, infer, transpose, render. No storage, no prefs. |
-| `js/edit/*.js` | Editor helpers (keybar). |
+| `js/edit/*.js` | Editor text logic with no DOM: `insert.js` (keybar chord chips and the text each key inserts). |
 | `js/live/*.js` | Live-mode behaviour with no UI: `autoscroll.js` (scroll engine, paging, touch/wheel sync), `wakelock.js` (screen wake lock). `views/live.js` builds the screen and wires these together. |
 | `js/db.js` | IndexedDB wrapper (`dbAll`, `dbPut`, `dbDelete`; stores `songs`, `setlists`). |
 | `js/store.js`, `js/setlists.js` | In-memory caches over `db.js`; `load()` at start, then sync `all()` / `get(id)` and async writes. |
 | `js/prefs.js` | All localStorage preferences. |
-| `js/dom.js` | DOM builders (`create`, `el`, `button`, `iconButton`, `labeledButton`) and `cls`, the state class names. |
+| `js/dom.js` | DOM builders: one function per tag (`div`, `span`, `p`, …), `button`, `iconButton`, `labeledButton`, and `cls`, the state class names. The only place `document.createElement` is called. |
 | `js/events.js` | `evt` (DOM event names) and `keys` (`KeyboardEvent.key` values). |
 | `js/autosave.js` | `createAutosave`: debounced, queued saves that also flush when the app is hidden. Used by every editing screen. |
 | `js/math.js` | `clamp`, `mod12`. |
 | `js/strings.js` | `strings`: UI text used in more than one place. |
-| `js/views/parts.js` | Shared screen pieces: `searchBox`, `rowMain`, `mountNotFound`. |
-| `js/modal.js`, `js/toast.js`, `js/icons.js`, `js/theme.js` | Shared UI primitives. |
+| `js/theme.js` | Theme choice (`getTheme`, `setTheme`); applies the saved theme on load. |
 | `js/audio/*.js` | Web Audio: shared context, pitch detection, mic input, metronome clicks. |
 | `css/app.css` | App chrome, tokens, components. `sheet.css` is the song sheet; `keybar.css` the editor keybar. |
 | `sw.js` | Service worker, cache-first. |
 | `test/` | Browser test runner. |
 
-New logic that isn't UI gets its own module outside `views/` (as `sheet/` does), so it can be tested without the DOM.
+New logic that isn't UI gets its own module outside `views/` and `components/` (as `sheet/` does), so it can be tested without the DOM.
 
 ## Views
 
@@ -46,17 +46,18 @@ New logic that isn't UI gets its own module outside `views/` (as `sheet/` does),
   - Option ids come from the id map next to their option list: `controlId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, and `groupId` in `group.js`. The list entries reference the map, so each id is written once.
   - Add a new entry to the frozen map rather than writing the literal. Structural class names passed to `create`/`el`/`button` stay as plain strings, as do CSS selectors.
 - Handlers are named `const onX = () => ...` and added with `addEventListener`. Listeners on the view's own elements need no removal; they go when the router replaces the view. Listeners on anything that outlives the view (`window`, `document`, `visualViewport`) take `{ signal }` from one `AbortController`, and cleanup calls `abort()`. Cleanup also releases anything held (wake lock, rAF, timers, audio, media streams) and sets a `disposed` flag that async callbacks check.
-- Build DOM imperatively with `js/dom.js`: `create(tag, attrs, text)` or `el(tag, className, text)`. Don't redefine these locally.
-- Buttons always come from `dom.js`, never `create('button', …)`: `button(label, title, className)` or `iconButton(name, title, className)` (both set `type="button"`, `title` and `aria-label`), or `labeledButton(icon, text, className)` for a visible text label. The one exception is a whole-row button whose rich content is its label (setlist's add-song row); it uses `create('button', …)` so no `aria-label` hides that content. Toggled state is `.active` plus `aria-pressed`.
+- Build DOM with the tag builders in `js/dom.js`: `div(attrs, text)`, `span(…)`, `p(…)` and so on. `attrs` is a class string (`div('row-title', title)`), an attribute object (`input({ type: 'range', min: 1 })`), or `null`. Never call `document.createElement` or pass a tag name as a string; a tag the code needs that has no builder gets one in `dom.js`. Don't name a local after a builder you import (`headerEl`, not `header`). SVG is the exception (`components/icons.js`, `createElementNS`).
+- Buttons always come from `dom.js`: `button(label, title, className)` or `iconButton(name, title, className)` (both set `type="button"`, `title` and `aria-label`), or `labeledButton(icon, text, className)` for a visible text label. `labeledButton` also takes a node as its content, for whole-row buttons (setlist's add-song row). Toggled state is `.active` plus `aria-pressed`.
 - Re-render by replacing children (`replaceChildren`) from state, in a `renderX()` function, not by patching nodes ad hoc.
 - Live view keyboard and tap handlers ignore input while a `dialog[open]` exists; anything modal must be a `<dialog>`.
 
 ## Dialogs
 
-- `openModal(title, ...rows)` from `modal.js` builds, shows and removes on close. Listen for `close` on the returned dialog for teardown.
+- `openModal(title, ...rows)` from `components/modal.js` builds, shows and removes on close. Listen for `close` on the returned dialog for teardown.
 - A button that opens a dialog and owns state across opens (tuner, metronome) uses `attachDialog(button, title, open)`. `open()` returns `{ rows, onClose }`, and the returned function disposes it. Don't track the dialog by hand.
-- Rows are `div.modal-row` with a `span.modal-label` first. Reuse `views/rows.js` helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
-- Screen pieces built in more than one view (search box, song row title/subtitle, not-found screen) come from `views/parts.js`.
+- Rows are `div.modal-row` with a `span.modal-label` first. Reuse `components/rows.js` helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
+- Screen pieces built in more than one view (search box, song row title/subtitle, not-found screen) come from `components/parts.js`. A self-contained UI piece (shared, or a widget that owns its own DOM and listeners) goes in `components/`; its non-UI logic goes in a plain module beside the code it serves (as `edit/insert.js` does for the keybar).
+- Views compose components; components may compose other components. Dependencies point one way: views → components → infrastructure (`dom.js`, `events.js`, `routes.js`, `prefs.js`, `audio/`, `edit/`, `sheet/`, …). A component never imports a view, and components never import each other in a cycle. Anything a component needs from a screen is passed in (`createMetronomeControl(tempo)`, `attachKeybar(textarea)`).
 
 ## Live controls
 
@@ -71,7 +72,7 @@ New logic that isn't UI gets its own module outside `views/` (as `sheet/` does),
 
 ## Icons
 
-- Font Awesome Free 6.7.2 **solid**, inlined in `js/icons.js` as `'name': [viewBox, pathD]`.
+- Font Awesome Free 6.7.2 **solid**, inlined in `js/components/icons.js` as `'name': [viewBox, pathD]`.
 - Copy the viewBox and path exactly from the Font Awesome 6.7.2 source. Never hand-write or approximate a path.
 
 ## CSS
@@ -88,7 +89,7 @@ New logic that isn't UI gets its own module outside `views/` (as `sheet/` does),
 
 - Open `/test/` on a local server. `test/harness.js` exports `test(name, fn)`, `eq(actual, expected, msg)` (JSON comparison) and `fixture(name)`.
 - One `*.test.js` per logic module, importing from `../js/...`. Register new files in the `files` array in `test/run.js`.
-- Test pure modules only; views aren't unit tested.
+- Test pure modules only; views and components aren't unit tested.
 
 ## Code style
 
