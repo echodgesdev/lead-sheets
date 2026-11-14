@@ -591,6 +591,12 @@ button.row:active {
   margin-right: auto;
 }
 
+.live-lead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .live-title {
   max-width: 760px;
   margin: 0 auto;

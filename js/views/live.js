@@ -103,7 +103,9 @@ export function mount(root, { id, preview = false, setId = null }) {
   const menuBtn = iconButton(iconId.ellipsisVertical, 'More options');
   const tuner = createTunerControl();
   const metronome = createMetronomeControl(rec.tempo);
-  headerEl.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
+  const lead = div('live-lead');
+  lead.append(homeBtn, transpose);
+  headerEl.append(lead, capoToggle, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
   const tags = div('live-tags');
   const title = h1('live-title', rec.title || strings.untitled);
 
@@ -140,7 +142,7 @@ export function mount(root, { id, preview = false, setId = null }) {
     capoBtn.classList.toggle(cls.active, fret !== base.capo);
     capoDownBtn.disabled = fret <= 0;
     capoUpBtn.disabled = fret >= maxFret;
-    shiftBtn.replaceChildren(...keyFace('Shift', signed(shift)));
+    shiftBtn.replaceChildren(...keyFace('Transpose', signed(shift)));
     shiftBtn.classList.toggle(cls.active, shift !== base.shift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
