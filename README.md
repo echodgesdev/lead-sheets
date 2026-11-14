@@ -18,4 +18,4 @@ An offline lead sheet and tab viewer that installs to your phone's home screen. 
   - Python: `py -m http.server 8000` on Windows, `python3 -m http.server 8000` elsewhere → `http://localhost:8000/`
   - Node: `npx serve .` → `http://localhost:3000/`
   - Tests: open `/test/` on the same server.
-- Icons: [Font Awesome Free](https://fontawesome.com) 6.7.2, CC BY 4.0, bundled in `js/components/icons.js` so the app works offline.
+- Icons: [Font Awesome Free](https://fontawesome.com) 6.7.2, CC BY 4.0, bundled in `js/core/icons.js` so the app works offline.

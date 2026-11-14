@@ -1,14 +1,14 @@
-import * as store from '../store.js';
+import * as store from '../data/store.js';
 import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../components/keybar.js';
-import { icon } from '../components/icons.js';
+import { icon } from '../core/icons.js';
 import { toast } from '../components/toast.js';
-import { editorId, featureId, getEditorOptions, hasFeature } from '../prefs.js';
-import { shareText } from '../share.js';
-import { div, h1, header, span, textarea, iconButton, labeledButton } from '../dom.js';
-import { evt, keys } from '../events.js';
+import { editorId, featureId, getEditorOptions, hasFeature } from '../data/prefs.js';
+import { shareText } from '../components/share.js';
+import { div, h1, header, span, textarea, iconButton, labeledButton } from '../core/dom.js';
+import { evt, keys } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
-import { createAutosave } from '../autosave.js';
+import { createAutosave } from '../core/autosave.js';
 import { strings } from '../strings.js';
 
 const NEW_TEMPLATE = 'New Song\nArtist: \nAlbum: \nGenre: \nKey: \nCapo: \nTuning: \nMeta: \nNotes: \n\nVerse 1:\n\nChorus:\n';

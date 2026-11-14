@@ -1,7 +1,7 @@
-import * as store from '../store.js';
-import * as setlists from '../setlists.js';
+import * as store from '../data/store.js';
+import * as setlists from '../data/setlists.js';
 import { parse } from '../sheet/parse.js';
-import { renderSheet } from '../sheet/render.js';
+import { renderSheet } from '../components/sheet.js';
 import {
   viewChords,
   transposeKey,
@@ -27,20 +27,20 @@ import {
   getTextSize,
   getSongOrder,
   tagValue,
-} from '../prefs.js';
+} from '../data/prefs.js';
 import { openSongMenu } from '../components/menu.js';
 import { openSongDetails } from '../components/details.js';
 import { createTunerControl } from '../components/tuner.js';
 import { createMetronomeControl } from '../components/metronome.js';
-import { icon } from '../components/icons.js';
-import { div, h1, header, p, small, span, button, iconButton, cls } from '../dom.js';
-import { evt, keys } from '../events.js';
+import { icon } from '../core/icons.js';
+import { div, h1, header, p, small, span, button, iconButton, cls } from '../core/dom.js';
+import { evt, keys } from '../core/events.js';
 import { routes } from '../routes.js';
-import { clamp } from '../math.js';
+import { clamp } from '../core/math.js';
 import { strings } from '../strings.js';
 import { mountNotFound } from '../components/parts.js';
-import { createAutoscroll, MIN_SPEED, MAX_SPEED, DEFAULT_SPEED } from '../live/autoscroll.js';
-import { holdWakeLock } from '../live/wakelock.js';
+import { createAutoscroll, MIN_SPEED, MAX_SPEED, DEFAULT_SPEED } from '../core/autoscroll.js';
+import { holdWakeLock } from '../core/wakelock.js';
 
 const TAP_SLOP = 10;
 const FORWARD_KEYS = new Set([keys.pageDown, keys.arrowDown, keys.arrowRight]);

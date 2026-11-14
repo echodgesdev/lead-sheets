@@ -1,6 +1,6 @@
 import * as store from './store.js';
 import * as setlists from './setlists.js';
-import { a } from './dom.js';
+import { a } from '../core/dom.js';
 
 const FORMAT = { app: 'tabs', version: 2 };
 const VERSIONS = [1, 2];

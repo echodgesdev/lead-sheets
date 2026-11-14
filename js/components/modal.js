@@ -1,5 +1,5 @@
-import { dialog, div, h2, iconButton } from '../dom.js';
-import { evt } from '../events.js';
+import { dialog, div, h2, iconButton } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 export function openModal(title, ...rows) {
   const modal = dialog({ class: 'modal', 'aria-labelledby': 'modal-title' });

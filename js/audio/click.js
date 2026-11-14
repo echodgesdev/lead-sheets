@@ -1,5 +1,5 @@
 import { audioContext } from './context.js';
-import { clamp } from '../math.js';
+import { clamp } from '../core/math.js';
 
 export const MIN_BPM = 30;
 export const MAX_BPM = 250;

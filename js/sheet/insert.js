@@ -1,5 +1,5 @@
-import { chordsIn, diatonic } from '../sheet/chords.js';
-import { parse } from '../sheet/parse.js';
+import { chordsIn, diatonic } from './chords.js';
+import { parse } from './parse.js';
 
 function headerKey(text) {
   const head = text.replace(/^\s+/, '').split(/\n[ \t]*\r?\n/)[0];

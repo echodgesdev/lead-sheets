@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { groupSongs, groupSetlists } from '../js/group.js';
+import { groupSongs, groupSetlists } from '../js/data/group.js';
 
 const songs = [
   { id: '1', title: 'Bright Harbor', artist: 'The Driftwood Kites', meta: ['opener', 'Fast'] },

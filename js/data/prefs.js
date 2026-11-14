@@ -1,5 +1,5 @@
 import { GROUPS, groupId } from './group.js';
-import { clamp } from './math.js';
+import { clamp } from '../core/math.js';
 
 const MODE_KEY = 'tabs.mode';
 const GROUP_KEY = 'tabs.group';

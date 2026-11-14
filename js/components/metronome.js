@@ -1,8 +1,8 @@
 import { MIN_BPM, MAX_BPM, DEFAULT_BPM, clampBpm, parseBpm, createTapper, createMetronome } from '../audio/click.js';
 import { attachDialog } from './modal.js';
-import { icon } from './icons.js';
-import { div, small, span, button, iconButton, labeledButton, cls } from '../dom.js';
-import { evt } from '../events.js';
+import { icon } from '../core/icons.js';
+import { div, small, span, button, iconButton, labeledButton, cls } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 export function createMetronomeControl(tempo) {
   let bpm = parseBpm(tempo) ?? DEFAULT_BPM;

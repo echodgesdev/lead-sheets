@@ -1,6 +1,6 @@
-import { chordChips, chordText, sectionText } from '../edit/insert.js';
-import { div, labeledButton } from '../dom.js';
-import { evt } from '../events.js';
+import { chordChips, chordText, sectionText } from '../sheet/insert.js';
+import { div, labeledButton } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 const SYMBOLS = [':', '#', 'b', '/', '|', 'x2'];
 const SECTIONS = ['Verse', 'Chorus', 'Bridge', 'Intro', 'Outro'];

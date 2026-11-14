@@ -1,6 +1,6 @@
-import { TAGS, tagValue } from '../prefs.js';
+import { TAGS, tagValue } from '../data/prefs.js';
 import { openModal } from './modal.js';
-import { div, p, span } from '../dom.js';
+import { div, p, span } from '../core/dom.js';
 import { strings } from '../strings.js';
 
 function capitalize(name) {

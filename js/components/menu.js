@@ -11,11 +11,11 @@ import {
   setNumberStyle,
   getPedalMode,
   setPedalMode,
-} from '../prefs.js';
+} from '../data/prefs.js';
 import { openModal } from './modal.js';
 import { choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { div, labeledButton } from '../dom.js';
-import { evt } from '../events.js';
+import { div, labeledButton } from '../core/dom.js';
+import { evt } from '../core/events.js';
 import { strings } from '../strings.js';
 
 export function openSongMenu(rec, { onSize, onClose, onEdit }) {

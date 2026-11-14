@@ -1,10 +1,10 @@
-import * as store from '../store.js';
-import * as setlists from '../setlists.js';
+import * as store from '../data/store.js';
+import * as setlists from '../data/setlists.js';
 import { openSettings } from '../components/settings.js';
-import { icon } from '../components/icons.js';
-import { GROUPS, groupId, groupSongs, groupSetlists } from '../group.js';
+import { icon } from '../core/icons.js';
+import { GROUPS, groupId, groupSongs, groupSetlists } from '../data/group.js';
 import { transposeKey } from '../sheet/transpose.js';
-import { importText } from '../backup.js';
+import { importText } from '../data/backup.js';
 import {
   modeId,
   featureId,
@@ -16,10 +16,10 @@ import {
   getListQuery,
   setListQuery,
   setSongOrder,
-} from '../prefs.js';
+} from '../data/prefs.js';
 import { toast } from '../components/toast.js';
-import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, cls } from '../dom.js';
-import { evt } from '../events.js';
+import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, cls } from '../core/dom.js';
+import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
 

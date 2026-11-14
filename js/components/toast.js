@@ -1,5 +1,5 @@
-import { div, button } from '../dom.js';
-import { evt } from '../events.js';
+import { div, button } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 const SHOW_MS = 4000;
 let current = null;

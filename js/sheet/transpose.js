@@ -1,5 +1,5 @@
 import { NATURAL, SHARPS, chordTokens } from './chords.js';
-import { clamp, mod12 } from '../math.js';
+import { clamp, mod12 } from '../core/math.js';
 
 const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const MAJOR_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];

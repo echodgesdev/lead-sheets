@@ -1,4 +1,4 @@
-import { strings } from './strings.js';
+import { strings } from '../strings.js';
 
 export const groupId = Object.freeze({
   title: 'title',

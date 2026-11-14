@@ -1,4 +1,4 @@
-import { evt } from './events.js';
+import { evt } from '../core/events.js';
 
 const KEY = 'tabs.theme';
 const BAR_COLOR = { dark: '#0a1219', light: '#0f1923' };

@@ -1,5 +1,5 @@
-import { evt } from '../events.js';
-import { clamp } from '../math.js';
+import { evt } from './events.js';
+import { clamp } from './math.js';
 
 export const MIN_SPEED = 1;
 export const MAX_SPEED = 10;

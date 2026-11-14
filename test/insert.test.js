@@ -1,6 +1,6 @@
 import { test, eq } from './harness.js';
 import { diatonic } from '../js/sheet/chords.js';
-import { chordChips, chordText, sectionText } from '../js/edit/insert.js';
+import { chordChips, chordText, sectionText } from '../js/sheet/insert.js';
 
 test('chordChips lists used chords, then the rest of the key', () => {
   const chips = chordChips('Song\nkey: G\n\n[G]Hello [D]world');

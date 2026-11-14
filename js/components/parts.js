@@ -1,5 +1,5 @@
-import { icon } from './icons.js';
-import { a, div, input, label, p } from '../dom.js';
+import { icon } from '../core/icons.js';
+import { a, div, input, label, p } from '../core/dom.js';
 import { routes } from '../routes.js';
 import { strings } from '../strings.js';
 

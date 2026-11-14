@@ -1,4 +1,4 @@
-import { parse, splitTags, fieldName, LIST_FIELDS } from './sheet/parse.js';
+import { parse, splitTags, fieldName, LIST_FIELDS } from '../sheet/parse.js';
 import { SONGS, dbAll, dbPut, dbDelete } from './db.js';
 
 const DEFAULT_SCROLL = 3;

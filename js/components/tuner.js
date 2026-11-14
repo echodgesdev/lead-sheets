@@ -1,8 +1,8 @@
 import { listen } from '../audio/listen.js';
 import { attachDialog } from './modal.js';
 import { signed } from '../sheet/transpose.js';
-import { div, p, small, span, iconButton, cls } from '../dom.js';
-import { clamp } from '../math.js';
+import { div, p, small, span, iconButton, cls } from '../core/dom.js';
+import { clamp } from '../core/math.js';
 
 const IN_TUNE_CENTS = 5;
 const MAX_CENTS = 50;

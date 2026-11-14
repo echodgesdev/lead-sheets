@@ -1,13 +1,13 @@
-import './theme.js';
-import * as store from './store.js';
-import * as setlists from './setlists.js';
+import './data/theme.js';
+import * as store from './data/store.js';
+import * as setlists from './data/setlists.js';
 import { mount as mountList } from './views/list.js';
 import { mount as mountLive } from './views/live.js';
 import { mount as mountEdit } from './views/edit.js';
 import { mount as mountSetlist } from './views/setlist.js';
-import { evt } from './events.js';
+import { evt } from './core/events.js';
 import { views, parseRoute } from './routes.js';
-import { p } from './dom.js';
+import { p } from './core/dom.js';
 
 const MOUNTS = {
   [views.live]: mountLive,

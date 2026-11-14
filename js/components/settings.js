@@ -1,5 +1,5 @@
-import * as backup from '../backup.js';
-import { getTheme, setTheme } from '../theme.js';
+import * as backup from '../data/backup.js';
+import { getTheme, setTheme } from '../data/theme.js';
 import {
   TAGS,
   CONTROLS,
@@ -19,11 +19,11 @@ import {
   FEATURES,
   getFeatures,
   setFeatures,
-} from '../prefs.js';
+} from '../data/prefs.js';
 import { openModal } from './modal.js';
 import { choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { div, input, p, span, labeledButton } from '../dom.js';
-import { evt } from '../events.js';
+import { div, input, p, span, labeledButton } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 const THEMES = [
   { id: 'system', icon: 'circle-half-stroke', label: 'Auto' },

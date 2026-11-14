@@ -1,11 +1,11 @@
-import * as store from '../store.js';
-import * as setlists from '../setlists.js';
+import * as store from '../data/store.js';
+import * as setlists from '../data/setlists.js';
 import { capoFret, placeCapo, transposeKey, signed, MAX_SHIFT } from '../sheet/transpose.js';
-import { icon } from '../components/icons.js';
-import { div, h1, header, input, p, small, span, iconButton, labeledButton, cls } from '../dom.js';
-import { evt } from '../events.js';
+import { icon } from '../core/icons.js';
+import { div, h1, header, input, p, small, span, iconButton, labeledButton, cls } from '../core/dom.js';
+import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
-import { createAutosave } from '../autosave.js';
+import { createAutosave } from '../core/autosave.js';
 import { strings } from '../strings.js';
 import { searchBox, rowMain, mountNotFound } from '../components/parts.js';
 

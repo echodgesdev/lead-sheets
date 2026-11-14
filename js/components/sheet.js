@@ -1,4 +1,4 @@
-import { b, div, pre, span } from '../dom.js';
+import { b, div, pre, span } from '../core/dom.js';
 
 const NO_CHORD = '\u200B';
 

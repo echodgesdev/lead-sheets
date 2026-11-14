@@ -1,4 +1,4 @@
-import { toast } from './components/toast.js';
+import { toast } from './toast.js';
 
 export async function shareText(title, text) {
   if (navigator.share) {

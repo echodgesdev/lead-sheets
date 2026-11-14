@@ -1,4 +1,4 @@
-import { icon } from './components/icons.js';
+import { icon } from './icons.js';
 
 export const cls = Object.freeze({
   active: 'active',

@@ -1,5 +1,5 @@
 import { SHARPS } from '../sheet/chords.js';
-import { mod12 } from '../math.js';
+import { mod12 } from '../core/math.js';
 
 const MIN_FREQ = 60;
 const MAX_FREQ = 1100;

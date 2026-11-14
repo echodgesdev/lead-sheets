@@ -1,6 +1,6 @@
-import { TEXT_SIZE, getTextSize, setTextSize } from '../prefs.js';
-import { div, input, span, labeledButton, cls } from '../dom.js';
-import { evt } from '../events.js';
+import { TEXT_SIZE, getTextSize, setTextSize } from '../data/prefs.js';
+import { div, input, span, labeledButton, cls } from '../core/dom.js';
+import { evt } from '../core/events.js';
 
 export function choiceRow(label, options, value, save) {
   const row = div('modal-row');

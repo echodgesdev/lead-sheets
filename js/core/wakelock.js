@@ -1,4 +1,4 @@
-import { evt } from '../events.js';
+import { evt } from './events.js';
 
 export function holdWakeLock(signal) {
   let lock = null;
