@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { parseBpm, createTapper, MIN_BPM, MAX_BPM } from '../js/audio/click.js';
+import { parseBpm, createTapper, MIN_BPM, MAX_BPM, MAX_BEATS, levelId, defaultPattern, resizePattern, cycleLevel, parsePattern } from '../js/audio/click.js';
 import { detectPitch, noteOf } from '../js/audio/pitch.js';
 
 const SAMPLE_RATE = 48000;
@@ -88,4 +88,32 @@ test('detectPitch avoids octave errors on a harmonic-rich low E', () => {
 
 test('detectPitch returns null for silence', () => {
   eq(detectPitch(new Float32Array(BUFFER_SIZE), SAMPLE_RATE), null);
+});
+
+const { accent, normal, soft, mute } = levelId;
+
+test('defaultPattern accents the first beat', () => {
+  eq(defaultPattern(4), [accent, normal, normal, normal]);
+  eq(defaultPattern(1), [accent]);
+  eq(defaultPattern(0), [accent]);
+  eq(defaultPattern(99).length, MAX_BEATS);
+});
+
+test('resizePattern keeps existing beats and pads with normal', () => {
+  eq(resizePattern([accent, soft, mute], 5), [accent, soft, mute, normal, normal]);
+  eq(resizePattern([accent, soft, mute], 2), [accent, soft]);
+  eq(resizePattern([soft], 0), [soft]);
+  eq(resizePattern([], 3), [accent, normal, normal]);
+});
+
+test('cycleLevel goes accent, normal, soft, mute and wraps', () => {
+  eq([accent, normal, soft, mute].map(cycleLevel), [normal, soft, mute, accent]);
+});
+
+test('parsePattern accepts only valid stored patterns', () => {
+  eq(parsePattern([accent, mute]), [accent, mute]);
+  eq(parsePattern(null), null);
+  eq(parsePattern([]), null);
+  eq(parsePattern([accent, 'loud']), null);
+  eq(parsePattern(Array(MAX_BEATS + 1).fill(normal)), null);
 });

@@ -972,13 +972,70 @@ button.row:active {
   font-variant-numeric: tabular-nums;
 }
 
-.metro-bpm {
+.metro-value {
   min-width: 64px;
   align-self: center;
   font-size: 20px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   text-align: center;
+}
+
+.metro-pads {
+  flex-wrap: nowrap;
+  justify-content: center;
+  gap: 6px;
+  padding-top: 0;
+}
+
+.metro-pad {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 56px;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  overflow: hidden;
+  border-radius: var(--r-sm);
+}
+
+.metro-pad::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--fill, 0%);
+  background: var(--accent);
+  transition: height 0.15s var(--ease);
+}
+
+.metro-pad[data-level="accent"] {
+  --fill: 100%;
+}
+
+.metro-pad[data-level="accent"]::after {
+  background: var(--accent-grad);
+}
+
+.metro-pad[data-level="normal"] {
+  --fill: 60%;
+}
+
+.metro-pad[data-level="soft"] {
+  --fill: 30%;
+}
+
+.metro-pad[data-level="mute"] {
+  background: transparent;
+  box-shadow: none;
+  border: 1px dashed var(--line);
+}
+
+.metro-pad.beat {
+  border-color: var(--fg);
+  animation: beat 0.16s ease-out;
 }
 
 .metro-actions .btn {

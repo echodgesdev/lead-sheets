@@ -4,8 +4,19 @@ import { clamp } from '../core/math.js';
 export const MIN_BPM = 30;
 export const MAX_BPM = 250;
 export const DEFAULT_BPM = 100;
+export const MIN_BEATS = 1;
+export const MAX_BEATS = 12;
+export const DEFAULT_BEATS = 4;
 
-const BEATS_PER_BAR = 4;
+export const levelId = Object.freeze({
+  accent: 'accent',
+  normal: 'normal',
+  soft: 'soft',
+  mute: 'mute',
+});
+
+const LEVEL_CYCLE = [levelId.accent, levelId.normal, levelId.soft, levelId.mute];
+
 const TAP_WINDOW = 4;
 const TAP_GAP_MS = 2000;
 const LOOKAHEAD_MS = 25;
@@ -17,7 +28,14 @@ const ACCENT_HZ = 1600;
 const BEAT_HZ = 1000;
 const ACCENT_GAIN = 0.9;
 const BEAT_GAIN = 0.6;
+const SOFT_GAIN = 0.2;
 const SILENT_GAIN = 0.0001;
+
+const SOUNDS = {
+  [levelId.accent]: { hz: ACCENT_HZ, gain: ACCENT_GAIN },
+  [levelId.normal]: { hz: BEAT_HZ, gain: BEAT_GAIN },
+  [levelId.soft]: { hz: BEAT_HZ, gain: SOFT_GAIN },
+};
 
 export function clampBpm(n) {
   return clamp(Math.round(n), MIN_BPM, MAX_BPM);
@@ -26,6 +44,26 @@ export function clampBpm(n) {
 export function parseBpm(tempo) {
   const match = /\d+(?:\.\d+)?/.exec(String(tempo ?? ''));
   return match ? clampBpm(Number(match[0])) : null;
+}
+
+export function defaultPattern(beats) {
+  const n = clamp(Math.round(beats), MIN_BEATS, MAX_BEATS);
+  return [levelId.accent, ...Array(n - 1).fill(levelId.normal)];
+}
+
+export function resizePattern(pattern, beats) {
+  const n = clamp(Math.round(beats), MIN_BEATS, MAX_BEATS);
+  if (!pattern.length) return defaultPattern(n);
+  return [...pattern.slice(0, n), ...Array(Math.max(0, n - pattern.length)).fill(levelId.normal)];
+}
+
+export function cycleLevel(level) {
+  return LEVEL_CYCLE[(LEVEL_CYCLE.indexOf(level) + 1) % LEVEL_CYCLE.length];
+}
+
+export function parsePattern(value) {
+  if (!Array.isArray(value) || value.length < MIN_BEATS || value.length > MAX_BEATS) return null;
+  return value.every((level) => LEVEL_CYCLE.includes(level)) ? [...value] : null;
 }
 
 export function createTapper() {
@@ -46,17 +84,18 @@ export function createMetronome(onBeat) {
   let timer = 0;
   let nextTime = 0;
   let beat = 0;
+  let pattern = defaultPattern(DEFAULT_BEATS);
   const pending = new Set();
   const voices = new Set();
 
-  function blip(time, accent) {
+  function blip(time, voice) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     voices.add(gain);
     osc.onended = () => voices.delete(gain);
-    osc.frequency.value = accent ? ACCENT_HZ : BEAT_HZ;
+    osc.frequency.value = voice.hz;
     gain.gain.setValueAtTime(SILENT_GAIN, time);
-    gain.gain.exponentialRampToValueAtTime(accent ? ACCENT_GAIN : BEAT_GAIN, time + ATTACK_S);
+    gain.gain.exponentialRampToValueAtTime(voice.gain, time + ATTACK_S);
     gain.gain.exponentialRampToValueAtTime(SILENT_GAIN, time + CLICK_S);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -64,10 +103,10 @@ export function createMetronome(onBeat) {
     osc.stop(time + CLICK_S);
   }
 
-  function announce(time, index) {
+  function announce(time, index, level) {
     const id = setTimeout(() => {
       pending.delete(id);
-      onBeat(index);
+      onBeat(index, level);
     }, Math.max(0, (time - ctx.currentTime) * 1000));
     pending.add(id);
   }
@@ -75,15 +114,21 @@ export function createMetronome(onBeat) {
   function schedule() {
     if (nextTime < ctx.currentTime) nextTime = ctx.currentTime;
     while (nextTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
-      blip(nextTime, beat === 0);
-      announce(nextTime, beat);
+      const level = pattern[beat];
+      if (level !== levelId.mute) blip(nextTime, SOUNDS[level]);
+      announce(nextTime, beat, level);
       nextTime += 60 / bpm;
-      beat = (beat + 1) % BEATS_PER_BAR;
+      beat = (beat + 1) % pattern.length;
     }
   }
 
   function setBpm(next) {
     bpm = clampBpm(next);
+  }
+
+  function setPattern(next) {
+    pattern = [...next];
+    if (beat >= pattern.length) beat = 0;
   }
 
   function start(next = bpm) {
@@ -109,6 +154,7 @@ export function createMetronome(onBeat) {
     start,
     stop,
     setBpm,
+    setPattern,
     get running() {
       return timer !== 0;
     },

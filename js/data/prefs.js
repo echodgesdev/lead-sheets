@@ -1,5 +1,6 @@
 import { GROUPS, groupId } from './group.js';
 import { clamp } from '../core/math.js';
+import { DEFAULT_BEATS, defaultPattern, parsePattern } from '../audio/click.js';
 
 const MODE_KEY = 'tabs.mode';
 const GROUP_KEY = 'tabs.group';
@@ -13,6 +14,7 @@ const PEDAL_KEY = 'tabs.pedal';
 const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
 const FEATURES_KEY = 'tabs.features';
+const METRONOME_KEY = 'tabs.metronome';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
@@ -233,6 +235,14 @@ export function getEditorOptions() {
 
 export function setEditorOptions(ids) {
   write(EDITOR_KEY, ids);
+}
+
+export function getMetronomePattern() {
+  return parsePattern(read(METRONOME_KEY)) ?? defaultPattern(DEFAULT_BEATS);
+}
+
+export function setMetronomePattern(pattern) {
+  write(METRONOME_KEY, pattern);
 }
 
 export function getFeatures() {
