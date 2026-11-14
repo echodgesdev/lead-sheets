@@ -919,7 +919,16 @@ button.row:active {
   height: 64px;
   border: 1px solid var(--line);
   border-radius: var(--r-md);
-  background: var(--bg);
+  background:
+    linear-gradient(to right,
+      transparent calc(50% - var(--in-tune)),
+      color-mix(in srgb, var(--accent) 35%, transparent) calc(50% - var(--in-tune)) calc(50% + var(--in-tune)),
+      transparent calc(50% + var(--in-tune))),
+    linear-gradient(to right,
+      transparent calc(50% - var(--close)),
+      color-mix(in srgb, var(--lime) 20%, transparent) calc(50% - var(--close)) calc(50% + var(--close)),
+      transparent calc(50% + var(--close))),
+    var(--bg);
   overflow: hidden;
 }
 
@@ -970,6 +979,10 @@ button.row:active {
   color: var(--muted);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+
+.tuner-status {
+  text-align: center;
 }
 
 .metro-value {

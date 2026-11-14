@@ -6,6 +6,7 @@ import { clamp } from '../core/math.js';
 import { iconId } from '../core/icons.js';
 
 const IN_TUNE_CENTS = 5;
+const CLOSE_CENTS = 10;
 const MAX_CENTS = 50;
 const MIC_ERROR = 'Microphone unavailable. Check permission in your browser settings.';
 
@@ -20,6 +21,8 @@ export function createTunerControl() {
     const octave = small('tuner-oct');
     name.append(noteName, octave);
     const meter = div('tuner-meter');
+    meter.style.setProperty('--in-tune', `${(IN_TUNE_CENTS / MAX_CENTS) * 50}%`);
+    meter.style.setProperty('--close', `${(CLOSE_CENTS / MAX_CENTS) * 50}%`);
     const needle = div('tuner-needle');
     needle.style.left = '50%';
     meter.append(needle);
@@ -43,7 +46,7 @@ export function createTunerControl() {
 
   function open() {
     const display = buildDisplay();
-    const status = p('modal-note', 'Play a single string');
+    const status = p('modal-note tuner-status', 'Play a single note');
     let closed = false;
     let stopListening = null;
     listen(display.render).then(
