@@ -1,4 +1,19 @@
-import { TEXT_SIZE, getTextSize, setTextSize } from '../data/prefs.js';
+import {
+  TEXT_SIZE,
+  CONTROLS,
+  NUMBER_STYLES,
+  PEDAL_MODES,
+  barId,
+  controlId,
+  getTextSize,
+  setTextSize,
+  getShownControls,
+  setShownControls,
+  getNumberStyle,
+  setNumberStyle,
+  getPedalMode,
+  setPedalMode,
+} from '../data/prefs.js';
 import { div, input, span, labeledButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { segToggle } from './controls.js';
@@ -64,4 +79,31 @@ export function textSizeRow(onSize) {
     onSize?.(size);
   });
   return modalRow('Text size', out, slider);
+}
+
+export function liveControlRows() {
+  const shown = new Set(getShownControls());
+  const numbersRow = choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle);
+
+  function syncNumbers() {
+    numbersRow.hidden = !shown.has(controlId.numbers);
+  }
+
+  function barRow(label, bar) {
+    const items = CONTROLS.filter((c) => c.bar === bar);
+    return chipsRow(label, items, [...shown], (ids) => {
+      for (const c of items) shown.delete(c.id);
+      for (const id of ids) shown.add(id);
+      setShownControls(CONTROLS.map((c) => c.id).filter((id) => shown.has(id)));
+      syncNumbers();
+    });
+  }
+
+  syncNumbers();
+  return [
+    barRow('Top bar', barId.top),
+    numbersRow,
+    barRow('Bottom bar', barId.bottom),
+    choiceRow('Page turner', PEDAL_MODES, getPedalMode(), setPedalMode),
+  ];
 }

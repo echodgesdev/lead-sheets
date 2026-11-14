@@ -203,6 +203,10 @@ export function mount(root, { id, preview = false, setId = null }) {
     numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
     numbersBtn.setAttribute('aria-label', numbersBtn.title);
     for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
+    const songNav = controls.has(controlId.songNav);
+    prevBtn.hidden = !songNav;
+    nextBtn.hidden = !songNav;
+    bar.hidden = !autoscroll && !songNav;
     if (!autoscroll) scroll.pause();
     renderContent();
   }

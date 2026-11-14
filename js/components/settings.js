@@ -2,18 +2,9 @@ import * as backup from '../data/backup.js';
 import { themeId, getTheme, setTheme } from '../data/theme.js';
 import {
   TAGS,
-  CONTROLS,
-  NUMBER_STYLES,
-  PEDAL_MODES,
   EDITOR_OPTIONS,
   getShownTags,
   setShownTags,
-  getShownControls,
-  setShownControls,
-  getNumberStyle,
-  setNumberStyle,
-  getPedalMode,
-  setPedalMode,
   getEditorOptions,
   setEditorOptions,
   FEATURES,
@@ -21,7 +12,7 @@ import {
   setFeatures,
 } from '../data/prefs.js';
 import { openModal } from './modal.js';
-import { modalRow, choiceRow, chipsRow, textSizeRow } from './rows.js';
+import { modalRow, choiceRow, chipsRow, textSizeRow, liveControlRows } from './rows.js';
 import { input, p, span, labeledButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { iconId } from '../core/icons.js';
@@ -91,9 +82,7 @@ export function openSettings({ onImport, onClose } = {}) {
     'Settings',
     choiceRow('Theme', THEMES, getTheme(), setTheme),
     textSizeRow(),
-    chipsRow('Live controls', CONTROLS, getShownControls(), setShownControls),
-    choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle),
-    choiceRow('Page turner', PEDAL_MODES, getPedalMode(), setPedalMode),
+    ...liveControlRows(),
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
     chipsRow('Editor', EDITOR_OPTIONS, getEditorOptions(), setEditorOptions),
     ...backupRows(onImport),

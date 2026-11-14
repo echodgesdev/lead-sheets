@@ -41,7 +41,7 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
   - State classes toggled at runtime come from `cls` (`classList.toggle(cls.active, on)`).
   - Navigation uses `routes.*` (`location.hash = routes.live(id)`), never a hand-built `#/...` string.
   - Icon names come from `iconId` in `core/icons.js`.
-  - Option ids come from the id map next to their option list: `controlId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, `groupId` in `group.js`, `themeId` in `theme.js`, and `levelId` in `audio/click.js`. The list entries reference the map, so each id is written once.
+  - Option ids come from the id map next to their option list: `controlId`, `barId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, `groupId` in `group.js`, `themeId` in `theme.js`, and `levelId` in `audio/click.js`. The list entries reference the map, so each id is written once.
   - Add a new entry to the frozen map rather than writing the literal. Structural class names passed to the `dom.js` builders stay as plain strings, as do CSS selectors.
 - Handlers are named `const onX = () => ...` and added with `addEventListener`. Listeners on the view's own elements need no removal; they go when the router replaces the view. Listeners on anything that outlives the view (`window`, `document`, `visualViewport`) take `{ signal }` from one `AbortController`, and cleanup calls `abort()`. Cleanup also releases anything held (wake lock, rAF, timers, audio, media streams) and sets a `disposed` flag that async callbacks check.
 - Build DOM with the tag builders in `core/dom.js`: `div(attrs, text)`, `span(…)`, `p(…)` and so on. `attrs` is a class string (`div('row-title', title)`), an attribute object (`input({ type: 'range', min: 1 })`), or `null`. Never call `document.createElement` or pass a tag name as a string; a tag the code needs that has no builder gets one in `dom.js`. Don't name a local after a builder you import (`headerEl`, not `header`). SVG is the exception (`core/icons.js`, `createElementNS`).
@@ -64,8 +64,9 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
 
 ## Live controls
 
-- Header controls in Live are listed in `CONTROLS` in `prefs.js`. Users toggle them via Settings → Live controls and the ⋮ menu (`chipsRow`).
-- `live.js` `applyPrefs()` reads `getShownControls()` and sets `hidden` on each control. A new control needs an entry in `CONTROLS` and a line in `applyPrefs`.
+- Live controls are listed in `CONTROLS` in `prefs.js`, each with a `bar` (`barId.top` header or `barId.bottom` bar). `liveControlRows()` in `components/rows.js` builds the shared Top bar / Numbers / Bottom bar / Page turner rows for both Settings and the ⋮ menu; Numbers is shown only while the Numbers control is on.
+- Shown controls are saved as `{ shown, known }`. A control missing from `known` was added after the user last saved and defaults to shown, so new controls appear without resetting anyone's choices. Lists saved in the older array format treat `LEGACY_UNSEEN_CONTROLS` the same way.
+- `live.js` `applyPrefs()` reads `getShownControls()` and sets `hidden` on each control, and hides the bottom bar when none of its controls are shown. A new control needs an entry in `CONTROLS` and a line in `applyPrefs`.
 - Song tempo for Live comes from `rec.tempo`, already overridden by the setlist entry's tempo when playing a set.
 
 ## Preferences

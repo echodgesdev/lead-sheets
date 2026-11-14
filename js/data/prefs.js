@@ -61,6 +61,12 @@ export const controlId = Object.freeze({
   details: 'details',
   tuner: 'tuner',
   metronome: 'metronome',
+  songNav: 'songNav',
+});
+
+export const barId = Object.freeze({
+  top: 'top',
+  bottom: 'bottom',
 });
 
 export const PEDAL_MODES = [
@@ -94,14 +100,17 @@ export const TAGS = [
 ];
 
 export const CONTROLS = [
-  { id: controlId.autoscroll, label: 'Auto-scroll' },
-  { id: controlId.capo, label: 'Capo' },
-  { id: controlId.transpose, label: 'Transpose' },
-  { id: controlId.numbers, label: 'Numbers' },
-  { id: controlId.details, label: 'Details' },
-  { id: controlId.tuner, label: 'Tuner' },
-  { id: controlId.metronome, label: 'Metronome' },
+  { id: controlId.capo, label: 'Capo', bar: barId.top },
+  { id: controlId.transpose, label: 'Transpose', bar: barId.top },
+  { id: controlId.numbers, label: 'Numbers', bar: barId.top },
+  { id: controlId.details, label: 'Details', bar: barId.top },
+  { id: controlId.tuner, label: 'Tuner', bar: barId.top },
+  { id: controlId.metronome, label: 'Metronome', bar: barId.top },
+  { id: controlId.autoscroll, label: 'Auto-scroll', bar: barId.bottom },
+  { id: controlId.songNav, label: 'Prev / Next', bar: barId.bottom },
 ];
+
+const LEGACY_UNSEEN_CONTROLS = [controlId.songNav];
 
 function read(key) {
   try {
@@ -187,11 +196,15 @@ export function setShownTags(ids) {
 }
 
 export function getShownControls() {
-  return shownIds(CONTROLS_KEY, CONTROLS, CONTROLS.map((c) => c.id));
+  const saved = read(CONTROLS_KEY);
+  const ids = CONTROLS.map((c) => c.id);
+  if (Array.isArray(saved)) return ids.filter((id) => saved.includes(id) || LEGACY_UNSEEN_CONTROLS.includes(id));
+  if (!Array.isArray(saved?.shown) || !Array.isArray(saved?.known)) return ids;
+  return ids.filter((id) => saved.shown.includes(id) || !saved.known.includes(id));
 }
 
 export function setShownControls(ids) {
-  write(CONTROLS_KEY, ids);
+  write(CONTROLS_KEY, { shown: ids, known: CONTROLS.map((c) => c.id) });
 }
 
 export function getNumbers() {
