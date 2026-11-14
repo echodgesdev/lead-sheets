@@ -1,5 +1,5 @@
 import { chordChips, chordText, sectionText } from '../sheet/insert.js';
-import { div, labeledButton } from '../core/dom.js';
+import { div, plainButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
 
 const SYMBOLS = [':', '#', 'b', '/', '|', 'x2'];
@@ -28,7 +28,7 @@ export function attachKeybar(textarea) {
   }
 
   function key(text, className, run) {
-    const b = labeledButton(null, text, `kb-btn ${className}`);
+    const b = plainButton(text, `kb-btn ${className}`);
     b.tabIndex = -1;
     actions.set(b, run);
     return b;

@@ -1,10 +1,11 @@
 import { dialog, div, h2, iconButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
+import { iconId } from '../core/icons.js';
 
 export function openModal(title, ...rows) {
   const modal = dialog({ class: 'modal', 'aria-labelledby': 'modal-title' });
   const head = div('modal-head');
-  const closeBtn = iconButton('xmark', 'Close', 'btn icon modal-close');
+  const closeBtn = iconButton(iconId.xmark, 'Close', 'modal-close');
   head.append(h2({ class: 'modal-title', id: 'modal-title' }, title), closeBtn);
 
   modal.append(head, ...rows);

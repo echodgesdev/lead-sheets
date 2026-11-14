@@ -1,7 +1,7 @@
 import * as store from '../data/store.js';
 import * as setlists from '../data/setlists.js';
 import { openSettings } from '../components/settings.js';
-import { icon } from '../core/icons.js';
+import { icon, iconId } from '../core/icons.js';
 import { GROUPS, groupId, groupSongs, groupSetlists } from '../data/group.js';
 import { transposeKey } from '../sheet/transpose.js';
 import { importText } from '../data/backup.js';
@@ -18,10 +18,11 @@ import {
   setSongOrder,
 } from '../data/prefs.js';
 import { toast } from '../components/toast.js';
-import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, cls } from '../core/dom.js';
+import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
+import { segToggle } from '../components/controls.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
@@ -38,14 +39,14 @@ export function mount(el) {
   const top = div('list-top');
 
   const headerEl = header('hdr');
-  const liveBtn = labeledButton('play', 'Live');
-  const editBtn = labeledButton('pen-to-square', 'Edit');
-  const modeToggle = div({ class: 'seg-toggle', role: 'group', 'aria-label': 'Mode' });
-  modeToggle.append(liveBtn, editBtn);
-  const gearBtn = iconButton('gear', 'Settings');
-  const newLink = a({ class: 'btn icon', href: routes.edit(NEW_ID), 'aria-label': 'New song', title: 'New song' });
-  newLink.append(icon('plus'));
-  const pasteBtn = iconButton('paste', 'Paste song');
+  const liveBtn = labeledButton(iconId.play, 'Live');
+  const editBtn = labeledButton(iconId.penToSquare, 'Edit');
+  const modeToggle = segToggle(liveBtn, editBtn);
+  modeToggle.setAttribute('role', 'group');
+  modeToggle.setAttribute('aria-label', 'Mode');
+  const gearBtn = iconButton(iconId.gear, 'Settings');
+  const newLink = iconLink(iconId.plus, 'New song', routes.edit(NEW_ID));
+  const pasteBtn = iconButton(iconId.paste, 'Paste song');
   headerEl.append(h1('hdr-title brand', 'Lead Sheets'), modeToggle, pasteBtn, newLink, gearBtn);
 
   const searchBar = div('toolbar');
@@ -56,7 +57,7 @@ export function mount(el) {
   const groupSelect = select({ class: 'field', 'aria-label': 'Group by' });
   for (const g of GROUPS) groupSelect.append(option({ value: g.id }, `By ${g.label}`));
   groupSelect.value = groupBy;
-  groupBox.append(icon('layer-group'), groupSelect, icon('chevron-down'));
+  groupBox.append(icon(iconId.layerGroup), groupSelect, icon(iconId.chevronDown));
   searchBar.append(searchField, groupBox);
 
 
@@ -87,7 +88,7 @@ export function mount(el) {
     labelEl.append(span('group-name', group.name), span('group-count', String(ids.length)));
     if (group.set && mode === modeId.edit) {
       const pen = a({ class: 'group-edit', href: routes.setlist(group.set.id), 'aria-label': `Edit ${group.name}`, title: 'Edit setlist' });
-      pen.append(icon('pen-to-square'));
+      pen.append(icon(iconId.penToSquare));
       labelEl.append(pen);
     }
     const list = div('list');
@@ -97,7 +98,7 @@ export function mount(el) {
 
   function newSetRow() {
     const row = a({ class: 'row new-row', href: routes.setlist(NEW_ID) });
-    row.append(icon('plus'), span('row-title', 'New setlist'));
+    row.append(icon(iconId.plus), span('row-title', 'New setlist'));
     const list = div('list');
     list.append(row);
     return list;

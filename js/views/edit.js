@@ -1,7 +1,7 @@
 import * as store from '../data/store.js';
 import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../components/keybar.js';
-import { icon } from '../core/icons.js';
+import { iconId } from '../core/icons.js';
 import { toast } from '../components/toast.js';
 import { editorId, featureId, getEditorOptions, hasFeature } from '../data/prefs.js';
 import { shareText } from '../components/share.js';
@@ -27,12 +27,12 @@ export function mount(el, { id, back = null }) {
 
   const screen = div('screen');
   const headerEl = header('hdr');
-  const previewBtn = labeledButton('play', 'Preview', 'btn primary');
+  const previewBtn = labeledButton(iconId.play, 'Preview', 'primary');
   const title = h1('hdr-title');
   const status = span('hdr-alert');
-  const inferBtn = iconButton('wand-magic-sparkles', 'Infer format');
-  const shareBtn = iconButton('arrow-up-from-bracket', 'Share');
-  const deleteBtn = iconButton('trash-can', 'Delete', 'btn icon danger');
+  const inferBtn = iconButton(iconId.wandMagicSparkles, 'Infer format');
+  const shareBtn = iconButton(iconId.arrowUpFromBracket, 'Share');
+  const deleteBtn = iconButton(iconId.trashCan, 'Delete', 'danger');
   const editor = textarea({
     class: 'editor',
     autocapitalize: 'off',

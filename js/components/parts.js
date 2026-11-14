@@ -1,19 +1,18 @@
-import { icon } from '../core/icons.js';
-import { a, div, input, label, p } from '../core/dom.js';
+import { icon, iconId } from '../core/icons.js';
+import { a, div, label, p } from '../core/dom.js';
+import { textField } from './controls.js';
 import { routes } from '../routes.js';
 import { strings } from '../strings.js';
 
 export function searchBox() {
   const box = label('input-icon');
-  const field = input({
-    class: 'field',
+  const field = textField(strings.searchSongs, null, {
     type: 'search',
-    placeholder: strings.searchSongs,
     autocapitalize: 'off',
     autocorrect: 'off',
     spellcheck: 'false',
   });
-  box.append(icon('magnifying-glass'), field);
+  box.append(icon(iconId.magnifyingGlass), field);
   return { box, input: field };
 }
 

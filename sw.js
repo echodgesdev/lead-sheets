@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v37';
+const CACHE = 'tabs-v40';
 
 const ASSETS = [
   './',
@@ -37,6 +37,7 @@ const ASSETS = [
   './js/audio/context.js',
   './js/audio/listen.js',
   './js/audio/pitch.js',
+  './js/components/controls.js',
   './js/components/details.js',
   './js/components/keybar.js',
   './js/components/menu.js',

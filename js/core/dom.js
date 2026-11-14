@@ -42,19 +42,34 @@ export const small = builder('small');
 export const span = builder('span');
 export const textarea = builder('textarea');
 
-export function button(text, title, className = 'btn') {
-  return create('button', { class: className, type: 'button', title, 'aria-label': title }, text);
+export function classes(...names) {
+  return names.filter(Boolean).join(' ');
 }
 
-export function iconButton(name, title, className = 'btn icon') {
-  const node = button('', title, className);
+export function plainButton(content, className) {
+  const node = create('button', { class: className, type: 'button' });
+  node.append(content);
+  return node;
+}
+
+export function button(text, title, extra) {
+  return create('button', { class: classes('btn', extra), type: 'button', title, 'aria-label': title }, text);
+}
+
+export function iconButton(name, title, extra) {
+  const node = button('', title, classes('icon', extra));
   node.append(icon(name));
   return node;
 }
 
-export function labeledButton(name, content, className = 'btn') {
-  const node = create('button', { class: className, type: 'button' });
-  if (name) node.append(icon(name));
-  node.append(content);
+export function labeledButton(name, content, extra) {
+  const node = plainButton(content, classes('btn', extra));
+  if (name) node.prepend(icon(name));
+  return node;
+}
+
+export function iconLink(name, title, href, extra) {
+  const node = a({ class: classes('btn icon', extra), href, title, 'aria-label': title });
+  node.append(icon(name));
   return node;
 }

@@ -1,22 +1,29 @@
 import { evt } from '../core/events.js';
 
 const KEY = 'tabs.theme';
-const BAR_COLOR = { dark: '#0a1219', light: '#0f1923' };
-const CHOICES = ['system', 'dark', 'light'];
+
+export const themeId = Object.freeze({
+  system: 'system',
+  dark: 'dark',
+  light: 'light',
+});
+
+const BAR_COLOR = { [themeId.dark]: '#0a1219', [themeId.light]: '#0f1923' };
+const CHOICES = Object.values(themeId);
 const prefersLight = window.matchMedia('(prefers-color-scheme: light)');
 
 export function getTheme() {
   try {
     const saved = localStorage.getItem(KEY);
-    return CHOICES.includes(saved) ? saved : 'system';
+    return CHOICES.includes(saved) ? saved : themeId.system;
   } catch {
-    return 'system';
+    return themeId.system;
   }
 }
 
 function resolve(choice) {
-  if (choice !== 'system') return choice;
-  return prefersLight.matches ? 'light' : 'dark';
+  if (choice !== themeId.system) return choice;
+  return prefersLight.matches ? themeId.light : themeId.dark;
 }
 
 function apply(choice) {

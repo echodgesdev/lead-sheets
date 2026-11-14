@@ -1,4 +1,4 @@
-import { div, button } from '../core/dom.js';
+import { div, plainButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
 
 const SHOW_MS = 4000;
@@ -16,7 +16,7 @@ export function toast(text, action) {
   }
 
   if (action) {
-    const b = button(action.label, action.label, 'toast-action');
+    const b = plainButton(action.label, 'toast-action');
     b.addEventListener(evt.click, () => {
       dismiss();
       action.run();

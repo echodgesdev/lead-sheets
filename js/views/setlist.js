@@ -1,8 +1,9 @@
 import * as store from '../data/store.js';
 import * as setlists from '../data/setlists.js';
 import { capoFret, placeCapo, transposeKey, signed, MAX_SHIFT } from '../sheet/transpose.js';
-import { icon } from '../core/icons.js';
-import { div, h1, header, input, p, small, span, iconButton, labeledButton, cls } from '../core/dom.js';
+import { icon, iconId } from '../core/icons.js';
+import { div, h1, header, p, span, plainButton, iconButton, labeledButton, cls } from '../core/dom.js';
+import { stepper, keyFace, textField } from '../components/controls.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { createAutosave } from '../core/autosave.js';
@@ -30,13 +31,13 @@ export function mount(el, { id }) {
 
   const screen = div('set-screen');
   const headerEl = header('hdr');
-  const deleteBtn = iconButton('trash-can', 'Delete setlist', 'btn icon danger');
+  const deleteBtn = iconButton(iconId.trashCan, 'Delete setlist', 'danger');
   const status = span('hdr-alert');
-  const doneBtn = labeledButton('check', 'Done', 'btn primary');
+  const doneBtn = labeledButton(iconId.check, 'Done', 'primary');
   headerEl.append(deleteBtn, h1('hdr-title', 'Setlist'), status, doneBtn);
 
   const nameBar = div('toolbar');
-  const nameInput = input({ class: 'field', type: 'text', placeholder: 'Setlist name', 'aria-label': 'Setlist name' });
+  const nameInput = textField('Setlist name');
   nameInput.value = existing?.name ?? '';
   nameBar.append(nameInput);
 
@@ -84,29 +85,20 @@ export function mount(el, { id }) {
   }
 
   function capoControl(entry, song) {
-    const toggle = div('seg-toggle');
-    const down = iconButton('minus', 'Transpose down');
-    const up = iconButton('plus', 'Transpose up');
     const placed = placeCapo(capoFret(song.capo), entry.shift);
-    const label = span({ class: 'btn live-key', title: 'Capo' });
-    label.append(small(null, 'Capo'), span(null, placed.shift ? `${placed.capo} ${signed(placed.shift)}` : String(placed.capo)));
-    label.classList.toggle(cls.active, entry.shift !== 0);
+    const face = span({ class: 'btn live-key', title: 'Capo' });
+    face.append(...keyFace('Capo', placed.shift ? `${placed.capo} ${signed(placed.shift)}` : placed.capo));
+    face.classList.toggle(cls.active, entry.shift !== 0);
+    const { toggle, down, up } = stepper(face, 'Transpose down', 'Transpose up');
     down.disabled = entry.shift <= -MAX_SHIFT;
     up.disabled = entry.shift >= MAX_SHIFT;
     down.addEventListener(evt.click, () => { entry.shift--; change(); });
     up.addEventListener(evt.click, () => { entry.shift++; change(); });
-    toggle.append(down, label, up);
     return toggle;
   }
 
   function tempoField(entry, song) {
-    const inputEl = input({
-      class: 'field set-tempo',
-      type: 'text',
-      inputmode: 'numeric',
-      placeholder: 'Tempo',
-      'aria-label': 'Tempo',
-    });
+    const inputEl = textField('Tempo', 'set-tempo', { inputmode: 'numeric' });
     inputEl.value = entry.tempo || song.tempo || '';
     inputEl.addEventListener(evt.input, () => {
       const value = inputEl.value.trim();
@@ -155,10 +147,10 @@ export function mount(el, { id }) {
     const song = store.get(entry.songId);
     const row = div('row set-row');
     row.dataset.songId = entry.songId;
-    const grip = iconButton('grip-vertical', 'Drag to reorder', 'btn icon set-grip');
+    const grip = iconButton(iconId.gripVertical, 'Drag to reorder', 'set-grip');
     grip.addEventListener(evt.pointerdown, (e) => startDrag(e, row));
     const main = rowMain(song, song.artist);
-    const remove = iconButton('xmark', 'Remove from setlist', 'btn icon set-remove');
+    const remove = iconButton(iconId.xmark, 'Remove from setlist', 'set-remove');
     remove.addEventListener(evt.click, () => {
       entries = entries.filter((e) => e !== entry);
       change();
@@ -179,7 +171,8 @@ export function mount(el, { id }) {
   }
 
   function resultRow(rec) {
-    const row = labeledButton('plus', rowMain(rec, rec.artist), 'row set-add');
+    const row = plainButton(icon(iconId.plus), 'row set-add');
+    row.append(rowMain(rec, rec.artist));
     if (rec.key) row.append(span('badge', rec.key));
     row.addEventListener(evt.click, () => {
       entries.push({ songId: rec.id, shift: 0, tempo: '' });

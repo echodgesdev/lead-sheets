@@ -1,10 +1,16 @@
 import { TEXT_SIZE, getTextSize, setTextSize } from '../data/prefs.js';
 import { div, input, span, labeledButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
+import { segToggle } from './controls.js';
+
+export function modalRow(label, ...controls) {
+  const row = div('modal-row');
+  if (label) row.append(span('modal-label', label));
+  row.append(...controls);
+  return row;
+}
 
 export function choiceRow(label, options, value, save) {
-  const row = div('modal-row');
-  const toggle = div('seg-toggle');
   const buttons = options.map((o) => [o.id, labeledButton(o.icon, o.label)]);
 
   function apply(id) {
@@ -13,19 +19,16 @@ export function choiceRow(label, options, value, save) {
   }
 
   for (const [id, b] of buttons) b.addEventListener(evt.click, () => apply(id));
-  toggle.append(...buttons.map(([, b]) => b));
-  row.append(span('modal-label', label), toggle);
   apply(value);
-  return row;
+  return modalRow(label, segToggle(...buttons.map(([, b]) => b)));
 }
 
 export function chipsRow(label, items, shownIds, save) {
-  const row = div('modal-row');
   const chips = div('chips');
   const shown = new Set(shownIds);
 
   for (const t of items) {
-    const b = labeledButton(null, t.label, 'btn chip');
+    const b = labeledButton(null, t.label, 'chip');
     const sync = () => {
       b.classList.toggle(cls.active, shown.has(t.id));
       b.setAttribute('aria-pressed', String(shown.has(t.id)));
@@ -40,12 +43,10 @@ export function chipsRow(label, items, shownIds, save) {
     chips.append(b);
   }
 
-  row.append(span('modal-label', label), chips);
-  return row;
+  return modalRow(label, chips);
 }
 
 export function textSizeRow(onSize) {
-  const r = div('modal-row');
   const slider = input({
     class: 'slider',
     type: 'range',
@@ -62,6 +63,5 @@ export function textSizeRow(onSize) {
     setTextSize(size);
     onSize?.(size);
   });
-  r.append(span('modal-label', 'Text size'), out, slider);
-  return r;
+  return modalRow('Text size', out, slider);
 }

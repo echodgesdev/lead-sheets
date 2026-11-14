@@ -1,5 +1,5 @@
 import * as backup from '../data/backup.js';
-import { getTheme, setTheme } from '../data/theme.js';
+import { themeId, getTheme, setTheme } from '../data/theme.js';
 import {
   TAGS,
   CONTROLS,
@@ -21,26 +21,26 @@ import {
   setFeatures,
 } from '../data/prefs.js';
 import { openModal } from './modal.js';
-import { choiceRow, chipsRow, textSizeRow } from './rows.js';
-import { div, input, p, span, labeledButton } from '../core/dom.js';
+import { modalRow, choiceRow, chipsRow, textSizeRow } from './rows.js';
+import { input, p, span, labeledButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
+import { iconId } from '../core/icons.js';
 
 const THEMES = [
-  { id: 'system', icon: 'circle-half-stroke', label: 'Auto' },
-  { id: 'dark', icon: 'moon', label: 'Dark' },
-  { id: 'light', icon: 'sun', label: 'Light' },
+  { id: themeId.system, icon: iconId.circleHalfStroke, label: 'Auto' },
+  { id: themeId.dark, icon: iconId.moon, label: 'Dark' },
+  { id: themeId.light, icon: iconId.sun, label: 'Light' },
 ];
 
 function backupRows(onImport) {
-  const row = div('modal-row');
-  const exportBtn = labeledButton('arrow-up-from-bracket', 'Share library');
-  const importBtn = labeledButton('file-import', 'Import');
+  const exportBtn = labeledButton(iconId.arrowUpFromBracket, 'Share library');
+  const importBtn = labeledButton(iconId.fileImport, 'Import');
   const fileInput = input({
     type: 'file',
     accept: '.json,.md,.txt,application/json,text/plain',
     hidden: '',
   });
-  row.append(span('modal-label', 'Backup'), exportBtn, importBtn, fileInput);
+  const row = modalRow('Backup', exportBtn, importBtn, fileInput);
   const note = p({ class: 'modal-note', hidden: '' });
 
   function setNote(text) {
@@ -74,9 +74,9 @@ function backupRows(onImport) {
 }
 
 function versionRow() {
-  const row = div({ class: 'modal-row', hidden: '' });
   const value = span('info-value');
-  row.append(span('modal-label', 'Version'), value);
+  const row = modalRow('Version', value);
+  row.hidden = true;
   globalThis.caches?.keys().then((keys) => {
     const key = keys.filter((k) => k.startsWith('tabs-')).at(-1);
     if (!key) return;

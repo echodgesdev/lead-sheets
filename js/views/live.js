@@ -32,8 +32,9 @@ import { openSongMenu } from '../components/menu.js';
 import { openSongDetails } from '../components/details.js';
 import { createTunerControl } from '../components/tuner.js';
 import { createMetronomeControl } from '../components/metronome.js';
-import { icon } from '../core/icons.js';
-import { div, h1, header, p, small, span, button, iconButton, cls } from '../core/dom.js';
+import { icon, iconId } from '../core/icons.js';
+import { div, h1, header, p, span, button, iconButton, cls } from '../core/dom.js';
+import { stepper, keyFace } from '../components/controls.js';
 import { evt, keys } from '../core/events.js';
 import { routes } from '../routes.js';
 import { clamp } from '../core/math.js';
@@ -89,23 +90,17 @@ export function mount(root, { id, preview = false, setId = null }) {
   const listening = new AbortController();
 
   const headerEl = header('hdr live-hdr');
-  const homeBtn = iconButton('chevron-left', 'Back to songs');
-  const editBtn = iconButton('pen-to-square', 'Edit song');
+  const homeBtn = iconButton(iconId.chevronLeft, 'Back to songs');
+  const editBtn = iconButton(iconId.penToSquare, 'Edit song');
   editBtn.hidden = !preview;
-  const capoToggle = div('seg-toggle');
-  const capoDownBtn = iconButton('minus', 'Capo down');
-  const capoBtn = button('', 'Reset capo', 'btn live-key');
-  const capoUpBtn = iconButton('plus', 'Capo up');
-  capoToggle.append(capoDownBtn, capoBtn, capoUpBtn);
-  const transpose = div('seg-toggle');
-  const downBtn = iconButton('minus', 'Transpose down');
-  const shiftBtn = button('', 'Reset transpose', 'btn live-key');
-  const upBtn = iconButton('plus', 'Transpose up');
-  transpose.append(downBtn, shiftBtn, upBtn);
+  const capoBtn = button('', 'Reset capo', 'live-key');
+  const { toggle: capoToggle, down: capoDownBtn, up: capoUpBtn } = stepper(capoBtn, 'Capo down', 'Capo up');
+  const shiftBtn = button('', 'Reset transpose', 'live-key');
+  const { toggle: transpose, down: downBtn, up: upBtn } = stepper(shiftBtn, 'Transpose down', 'Transpose up');
   const numbersBtn = button('', '');
   numbersBtn.disabled = !keyed;
-  const detailsBtn = iconButton('circle-info', 'Song details');
-  const menuBtn = iconButton('ellipsis-vertical', 'More options');
+  const detailsBtn = iconButton(iconId.circleInfo, 'Song details');
+  const menuBtn = iconButton(iconId.ellipsisVertical, 'More options');
   const tuner = createTunerControl();
   const metronome = createMetronomeControl(rec.tempo);
   headerEl.append(homeBtn, capoToggle, transpose, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
@@ -117,11 +112,11 @@ export function mount(root, { id, preview = false, setId = null }) {
   setSize(getTextSize());
 
   const bar = div('bar');
-  const prevBtn = iconButton('backward-step', 'Previous song');
-  const slowBtn = iconButton('minus', 'Slower');
+  const prevBtn = iconButton(iconId.backwardStep, 'Previous song');
+  const slowBtn = iconButton(iconId.minus, 'Slower');
   const playBtn = button('', 'Play or pause');
-  const fastBtn = iconButton('plus', 'Faster');
-  const nextBtn = iconButton('forward-step', 'Next song');
+  const fastBtn = iconButton(iconId.plus, 'Faster');
+  const nextBtn = iconButton(iconId.forwardStep, 'Next song');
   const speedLabel = span('live-bar-speed');
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
@@ -141,11 +136,11 @@ export function mount(root, { id, preview = false, setId = null }) {
     const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
     renderSheet(viewChords(parsed, view), sheet);
     fillTags(tags, shownRec());
-    capoBtn.replaceChildren(small(null, 'Capo'), span(null, String(fret)));
+    capoBtn.replaceChildren(...keyFace('Capo', fret));
     capoBtn.classList.toggle(cls.active, fret !== base.capo);
     capoDownBtn.disabled = fret <= 0;
     capoUpBtn.disabled = fret >= maxFret;
-    shiftBtn.replaceChildren(small(null, 'Shift'), span(null, signed(shift)));
+    shiftBtn.replaceChildren(...keyFace('Shift', signed(shift)));
     shiftBtn.classList.toggle(cls.active, shift !== base.shift);
     downBtn.disabled = shift <= -MAX_SHIFT;
     upBtn.disabled = shift >= MAX_SHIFT;
@@ -154,7 +149,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   }
 
   function renderControls() {
-    playBtn.replaceChildren(icon(scroll.playing ? 'pause' : 'play'), speedLabel);
+    playBtn.replaceChildren(icon(scroll.playing ? iconId.pause : iconId.play), speedLabel);
     speedLabel.textContent = String(scroll.speed);
     playBtn.classList.toggle(cls.active, scroll.playing);
     bar.classList.toggle(cls.away, scroll.playing);

@@ -18,7 +18,7 @@ Folders are layers, top to bottom. A module imports only from its own layer or t
 | | `js/routes.js` | Hash URL format: `routes.*` builders, `parseRoute`, `views`, and `NEW_ID` for unsaved records. Nothing else builds or parses `#/...` strings. |
 | | `js/strings.js` | `strings`: UI text used in more than one place. |
 | Views | `js/views/` | Routed screens only: `list`, `live`, `edit`, `setlist`. Each exports `mount(root, params)`. |
-| Components | `js/components/` | All UI that isn't a routed screen. Primitives: `modal.js` (`openModal`, `attachDialog`), `toast.js`, `rows.js` (dialog rows), `parts.js` (search box, song row, not-found screen), `sheet.js` (`renderSheet`), `share.js`. Widgets: `keybar.js`, `tuner.js`, `metronome.js`. Dialogs: `menu.js`, `settings.js`, `details.js`. |
+| Components | `js/components/` | All UI that isn't a routed screen. Primitives: `modal.js` (`openModal`, `attachDialog`), `toast.js`, `rows.js` (`modalRow` and the dialog rows built on it), `controls.js` (`segToggle`, `stepper`, `keyFace`, `textField`), `parts.js` (search box, song row, not-found screen), `sheet.js` (`renderSheet`), `share.js`. Widgets: `keybar.js`, `tuner.js`, `metronome.js`. Dialogs: `menu.js`, `settings.js`, `details.js`. |
 | Domain | `js/sheet/` | Pure song logic with no DOM, storage or prefs: `chords`, `parse`, `infer`, `transpose`, `insert` (keybar chord chips and the text each key inserts). |
 | | `js/audio/` | Web Audio: shared context, pitch detection, mic input, metronome clicks. |
 | | `js/data/` | Persistence and settings. `db.js` (IndexedDB: `dbAll`, `dbPut`, `dbDelete`); `store.js`, `setlists.js` (in-memory caches over `db.js`: `load()` at start, then sync `all()` / `get(id)` and async writes); `prefs.js` (all preferences); `theme.js` (theme choice, applied on load); `group.js` (list grouping); `backup.js` (export/import). |
@@ -40,11 +40,17 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
   - Keys come from `keys` (`e.key === keys.escape`).
   - State classes toggled at runtime come from `cls` (`classList.toggle(cls.active, on)`).
   - Navigation uses `routes.*` (`location.hash = routes.live(id)`), never a hand-built `#/...` string.
-  - Option ids come from the id map next to their option list: `controlId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, and `groupId` in `group.js`. The list entries reference the map, so each id is written once.
+  - Icon names come from `iconId` in `core/icons.js`.
+  - Option ids come from the id map next to their option list: `controlId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, `groupId` in `group.js`, `themeId` in `theme.js`, and `levelId` in `audio/click.js`. The list entries reference the map, so each id is written once.
   - Add a new entry to the frozen map rather than writing the literal. Structural class names passed to the `dom.js` builders stay as plain strings, as do CSS selectors.
 - Handlers are named `const onX = () => ...` and added with `addEventListener`. Listeners on the view's own elements need no removal; they go when the router replaces the view. Listeners on anything that outlives the view (`window`, `document`, `visualViewport`) take `{ signal }` from one `AbortController`, and cleanup calls `abort()`. Cleanup also releases anything held (wake lock, rAF, timers, audio, media streams) and sets a `disposed` flag that async callbacks check.
 - Build DOM with the tag builders in `core/dom.js`: `div(attrs, text)`, `span(…)`, `p(…)` and so on. `attrs` is a class string (`div('row-title', title)`), an attribute object (`input({ type: 'range', min: 1 })`), or `null`. Never call `document.createElement` or pass a tag name as a string; a tag the code needs that has no builder gets one in `dom.js`. Don't name a local after a builder you import (`headerEl`, not `header`). SVG is the exception (`core/icons.js`, `createElementNS`).
-- Buttons always come from `dom.js`: `button(label, title, className)` or `iconButton(name, title, className)` (both set `type="button"`, `title` and `aria-label`), or `labeledButton(icon, text, className)` for a visible text label. `labeledButton` also takes a node as its content, for whole-row buttons (setlist's add-song row). Toggled state is `.active` plus `aria-pressed`.
+- Buttons always come from `dom.js`. The last argument is *extra* classes added to the base, never the full class list:
+  - `button(text, title, extra)` → `.btn`; `iconButton(name, title, extra)` → `.btn.icon`. Both set `type="button"`, `title` and `aria-label`.
+  - `labeledButton(icon, content, extra)` → `.btn` with a visible label (text or a node).
+  - `iconLink(name, title, href, extra)` → an `<a>` styled `.btn.icon`.
+  - `plainButton(content, className)` → a bare `type="button"` with no base class, for things not styled as buttons (keybar keys, toast action, setlist add-song row).
+  - Toggled state is `.active` plus `aria-pressed`. Join class names with `classes(...)` from `dom.js`, which skips empty ones.
 - Re-render by replacing children (`replaceChildren`) from state, in a `renderX()` function, not by patching nodes ad hoc.
 - Live view keyboard and tap handlers ignore input while a `dialog[open]` exists; anything modal must be a `<dialog>`.
 
@@ -52,7 +58,8 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
 
 - `openModal(title, ...rows)` from `components/modal.js` builds, shows and removes on close. Listen for `close` on the returned dialog for teardown.
 - A button that opens a dialog and owns state across opens (tuner, metronome) uses `attachDialog(button, title, open)`. `open()` returns `{ rows, onClose }`, and the returned function disposes it. Don't track the dialog by hand.
-- Rows are `div.modal-row` with a `span.modal-label` first. Reuse `components/rows.js` helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
+- Dialog rows come from `modalRow(label, ...controls)` in `components/rows.js` (a `div.modal-row` with a `span.modal-label` first; `null` label for none). Reuse its helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
+- Shared controls come from `components/controls.js`: `segToggle(...nodes)` for any `.seg-toggle`, `stepper(center, downTitle, upTitle)` for − value + controls, `keyFace(label, value)` for the small-label/value face on `.live-key` buttons, `textField(placeholder, extra, attrs)` for text inputs (the placeholder is also the `aria-label`).
 - Screen pieces built in more than one view (search box, song row title/subtitle, not-found screen) come from `components/parts.js`. A widget's non-UI logic goes in the domain folder it's about (as `sheet/insert.js` does for the keybar), not in the component.
 
 ## Live controls
@@ -68,7 +75,8 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
 
 ## Icons
 
-- Font Awesome Free 6.7.2 **solid**, inlined in `js/core/icons.js` as `'name': [viewBox, pathD]`.
+- Font Awesome Free 6.7.2 **solid**, inlined in `js/core/icons.js` as `[iconId.name]: [viewBox, pathD]`.
+- Refer to icons only through `iconId` (`iconButton(iconId.xmark, 'Close')`), never by name string. A new icon needs an `iconId` entry (camelCase key, Font Awesome name as value) and an `ICONS` entry.
 - Copy the viewBox and path exactly from the Font Awesome 6.7.2 source. Never hand-write or approximate a path.
 
 ## CSS

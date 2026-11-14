@@ -4,7 +4,7 @@ import { SONGS, dbAll, dbPut, dbDelete } from './db.js';
 const DEFAULT_SCROLL = 3;
 const FIELD_TOKEN = /^(title|artist|album|genre|key|meta|tags?):(.+)$/;
 const SETLIST_LINE_RE = /^[ \t]*setlists?[ \t]*:.*(?:\r?\n|$)/gim;
-const PLAIN_FIELDS =['title', 'artist', 'album', 'genre', ...LIST_FIELDS];
+const PLAIN_FIELDS = ['title', 'artist', 'album', 'genre', ...LIST_FIELDS];
 const songs = new Map();
 let loading = null;
 
