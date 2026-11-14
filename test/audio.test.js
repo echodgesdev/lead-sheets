@@ -90,30 +90,31 @@ test('detectPitch returns null for silence', () => {
   eq(detectPitch(new Float32Array(BUFFER_SIZE), SAMPLE_RATE), null);
 });
 
-const { accent, normal, soft, mute } = levelId;
+const { primary, secondary, mute } = levelId;
 
-test('defaultPattern accents the first beat', () => {
-  eq(defaultPattern(4), [accent, normal, normal, normal]);
-  eq(defaultPattern(1), [accent]);
-  eq(defaultPattern(0), [accent]);
+test('defaultPattern starts with primary, then secondary', () => {
+  eq(defaultPattern(4), [primary, secondary, secondary, secondary]);
+  eq(defaultPattern(1), [primary]);
+  eq(defaultPattern(0), [primary]);
   eq(defaultPattern(99).length, MAX_BEATS);
 });
 
-test('resizePattern keeps existing beats and pads with normal', () => {
-  eq(resizePattern([accent, soft, mute], 5), [accent, soft, mute, normal, normal]);
-  eq(resizePattern([accent, soft, mute], 2), [accent, soft]);
-  eq(resizePattern([soft], 0), [soft]);
-  eq(resizePattern([], 3), [accent, normal, normal]);
+test('resizePattern keeps existing beats and pads with secondary', () => {
+  eq(resizePattern([primary, mute, primary], 5), [primary, mute, primary, secondary, secondary]);
+  eq(resizePattern([primary, mute, primary], 2), [primary, mute]);
+  eq(resizePattern([mute], 0), [mute]);
+  eq(resizePattern([], 3), [primary, secondary, secondary]);
 });
 
-test('cycleLevel goes accent, normal, soft, mute and wraps', () => {
-  eq([accent, normal, soft, mute].map(cycleLevel), [normal, soft, mute, accent]);
+test('cycleLevel goes primary, secondary, mute and wraps', () => {
+  eq([primary, secondary, mute].map(cycleLevel), [secondary, mute, primary]);
 });
 
 test('parsePattern accepts only valid stored patterns', () => {
-  eq(parsePattern([accent, mute]), [accent, mute]);
+  eq(parsePattern([primary, mute]), [primary, mute]);
+  eq(parsePattern(Array(MAX_BEATS).fill(secondary)).length, MAX_BEATS);
   eq(parsePattern(null), null);
   eq(parsePattern([]), null);
-  eq(parsePattern([accent, 'loud']), null);
-  eq(parsePattern(Array(MAX_BEATS + 1).fill(normal)), null);
+  eq(parsePattern([primary, 'accent']), null);
+  eq(parsePattern(Array(MAX_BEATS + 1).fill(secondary)), null);
 });

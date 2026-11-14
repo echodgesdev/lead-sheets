@@ -14,7 +14,6 @@ import {
 } from '../audio/click.js';
 import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
 import { attachDialog } from './modal.js';
-import { modalRow } from './rows.js';
 import { stepper, keyFace } from './controls.js';
 import { icon, iconId } from '../core/icons.js';
 import { div, span, button, labeledButton, cls } from '../core/dom.js';
@@ -23,6 +22,12 @@ import { evt } from '../core/events.js';
 function valueStepper(downTitle, upTitle) {
   const value = span('metro-value');
   return { value, ...stepper(value, downTitle, upTitle) };
+}
+
+function labeled(text, control) {
+  const field = div('metro-field');
+  field.append(span('modal-label', text), control);
+  return field;
 }
 
 export function createMetronomeControl(tempo) {
@@ -43,7 +48,7 @@ export function createMetronomeControl(tempo) {
     headerBtn.classList.remove(cls.beat, cls.down);
     void headerBtn.offsetWidth;
     headerBtn.classList.add(cls.beat);
-    headerBtn.classList.toggle(cls.down, level === levelId.accent);
+    headerBtn.classList.toggle(cls.down, level === levelId.primary);
     showBeat?.(beat);
   }
 
@@ -77,6 +82,8 @@ export function createMetronomeControl(tempo) {
   function open() {
     const tempoStep = valueStepper('Slower', 'Faster');
     const beatsStep = valueStepper('Fewer beats', 'More beats');
+    const settings = div('modal-row metro-settings');
+    settings.append(labeled('Tempo', tempoStep.toggle), labeled('Beats', beatsStep.toggle));
     const pads = div('modal-row metro-pads');
 
     const tapBtn = labeledButton(null, 'Tap');
@@ -126,7 +133,7 @@ export function createMetronomeControl(tempo) {
 
     sync();
     return {
-      rows: [modalRow('Tempo', tempoStep.toggle), modalRow('Beats', beatsStep.toggle), pads, actions],
+      rows: [settings, pads, actions],
       onClose: () => {
         sync = null;
         showBeat = null;

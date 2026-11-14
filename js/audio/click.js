@@ -5,17 +5,16 @@ export const MIN_BPM = 30;
 export const MAX_BPM = 250;
 export const DEFAULT_BPM = 100;
 export const MIN_BEATS = 1;
-export const MAX_BEATS = 12;
+export const MAX_BEATS = 16;
 export const DEFAULT_BEATS = 4;
 
 export const levelId = Object.freeze({
-  accent: 'accent',
-  normal: 'normal',
-  soft: 'soft',
+  primary: 'primary',
+  secondary: 'secondary',
   mute: 'mute',
 });
 
-const LEVEL_CYCLE = [levelId.accent, levelId.normal, levelId.soft, levelId.mute];
+const LEVEL_CYCLE = [levelId.primary, levelId.secondary, levelId.mute];
 
 const TAP_WINDOW = 4;
 const TAP_GAP_MS = 2000;
@@ -24,17 +23,14 @@ const SCHEDULE_AHEAD_S = 0.1;
 const START_DELAY_S = 0.05;
 const CLICK_S = 0.03;
 const ATTACK_S = 0.002;
-const ACCENT_HZ = 1600;
-const BEAT_HZ = 1000;
-const ACCENT_GAIN = 0.9;
-const BEAT_GAIN = 0.6;
-const SOFT_GAIN = 0.2;
+const PRIMARY_HZ = 1600;
+const SECONDARY_HZ = 1000;
+const CLICK_GAIN = 0.8;
 const SILENT_GAIN = 0.0001;
 
-const SOUNDS = {
-  [levelId.accent]: { hz: ACCENT_HZ, gain: ACCENT_GAIN },
-  [levelId.normal]: { hz: BEAT_HZ, gain: BEAT_GAIN },
-  [levelId.soft]: { hz: BEAT_HZ, gain: SOFT_GAIN },
+const PITCH = {
+  [levelId.primary]: PRIMARY_HZ,
+  [levelId.secondary]: SECONDARY_HZ,
 };
 
 export function clampBpm(n) {
@@ -48,13 +44,13 @@ export function parseBpm(tempo) {
 
 export function defaultPattern(beats) {
   const n = clamp(Math.round(beats), MIN_BEATS, MAX_BEATS);
-  return [levelId.accent, ...Array(n - 1).fill(levelId.normal)];
+  return [levelId.primary, ...Array(n - 1).fill(levelId.secondary)];
 }
 
 export function resizePattern(pattern, beats) {
   const n = clamp(Math.round(beats), MIN_BEATS, MAX_BEATS);
   if (!pattern.length) return defaultPattern(n);
-  return [...pattern.slice(0, n), ...Array(Math.max(0, n - pattern.length)).fill(levelId.normal)];
+  return [...pattern.slice(0, n), ...Array(Math.max(0, n - pattern.length)).fill(levelId.secondary)];
 }
 
 export function cycleLevel(level) {
@@ -88,14 +84,14 @@ export function createMetronome(onBeat) {
   const pending = new Set();
   const voices = new Set();
 
-  function blip(time, voice) {
+  function blip(time, hz) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     voices.add(gain);
     osc.onended = () => voices.delete(gain);
-    osc.frequency.value = voice.hz;
+    osc.frequency.value = hz;
     gain.gain.setValueAtTime(SILENT_GAIN, time);
-    gain.gain.exponentialRampToValueAtTime(voice.gain, time + ATTACK_S);
+    gain.gain.exponentialRampToValueAtTime(CLICK_GAIN, time + ATTACK_S);
     gain.gain.exponentialRampToValueAtTime(SILENT_GAIN, time + CLICK_S);
     osc.connect(gain);
     gain.connect(ctx.destination);
@@ -115,7 +111,7 @@ export function createMetronome(onBeat) {
     if (nextTime < ctx.currentTime) nextTime = ctx.currentTime;
     while (nextTime < ctx.currentTime + SCHEDULE_AHEAD_S) {
       const level = pattern[beat];
-      if (level !== levelId.mute) blip(nextTime, SOUNDS[level]);
+      if (level !== levelId.mute) blip(nextTime, PITCH[level]);
       announce(nextTime, beat, level);
       nextTime += 60 / bpm;
       beat = (beat + 1) % pattern.length;
