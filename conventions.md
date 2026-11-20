@@ -17,12 +17,12 @@ Folders are layers, top to bottom. A module imports only from its own layer or t
 | Shell | `js/app.js` | Entry point and router. Maps each view name from `parseRoute` to that view's `mount`. |
 | | `js/routes.js` | Hash URL format: `routes.*` builders, `parseRoute`, `views`, and `NEW_ID` for unsaved records. Nothing else builds or parses `#/...` strings. |
 | | `js/strings.js` | `strings`: UI text used in more than one place. |
-| Views | `js/views/` | Routed screens only: `list`, `live`, `edit`, `setlist`. Each exports `mount(root, params)`. |
+| Views | `js/views/` | Routed screens only: `list`, `live`, `edit`, `setlist`, `shared` (opens a song link). Each exports `mount(root, params)`. |
 | Components | `js/components/` | All UI that isn't a routed screen. Primitives: `modal.js` (`openModal`, `attachDialog`), `toast.js`, `rows.js` (`modalRow` and the dialog rows built on it), `controls.js` (`segToggle`, `stepper`, `keyFace`, `textField`), `parts.js` (search box, song row, not-found screen), `sheet.js` (`renderSheet`), `share.js`. Widgets: `keybar.js`, `tuner.js`, `metronome.js`. Dialogs: `menu.js`, `settings.js`, `details.js`. |
 | Domain | `js/sheet/` | Pure song logic with no DOM, storage or prefs: `chords`, `parse`, `infer`, `transpose`, `insert` (keybar chord chips and the text each key inserts). |
 | | `js/audio/` | Web Audio: shared context, pitch detection, mic input, metronome clicks. |
-| | `js/data/` | Persistence and settings. `db.js` (IndexedDB: `dbAll`, `dbPut`, `dbDelete`); `store.js`, `setlists.js` (in-memory caches over `db.js`: `load()` at start, then sync `all()` / `get(id)` and async writes); `prefs.js` (all preferences); `theme.js` (theme choice, applied on load); `group.js` (list grouping); `backup.js` (export/import). |
-| Core | `js/core/` | App-agnostic engine. `dom.js` (tag builders, buttons, `cls`); `icons.js`; `events.js` (`evt`, `keys`); `math.js` (`clamp`, `mod12`); `autosave.js` (`createAutosave`); `autoscroll.js` (page scroll engine, paging, touch/wheel sync); `wakelock.js`. |
+| | `js/data/` | Persistence and settings. `db.js` (IndexedDB: `dbAll`, `dbPut`, `dbDelete`); `store.js`, `setlists.js` (in-memory caches over `db.js`: `load()` at start, then sync `all()` / `get(id)` and async writes); `prefs.js` (all preferences); `theme.js` (theme choice, applied on load); `group.js` (list grouping); `backup.js` (gzipped library export/import, song links). |
+| Core | `js/core/` | App-agnostic engine. `dom.js` (tag builders, buttons, `cls`); `icons.js`; `events.js` (`evt`, `keys`); `math.js` (`clamp`, `mod12`); `autosave.js` (`createAutosave`); `autoscroll.js` (page scroll engine, paging, touch/wheel sync); `compress.js` (`CompressionStream` and base64url); `wakelock.js`. |
 
 - The shell's `routes.js` and `strings.js` are constants with no imports, so any layer except `core/` may import them.
 - Domain folders may import each other (`audio/pitch.js` uses `sheet/chords.js`; `data/store.js` uses `sheet/parse.js`), but `sheet/` imports only `core/`.

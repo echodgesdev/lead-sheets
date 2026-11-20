@@ -4,7 +4,8 @@ import { attachKeybar } from '../components/keybar.js';
 import { iconId } from '../core/icons.js';
 import { toast } from '../components/toast.js';
 import { editorId, featureId, getEditorOptions, hasFeature } from '../data/prefs.js';
-import { shareText } from '../components/share.js';
+import { shareLink } from '../components/share.js';
+import { songLink } from '../data/backup.js';
 import { div, h1, header, span, textarea, iconButton, labeledButton } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
@@ -113,8 +114,8 @@ export function mount(el, { id, back = null }) {
     location.hash = currentId ? (back ?? routes.preview(currentId)) : routes.home;
   }
 
-  function onShare() {
-    shareText(titleOf(editor.value), editor.value);
+  async function onShare() {
+    shareLink(titleOf(editor.value), await songLink(editor.value));
   }
 
   async function onDelete() {

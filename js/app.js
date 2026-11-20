@@ -5,6 +5,7 @@ import { mount as mountList } from './views/list.js';
 import { mount as mountLive } from './views/live.js';
 import { mount as mountEdit } from './views/edit.js';
 import { mount as mountSetlist } from './views/setlist.js';
+import { mount as mountShared } from './views/shared.js';
 import { evt } from './core/events.js';
 import { views, parseRoute } from './routes.js';
 import { p } from './core/dom.js';
@@ -15,6 +16,7 @@ const MOUNTS = {
   [views.set]: mountLive,
   [views.edit]: mountEdit,
   [views.setlist]: mountSetlist,
+  [views.shared]: mountShared,
 };
 
 const app = document.getElementById('app');

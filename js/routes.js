@@ -6,6 +6,7 @@ export const views = Object.freeze({
   set: 'set',
   edit: 'edit',
   setlist: 'setlist',
+  shared: 'shared',
 });
 
 export const routes = Object.freeze({
@@ -15,6 +16,7 @@ export const routes = Object.freeze({
   set: (setId, songId) => `#/${views.set}/${setId}/${songId}`,
   edit: (id, back) => (back ? `#/${views.edit}/${id}/${back.slice(2)}` : `#/${views.edit}/${id}`),
   setlist: (id) => `#/${views.setlist}/${id}`,
+  shared: (code) => `#/${views.shared}/${code}`,
 });
 
 export function parseRoute(hash) {
@@ -26,5 +28,6 @@ export function parseRoute(hash) {
   if (view === views.set && songId) return { view, params: { id: songId, setId: id } };
   if (view === views.edit) return { view, params: { id, back: songId ? `#/${parts.slice(3).join('/')}` : null } };
   if (view === views.setlist) return { view, params: { id } };
+  if (view === views.shared) return { view, params: { code: id } };
   return { view: null, params: {} };
 }

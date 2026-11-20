@@ -28,7 +28,7 @@ function backupRows(onImport) {
   const importBtn = labeledButton(iconId.fileImport, 'Import');
   const fileInput = input({
     type: 'file',
-    accept: '.json,.md,.txt,application/json,text/plain',
+    accept: '.gz,.json,.md,.txt,application/gzip,application/x-gzip,application/json,text/plain',
     hidden: '',
   });
   const row = modalRow('Backup', exportBtn, importBtn, fileInput);
