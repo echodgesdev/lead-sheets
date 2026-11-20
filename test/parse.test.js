@@ -11,12 +11,13 @@ test('isChord positives', () => {
     'A', 'Am', 'E', 'Em7', 'Am7', 'F#m7b5', 'G/B', 'Bbmaj7', 'Dsus4', 'C#dim', 'E7#9', 'N.C.',
     'Cadd9', 'C(add9)', 'Dm/F', 'Gsus2', 'Aaug', 'C+', 'Bø', 'B°', 'A7sus4', 'Cmaj9', 'D6',
     'G13', 'Eb', 'Cm9', 'F#', 'Gmin7', 'CM7', 'E5', 'C7b9', 'D7#11', 'Dm7b5', 'Bb', 'a', 'em7',
+    'Bm7-5', 'C#m7-5', 'A7-9', 'C7+5',
   ];
   good.forEach((t) => eq(isChord(t), true, t));
 });
 
 test('isChord negatives', () => {
-  const bad = ['Bad', 'Dog', 'Each', 'Ebb', 'Hello', 'I', 'The', 'Amen', 'Add', 'Dim', 'Cat', 'Gone', 'Abbot', 'H', 'x2', '', 'be', 'dad'];
+  const bad = ['Bad', 'Dog', 'Each', 'Ebb', 'Hello', 'I', 'The', 'Amen', 'Add', 'Dim', 'Cat', 'Gone', 'Abbot', 'H', 'x2', '', 'be', 'dad', 'A-', 'B-side'];
   bad.forEach((t) => eq(isChord(t), false, t));
 });
 

@@ -9,7 +9,7 @@ const DEGREES = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'
 const ROMAN = ['I', '♭II', 'II', '♭III', 'III', 'IV', '♭V', 'V', '♭VI', 'VI', '♭VII', 'VII'];
 const SUPERSCRIPT = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
 const QUALITIES = [
-  { re: /^(?:m7b5|ø7?)/, lower: true, mark: 'ø', seventh: true },
+  { re: /^(?:m7[b-]5|ø7?)/, lower: true, mark: 'ø', seventh: true },
   { re: /^(?:dim|°)/, lower: true, mark: '°' },
   { re: /^(?:aug|\+)/, lower: false, mark: '+' },
   { re: /^(?:min|m(?!aj))/, lower: true, mark: '' },

@@ -1,5 +1,5 @@
 const ROOT = '[A-Ga-g][#b]?';
-const PART = '(?:maj|min|dim|aug|add|sus|m|M|ø|°|\\+|[#b]?\\d{1,2}|\\([#b+\\-\\w]*\\))';
+const PART = '(?:maj|min|dim|aug|add|sus|m|M|ø|°|\\+|[#b+\\-]?\\d{1,2}|\\([#b+\\-\\w]*\\))';
 const CHORD_RE = new RegExp(`^${ROOT}${PART}*(?:\\/${ROOT})?\\**$`);
 const NC_RE = /^N\.?C\.?$/;
 const FILLER_RE = /^(?:\(?x\d+\)?|\d+x|[-/%:.()*~]+)$/i;

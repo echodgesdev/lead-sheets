@@ -62,6 +62,7 @@ test('roman numerals', () => {
     ['Bb', '♭VII'],
     ['Bdim', 'vii°'],
     ['Bm7b5', 'viiø⁷'],
+    ['Bm7-5', 'viiø⁷'],
     ['Cmaj7', 'Imaj⁷'],
     ['Faug', 'IV+'],
     ['C/D', 'I/2'],
