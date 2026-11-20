@@ -21,6 +21,7 @@ export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 export const modeId = Object.freeze({
   live: 'live',
   edit: 'edit',
+  learn: 'learn',
 });
 
 export const pedalId = Object.freeze({
@@ -150,7 +151,8 @@ function shownIds(key, items, fallback) {
 }
 
 export function getListMode() {
-  return readRaw(localStorage, MODE_KEY) === modeId.edit ? modeId.edit : modeId.live;
+  const mode = readRaw(localStorage, MODE_KEY);
+  return Object.values(modeId).includes(mode) ? mode : modeId.live;
 }
 
 export function setListMode(mode) {

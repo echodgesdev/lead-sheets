@@ -525,6 +525,10 @@ button.row:active {
   transform: scale(0.985);
 }
 
+.tool-row {
+  cursor: pointer;
+}
+
 @media (hover: hover) {
   .btn:hover:not(:disabled):not(.active):not(.primary),
   .row:hover {

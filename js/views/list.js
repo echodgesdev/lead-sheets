@@ -23,6 +23,7 @@ import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
 import { segToggle } from '../components/controls.js';
+import { createLearnPanel } from '../components/learn.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
@@ -39,9 +40,12 @@ export function mount(el) {
   const top = div('list-top');
 
   const headerEl = header('hdr');
-  const liveBtn = labeledButton(iconId.play, 'Live');
-  const editBtn = labeledButton(iconId.penToSquare, 'Edit');
-  const modeToggle = segToggle(liveBtn, editBtn);
+  const modeBtns = {
+    [modeId.live]: labeledButton(iconId.play, 'Live'),
+    [modeId.edit]: labeledButton(iconId.penToSquare, 'Edit'),
+    [modeId.learn]: labeledButton(null, 'Learn'),
+  };
+  const modeToggle = segToggle(...Object.values(modeBtns));
   modeToggle.setAttribute('role', 'group');
   modeToggle.setAttribute('aria-label', 'Mode');
   const gearBtn = iconButton(iconId.gear, 'Settings');
@@ -63,9 +67,11 @@ export function mount(el) {
 
   const groupsEl = div('groups');
   const empty = p({ class: 'status', hidden: '' });
+  const learnEl = div();
+  let learnPanel = null;
 
   top.append(headerEl, searchBar);
-  screen.append(top, groupsEl, empty);
+  screen.append(top, groupsEl, empty, learnEl);
   el.append(screen);
 
   function hrefFor(rec, set) {
@@ -110,6 +116,7 @@ export function mount(el) {
   }
 
   function renderList() {
+    if (mode === modeId.learn) return;
     const songs = store.search(search.value);
     const bySet = groupBy === groupId.setlist;
     const groups = bySet ? groupSetlists(songs, setlists.all(), !search.value.trim()) : groupSongs(songs, groupBy);
@@ -121,14 +128,30 @@ export function mount(el) {
   }
 
   function applyMode() {
-    const live = mode === modeId.live;
-    liveBtn.classList.toggle(cls.active, live);
-    editBtn.classList.toggle(cls.active, !live);
-    liveBtn.setAttribute('aria-pressed', String(live));
-    editBtn.setAttribute('aria-pressed', String(!live));
-    newLink.hidden = live;
-    pasteBtn.hidden = live || !hasFeature(featureId.share);
+    for (const [id, btn] of Object.entries(modeBtns)) {
+      btn.classList.toggle(cls.active, id === mode);
+      btn.setAttribute('aria-pressed', String(id === mode));
+    }
+    const edit = mode === modeId.edit;
+    const learn = mode === modeId.learn;
+    newLink.hidden = !edit;
+    pasteBtn.hidden = !edit || !hasFeature(featureId.share);
+    searchBar.hidden = learn;
+    groupsEl.hidden = learn;
+    if (learn) {
+      empty.hidden = true;
+      learnPanel ??= createLearnPanel();
+      learnEl.replaceChildren(learnPanel.el);
+      return;
+    }
+    disposeLearn();
     renderList();
+  }
+
+  function disposeLearn() {
+    learnPanel?.dispose();
+    learnPanel = null;
+    learnEl.replaceChildren();
   }
 
   async function onPaste() {
@@ -170,12 +193,11 @@ export function mount(el) {
     setListGroup(groupBy);
     renderList();
   });
-  liveBtn.addEventListener(evt.click, () => setMode(modeId.live));
-  editBtn.addEventListener(evt.click, () => setMode(modeId.edit));
+  for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
   pasteBtn.addEventListener(evt.click, onPaste);
   gearBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
 
   applyMode();
 
-  return () => {};
+  return disposeLearn;
 }
