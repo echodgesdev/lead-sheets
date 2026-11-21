@@ -15,6 +15,7 @@ const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
 const LIST_OPTIONS_KEY = 'tabs.listOptions';
 const OPEN_TOOLS_KEY = 'tabs.openTools';
+const KEY_OCTAVES_KEY = 'tabs.keyOctaves';
 const METRONOME_KEY = 'tabs.metronome';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
@@ -263,6 +264,20 @@ export function setListOptions(ids) {
 
 export function hasListOption(id) {
   return getListOptions().includes(id);
+}
+
+export const KEY_OCTAVE_OPTIONS = [
+  { id: 2, label: '2', title: 'At least two octaves' },
+  { id: 3, label: '3', title: 'At least three octaves' },
+];
+
+export function getKeyOctaves() {
+  const saved = read(KEY_OCTAVES_KEY);
+  return KEY_OCTAVE_OPTIONS.some((o) => o.id === saved) ? saved : KEY_OCTAVE_OPTIONS[0].id;
+}
+
+export function setKeyOctaves(n) {
+  write(KEY_OCTAVES_KEY, n);
 }
 
 export function getOpenTools() {

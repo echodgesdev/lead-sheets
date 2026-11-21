@@ -2,6 +2,7 @@ import { icon } from './icons.js';
 
 export const cls = Object.freeze({
   active: 'active',
+  allowed: 'allowed',
   away: 'away',
   beat: 'beat',
   blocked: 'blocked',

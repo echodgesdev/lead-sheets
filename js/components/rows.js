@@ -3,6 +3,7 @@ import {
   TAGS,
   EDITOR_OPTIONS,
   LIST_OPTIONS,
+  KEY_OCTAVE_OPTIONS,
   CONTROLS,
   NUMBER_STYLES,
   PEDAL_MODES,
@@ -18,6 +19,8 @@ import {
   setPedalMode,
   getShownTags,
   setShownTags,
+  getKeyOctaves,
+  setKeyOctaves,
   getListOptions,
   setListOptions,
   getEditorOptions,
@@ -153,6 +156,10 @@ export function liveSettingsRows(onSize) {
     ...liveControlRows(),
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
   ];
+}
+
+export function toolsSettingsRows() {
+  return [choiceRow('Piano octaves', KEY_OCTAVE_OPTIONS, getKeyOctaves(), setKeyOctaves)];
 }
 
 export function listSettingsRows() {

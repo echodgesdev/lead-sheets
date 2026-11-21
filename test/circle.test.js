@@ -109,4 +109,6 @@ test('circle scale roots in the key or on the tonic', () => {
   eq(scaleRoot(1, false, 'minorPentatonic', true), 4);
   eq(scalePitches(scaleRoot(0, false, 'dorian', true), 'dorian'), [2, 4, 5, 7, 9, 11, 0]);
   eq(wedgeOf(7), 1);
+  eq(wedgeOf(2, true), 11);
+  eq(wedgeOf(9, true), 0);
 });

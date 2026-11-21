@@ -1734,18 +1734,6 @@ button.row:active {
   cursor: not-allowed;
 }
 
-.clock-label.blocked {
-  opacity: 0.2;
-}
-
-.chain-cell.blocked {
-  opacity: 0.3;
-}
-
-.key.blocked {
-  opacity: 0.35;
-}
-
 .clock-dot.pressed {
   transform: scale(1.35);
   transition-duration: 0.08s;
@@ -1870,8 +1858,8 @@ button.row:active {
 }
 
 .key.white {
-  left: calc(var(--i) * 100% / 21);
-  width: calc(100% / 21 - 1px);
+  left: calc(var(--i) * 100% / var(--whites));
+  width: calc(100% / var(--whites) - 1px);
   height: 100%;
   border-radius: 0 0 4px 4px;
   background: var(--key-white);
@@ -1880,38 +1868,45 @@ button.row:active {
 
 .key.black {
   z-index: 1;
-  left: calc(var(--i) * 100% / 21 - 100% / 68);
-  width: calc(100% / 34);
+  left: calc((var(--i) - 0.31) * 100% / var(--whites));
+  width: calc(0.62 * 100% / var(--whites));
   height: 62%;
   border-radius: 0 0 3px 3px;
   background: var(--key-black);
-  box-shadow: 0 0 0 1px var(--surface);
+  box-shadow: 0 0 0 2px var(--surface);
 }
 
-.key.in-key::after {
-  content: '';
+.keys-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.key-dots {
+  position: relative;
+  height: 7px;
+}
+
+.key-dot {
   position: absolute;
-  bottom: 6px;
-  left: 50%;
-  width: 5px;
-  height: 5px;
-  margin-left: -2.5px;
+  top: 0;
+  left: calc(var(--x) * 1%);
+  width: 7px;
+  height: 7px;
+  margin-left: -3.5px;
   border-radius: 50%;
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.key-dot.in-key {
   background: var(--muted);
+  box-shadow: none;
 }
 
-.key.black.in-key::after {
-  bottom: 5px;
-  background: color-mix(in srgb, var(--key-white) 60%, transparent);
-}
-
-.key.voiced::after {
-  background: var(--on-accent);
-}
-
-.key.white.voiced,
-.key.black.voiced {
-  background: var(--accent);
+.key-dot.allowed {
+  box-shadow: 0 0 0 1.5px var(--accent);
 }
 
 .key.white.pressed {
@@ -1923,26 +1918,32 @@ button.row:active {
   background: color-mix(in srgb, var(--accent) 60%, var(--key-black));
 }
 
-.key.white.voiced.root,
-.key.black.voiced.root {
+.key.white.voiced {
+  background: var(--accent);
+}
+
+.key.black.voiced {
+  background: color-mix(in srgb, var(--accent) 70%, var(--key-black));
+}
+
+.key.white.voiced.root {
   background: var(--lime);
 }
 
-.key.white.voiced.outside,
-.key.black.voiced.outside {
+.key.black.voiced.root {
+  background: color-mix(in srgb, var(--lime) 70%, var(--key-black));
+}
+
+.key.white.voiced.outside {
   background: var(--orange);
 }
 
+.key.black.voiced.outside {
+  background: color-mix(in srgb, var(--orange) 70%, var(--key-black));
+}
+
 .key.voiced.pressed {
-  background: color-mix(in srgb, var(--accent) 70%, var(--fg));
-}
-
-.key.voiced.root.pressed {
-  background: color-mix(in srgb, var(--lime) 70%, var(--fg));
-}
-
-.key.voiced.outside.pressed {
-  background: color-mix(in srgb, var(--orange) 70%, var(--fg));
+  filter: brightness(1.2);
 }
 
 @media (prefers-reduced-motion: reduce) {

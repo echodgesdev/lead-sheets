@@ -30,6 +30,7 @@ import {
   roleId,
 } from '../sheet/circle.js';
 import { startNotes, playRun } from '../audio/tone.js';
+import { getKeyOctaves } from '../data/prefs.js';
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, iconButton, plainButton, labeledButton, cls } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
@@ -322,6 +323,7 @@ export function createCircleControl() {
         names: pitchNames(selected.index, keyPcs),
         scalePcs: keyPcs,
         noteMidiOf: (pc) => noteMidi(pc, display),
+        minOctaves: getKeyOctaves(),
       };
     }
 
@@ -382,7 +384,8 @@ export function createCircleControl() {
     });
 
     function renderStage() {
-      stage.replaceChildren(view === viewId.fifths ? art : RENDERERS[view](model()));
+      if (view !== viewId.fifths) stage.replaceChildren(RENDERERS[view](model()));
+      else if (art.parentNode !== stage) stage.replaceChildren(art);
     }
 
     function syncChips() {
@@ -459,10 +462,24 @@ export function createCircleControl() {
     let voice = null;
     let pressed = [];
 
+    function noteWedges(pc) {
+      return [slotOf(wedgeOf(pc), ringId.outer), slotOf(wedgeOf(pc, true), ringId.inner)]
+        .map((slot) => stage.querySelector(`[data-slot="${slot}"]`))
+        .filter(Boolean);
+    }
+
+    function notePcOf(el) {
+      const { ring, index, slot } = el.dataset;
+      if (ring && ring !== ringId.dim) return keyTonic(Number(index), ring === ringId.inner);
+      return chipItems.get(slot)?.pc ?? null;
+    }
+
     function press(el) {
       for (const p of pressed) p.classList.remove(cls.pressed);
       const slot = el?.dataset.slot;
+      const notePc = el && noteMode() && view === viewId.fifths ? notePcOf(el) : null;
       if (!el) pressed = [];
+      else if (notePc !== null) pressed = [...noteWedges(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
       else if (slot) pressed = [stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]);
       else pressed = [el];
       for (const p of pressed) p.classList.add(cls.pressed);
@@ -498,9 +515,7 @@ export function createCircleControl() {
       for (const el of lit) el.classList.remove(cls.pressed);
       lit = [];
       if (midi === null) return;
-      lit = view === viewId.fifths
-        ? [stage.querySelector(`[data-slot="${slotOf(wedgeOf(midi % WEDGES), ringId.outer)}"]`)].filter(Boolean)
-        : [...stage.querySelectorAll(`[data-notes="${midi}"]`)];
+      lit = view === viewId.fifths ? noteWedges(midi % WEDGES) : [...stage.querySelectorAll(`[data-notes="${midi}"]`)];
       for (const el of lit) el.classList.add(cls.pressed);
     }
 

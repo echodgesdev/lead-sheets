@@ -255,6 +255,6 @@ export function scaleRoot(index, minor, id, inKey) {
   return inKey ? (keyTonic(index, false) + scaleOf(id).offset) % WEDGES : keyTonic(index, minor);
 }
 
-export function wedgeOf(pc) {
-  return FIFTHS.indexOf(pc);
+export function wedgeOf(pc, minor = false) {
+  return FIFTHS.indexOf(minor ? (pc + WEDGES - RELATIVE_MINOR) % WEDGES : pc);
 }

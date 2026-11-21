@@ -1,7 +1,7 @@
 import * as backup from '../data/backup.js';
 import { themeId, getTheme, setTheme } from '../data/theme.js';
 import { openModal } from './modal.js';
-import { modalRow, choiceRow, accordionRow, listSettingsRows, liveSettingsRows, editorSettingsRows } from './rows.js';
+import { modalRow, choiceRow, accordionRow, listSettingsRows, liveSettingsRows, editorSettingsRows, toolsSettingsRows } from './rows.js';
 import { input, p, span, labeledButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { iconId } from '../core/icons.js';
@@ -73,6 +73,7 @@ export function openSettings({ onImport, onClose } = {}) {
     accordionRow('Song list', ...listSettingsRows()),
     accordionRow('Live settings', ...liveSettingsRows()),
     accordionRow('Editor', ...editorSettingsRows()),
+    accordionRow('Tools', ...toolsSettingsRows()),
   );
   if (onClose) dialog.addEventListener(evt.close, onClose);
 }

@@ -13,7 +13,6 @@ const HUB_SUB_DY = '1.6em';
 const DOT = 4.5;
 const ROOT_DOT = 6;
 const INTERVALS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
-const KEY_OCTAVES = 3;
 const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
 const BLACK_PCS = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
 
@@ -225,7 +224,6 @@ function pianoKey(midi, pc, index, shade, model) {
   const key = plainButton('', classes(
     'key',
     shade,
-    model.scalePcs.includes(pc) && cls.inKey,
     lit && cls.voiced,
     lit && pc === model.rootPc && cls.root,
     lit && pc !== model.rootPc && isOutside(model, pc) && cls.outside,
@@ -237,16 +235,40 @@ function pianoKey(midi, pc, index, shade, model) {
   return key;
 }
 
+function keyDot(pc, center, whites, model) {
+  const dot = span(classes('key-dot', model.scalePcs.includes(pc) && cls.inKey, model.locked && model.allowed.includes(pc) && cls.allowed));
+  dot.style.setProperty('--x', (center * 100) / whites);
+  return dot;
+}
+
+function keyRange({ shown, tonicMidi, minOctaves }) {
+  const low = Math.min(tonicMidi, ...shown);
+  const start = low - (low % OCTAVE);
+  const octaves = Math.max(minOctaves, Math.ceil((Math.max(...shown) + 1 - start) / OCTAVE));
+  return { start, octaves };
+}
+
 export function renderKeys(model) {
-  const start = model.tonicMidi - (model.tonicMidi % OCTAVE);
+  const { start, octaves } = keyRange(model);
+  const whites = octaves * WHITE_PCS.length;
   const board = div('keys');
+  board.style.setProperty('--whites', whites);
+  const dots = div('key-dots');
   const blacks = [];
-  for (let o = 0; o < KEY_OCTAVES; o++) {
-    WHITE_PCS.forEach((pc, i) => board.append(pianoKey(start + o * OCTAVE + pc, pc, o * WHITE_PCS.length + i, 'white', model)));
+  for (let o = 0; o < octaves; o++) {
+    WHITE_PCS.forEach((pc, i) => {
+      const index = o * WHITE_PCS.length + i;
+      board.append(pianoKey(start + o * OCTAVE + pc, pc, index, 'white', model));
+      dots.append(keyDot(pc, index + 0.5, whites, model));
+    });
     for (const [pc, i] of Object.entries(BLACK_PCS)) {
-      blacks.push(pianoKey(start + o * OCTAVE + Number(pc), Number(pc), o * WHITE_PCS.length + i, 'black', model));
+      const index = o * WHITE_PCS.length + i;
+      blacks.push(pianoKey(start + o * OCTAVE + Number(pc), Number(pc), index, 'black', model));
+      dots.append(keyDot(Number(pc), index, whites, model));
     }
   }
   board.append(...blacks);
-  return board;
+  const view = div('keys-view');
+  view.append(board, dots);
+  return view;
 }
