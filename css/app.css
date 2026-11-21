@@ -18,9 +18,7 @@
   --lime: #c6d74c;
   --orange: #f5a524;
   --key-white: #e6edf3;
-  --key-white-out: #7d8a96;
   --key-black: #0b1117;
-  --key-black-in: #34475a;
 
   --bg: #0f1923;
   --surface: #16232f;
@@ -59,9 +57,7 @@
   --chord: #005b7f;
   --orange: #d97a00;
   --key-white: #ffffff;
-  --key-white-out: #c5ced6;
   --key-black: #1e2a36;
-  --key-black-in: #4a6a85;
   --danger: #c62828;
   --badge-bg: #e8f4fb;
   --badge-fg: #005b7f;
@@ -1827,11 +1823,8 @@ button.row:active {
   width: calc(100% / 21 - 1px);
   height: 100%;
   border-radius: 0 0 4px 4px;
-  background: var(--key-white-out);
-}
-
-.key.white.in-key {
   background: var(--key-white);
+  box-shadow: inset 0 0 0 1px var(--line);
 }
 
 .key.black {
@@ -1844,8 +1837,25 @@ button.row:active {
   box-shadow: 0 0 0 1px var(--surface);
 }
 
-.key.black.in-key {
-  background: var(--key-black-in);
+.key.in-key::after {
+  content: '';
+  position: absolute;
+  bottom: 6px;
+  left: 50%;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.key.black.in-key::after {
+  bottom: 5px;
+  background: color-mix(in srgb, var(--key-white) 60%, transparent);
+}
+
+.key.voiced::after {
+  background: var(--on-accent);
 }
 
 .key.white.voiced,

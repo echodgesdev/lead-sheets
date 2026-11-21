@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, shapeSteps, shapePitches, shapeName } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, shapeSteps, shapePitches, shapeName, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -89,4 +89,14 @@ test('circle chord shapes', () => {
   eq(['triad', '7', 'maj7'].map((s) => shapeName('Dm', 'minor', s)), ['Dm', 'Dm7', 'DmM7']);
   eq(shapeName('Bdim', 'diminished', '7'), 'Bø7');
   eq(chordNotes(0, 'major', true, C, 1, '7'), [64, 67, 70, 72]);
+});
+
+test('circle scale roots in the key or on the tonic', () => {
+  eq(scaleRoot(0, false, 'dorian', true), 2);
+  eq(scaleRoot(0, false, 'dorian', false), 0);
+  eq(scaleRoot(0, true, 'ionian', true), 0);
+  eq(scaleRoot(0, true, 'dorian', false), 9);
+  eq(scaleRoot(1, false, 'minorPentatonic', true), 4);
+  eq(scalePitches(scaleRoot(0, false, 'dorian', true), 'dorian'), [2, 4, 5, 7, 9, 11, 0]);
+  eq(wedgeOf(7), 1);
 });

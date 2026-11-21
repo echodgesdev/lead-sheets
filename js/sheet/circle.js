@@ -169,15 +169,15 @@ export const scaleId = Object.freeze({
 });
 
 export const SCALES = [
-  { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', tag: '1', steps: [0, 2, 4, 5, 7, 9, 11] },
-  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', tag: '2', steps: [0, 2, 3, 5, 7, 9, 10] },
-  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', tag: '3', steps: [0, 1, 3, 5, 7, 8, 10] },
-  { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', tag: '4', steps: [0, 2, 4, 6, 7, 9, 11] },
-  { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', tag: '5', steps: [0, 2, 4, 5, 7, 9, 10] },
-  { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', tag: '6', steps: [0, 2, 3, 5, 7, 8, 10] },
-  { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', tag: '7', steps: [0, 1, 3, 5, 6, 8, 10] },
-  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Pent.', tag: 'maj', steps: [0, 2, 4, 7, 9] },
-  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Pent.', tag: 'min', steps: [0, 3, 5, 7, 10] },
+  { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', tag: '1', offset: 0, steps: [0, 2, 4, 5, 7, 9, 11] },
+  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', tag: '2', offset: 2, steps: [0, 2, 3, 5, 7, 9, 10] },
+  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', tag: '3', offset: 4, steps: [0, 1, 3, 5, 7, 8, 10] },
+  { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', tag: '4', offset: 5, steps: [0, 2, 4, 6, 7, 9, 11] },
+  { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', tag: '5', offset: 7, steps: [0, 2, 4, 5, 7, 9, 10] },
+  { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', tag: '6', offset: 9, steps: [0, 2, 3, 5, 7, 8, 10] },
+  { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', tag: '7', offset: 11, steps: [0, 1, 3, 5, 6, 8, 10] },
+  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Pent.', tag: 'maj', offset: 0, steps: [0, 2, 4, 7, 9] },
+  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Pent.', tag: 'min', offset: 9, steps: [0, 3, 5, 7, 10] },
 ];
 
 export function scaleOf(id) {
@@ -191,4 +191,12 @@ export function scalePitches(tonic, id) {
 export function scaleRun(tonic, id) {
   const base = noteMidi(tonic, tonic);
   return [...scaleOf(id).steps.map((step) => base + step), base + WEDGES];
+}
+
+export function scaleRoot(index, minor, id, inKey) {
+  return inKey ? (keyTonic(index, false) + scaleOf(id).offset) % WEDGES : keyTonic(index, minor);
+}
+
+export function wedgeOf(pc) {
+  return FIFTHS.indexOf(pc);
 }

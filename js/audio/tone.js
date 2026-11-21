@@ -44,10 +44,10 @@ export function startNotes(midis) {
   };
 }
 
-export function playRun(midis) {
+export function playRun(midis, onStep) {
   const ctx = audioContext();
   const start = ctx.currentTime;
-  midis.forEach((midi, i) => {
+  const voices = midis.map((midi, i) => {
     const at = start + i * RUN_STEP_S;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(SILENT, at);
@@ -60,5 +60,19 @@ export function playRun(midis) {
     osc.connect(gain);
     osc.start(at);
     osc.stop(at + RUN_NOTE_S);
+    return { gain, osc };
   });
+  const timers = midis.map((midi, i) => setTimeout(() => onStep?.(midi), i * RUN_STEP_S * 1000));
+  timers.push(setTimeout(() => onStep?.(null), midis.length * RUN_STEP_S * 1000));
+
+  return function stop() {
+    timers.forEach(clearTimeout);
+    const t = ctx.currentTime;
+    for (const { gain, osc } of voices) {
+      gain.gain.cancelScheduledValues(t);
+      gain.gain.setValueAtTime(SILENT, t);
+      osc.stop(t);
+    }
+    onStep?.(null);
+  };
 }
