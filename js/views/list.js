@@ -4,7 +4,6 @@ import { openSettings } from '../components/settings.js';
 import { icon, iconId } from '../core/icons.js';
 import { GROUPS, groupId, groupSongs, groupSetlists } from '../data/group.js';
 import { transposeKey } from '../sheet/transpose.js';
-import { importText } from '../data/backup.js';
 import {
   modeId,
   getListMode,
@@ -15,7 +14,6 @@ import {
   setListQuery,
   setSongOrder,
 } from '../data/prefs.js';
-import { toast } from '../components/toast.js';
 import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
@@ -67,9 +65,8 @@ export function mount(el) {
   modeToggle.setAttribute('aria-label', 'Mode');
   const menuBtn = iconButton(iconId.ellipsisVertical, 'Settings');
   const newLink = iconLink(iconId.plus, 'New song', routes.edit(NEW_ID));
-  const pasteBtn = iconButton(iconId.paste, 'Paste song');
   const actions = div('hdr-actions');
-  actions.append(pasteBtn, newLink, menuBtn);
+  actions.append(newLink, menuBtn);
   headerEl.append(brand, modeToggle, actions);
   const introTimer = intro ? setTimeout(() => headerEl.classList.remove(cls.intro), INTRO_MS) : 0;
 
@@ -155,7 +152,6 @@ export function mount(el) {
     const edit = mode === modeId.edit;
     const learn = mode === modeId.learn;
     newLink.hidden = !edit;
-    pasteBtn.hidden = !edit;
     searchBar.hidden = learn;
     groupsEl.hidden = learn;
     if (learn) {
@@ -174,30 +170,6 @@ export function mount(el) {
     learnEl.replaceChildren();
   }
 
-  async function onPaste() {
-    let text = '';
-    try {
-      text = (await navigator.clipboard.readText()).trim();
-    } catch {
-      text = '';
-    }
-    if (!text) {
-      toast('Nothing to paste');
-      return;
-    }
-    try {
-      const { count, id } = await importText(text);
-      if (id) {
-        location.hash = routes.edit(id);
-        return;
-      }
-      toast(`Imported ${count}`);
-      renderList();
-    } catch (err) {
-      toast(err.message);
-    }
-  }
-
   function setMode(next) {
     mode = next;
     setListMode(next);
@@ -214,7 +186,6 @@ export function mount(el) {
     renderList();
   });
   for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
-  pasteBtn.addEventListener(evt.click, onPaste);
   menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
 
   applyMode();
