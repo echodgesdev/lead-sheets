@@ -1,6 +1,6 @@
 import { attachDialog } from './modal.js';
-import { modalRow, choiceToggle } from './rows.js';
-import { renderClock, renderChain, renderKeys, hubText, alignId } from './theory-views.js';
+import { modalRow, choiceToggle, labeledField } from './rows.js';
+import { renderClock, renderChain, renderKeys, hubText, alignId, modeId } from './theory-views.js';
 import {
   WEDGES,
   ringId,
@@ -15,8 +15,14 @@ import {
   pitchNames,
   noteMidi,
   voicing,
+  chordPitches,
+  scaleId,
+  SCALES,
+  scaleOf,
+  scalePitches,
+  scaleRun,
 } from '../sheet/circle.js';
-import { startNotes } from '../audio/tone.js';
+import { startNotes, playRun } from '../audio/tone.js';
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, iconButton, plainButton, cls } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
@@ -29,12 +35,7 @@ const HUB_RADIUS = 29;
 const GRADIENT_ID = 'circle-accent';
 const MAIN_DY = '-0.4em';
 const ALT_DY = '1.15em';
-const PLAYABLE = '[data-slot], [data-notes]';
-
-const soundId = Object.freeze({
-  note: 'note',
-  chord: 'chord',
-});
+const PLAYABLE = '[data-slot], [data-notes], [data-scale]';
 
 const viewId = Object.freeze({
   fifths: 'fifths',
@@ -44,9 +45,10 @@ const viewId = Object.freeze({
   keys: 'keys',
 });
 
-const SOUNDS = [
-  { id: soundId.note, label: 'Note' },
-  { id: soundId.chord, label: 'Chord' },
+const MODES = [
+  { id: modeId.note, label: 'Note' },
+  { id: modeId.chord, label: 'Chord' },
+  { id: modeId.scale, label: 'Scale' },
 ];
 
 const VIEWS = [
@@ -162,6 +164,15 @@ function chordRoot(chord) {
   return chord.replace(/(m|dim)$/, '');
 }
 
+function scaleChip(scale) {
+  const chip = plainButton(span('circle-degree', scale.tag), 'circle-chord');
+  chip.append(span(null, scale.short));
+  chip.dataset.scale = scale.id;
+  chip.title = scale.name;
+  chip.setAttribute('aria-label', scale.name);
+  return chip;
+}
+
 function chordChip(item, degree, bare) {
   const numeral = bare ? String(degree) : item.numeral;
   const name = displayName(bare ? chordRoot(item.chord) : item.chord);
@@ -174,10 +185,11 @@ function chordChip(item, degree, bare) {
 
 export function createCircleControl() {
   const button = iconButton(iconId.chartPie, 'Keys & chords');
-  let sound = soundId.chord;
+  let mode = modeId.chord;
   let locked = false;
   let view = viewId.fifths;
   let inversion = 0;
+  let scaleChoice = scaleId.ionian;
   let selected = { index: 0, minor: false };
   let chordIndex = 0;
 
@@ -209,24 +221,37 @@ export function createCircleControl() {
     }
 
     function noteMode() {
-      return sound === soundId.note;
+      return mode === modeId.note;
     }
 
     function model() {
       const t = tonic();
       const chord = items[chordIndex];
+      const keyPcs = items.map((item) => item.pc);
+      const voiced = voicing(chord.pc, chord.quality, inversion, t);
+      const note = { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) };
+      const scale = { name: scaleOf(scaleChoice).name, pcs: scalePitches(t, scaleChoice), run: scaleRun(t, scaleChoice) };
+      const chordPcs = chordPitches(chord.pc, chord.quality);
+      const byMode = {
+        [modeId.chord]: { shown: voiced, shownPcs: chordPcs, rootPc: chord.pc, allowed: chordPcs },
+        [modeId.note]: { shown: [note.midi], shownPcs: [note.pc], rootPc: note.pc, allowed: keyPcs },
+        [modeId.scale]: { shown: scale.run, shownPcs: scale.pcs, rootPc: t, allowed: scale.pcs },
+      };
       return {
+        ...byMode[mode],
+        mode,
         items,
         chordIndex,
         chord,
+        voiced,
+        note,
+        scale,
+        locked,
         tonic: t,
         tonicMidi: noteMidi(t, t),
         names: pitchNames(selected.index),
-        scalePcs: items.map((item) => item.pc),
-        voiced: voicing(chord.pc, chord.quality, inversion, t),
+        scalePcs: keyPcs,
         noteMidiOf: (pc) => noteMidi(pc, t),
-        noteMode: noteMode(),
-        note: { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) },
       };
     }
 
@@ -236,19 +261,27 @@ export function createCircleControl() {
       view = id;
       renderStage();
     }));
-    const voicingToggle = choiceToggle(INVERSIONS, inversion, (id) => {
+    const voicingField = labeledField('Voicing', choiceToggle(INVERSIONS, inversion, (id) => {
       if (id === inversion) return;
       inversion = id;
       renderStage();
-    });
+    }));
 
     function renderStage() {
-      lockBtn.hidden = view !== viewId.fifths;
       stage.replaceChildren(view === viewId.fifths ? art : RENDERERS[view](model()));
     }
 
     function syncChips() {
-      [...chords.children].forEach((chip, i) => chip.classList.toggle(cls.active, i === chordIndex));
+      chords.dataset.mode = mode;
+      [...chords.children].forEach((chip, i) => {
+        chip.classList.toggle(cls.active, mode === modeId.scale ? chip.dataset.scale === scaleChoice : i === chordIndex);
+      });
+    }
+
+    function renderChips() {
+      if (mode === modeId.scale) chords.replaceChildren(...SCALES.map(scaleChip));
+      else chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, noteMode())));
+      syncChips();
     }
 
     function renderKey() {
@@ -268,32 +301,33 @@ export function createCircleControl() {
       dimEl?.remove();
       dimEl = dimWedge(items.find((item) => item.ring === ringId.dim), noteMode());
       art.insertBefore(dimEl, hub);
-      chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, noteMode())));
-      syncChips();
+      renderChips();
       renderStage();
     }
 
-    const lockBtn = iconButton(iconId.lockOpen, 'Lock key');
+    const lockBtn = iconButton(iconId.lockOpen, 'Lock');
 
     function renderLock() {
       lockBtn.replaceChildren(icon(locked ? iconId.lock : iconId.lockOpen));
       lockBtn.classList.toggle(cls.active, locked);
       lockBtn.setAttribute('aria-pressed', String(locked));
-      lockBtn.title = locked ? 'Unlock key' : 'Lock key';
+      lockBtn.title = locked ? 'Unlock' : 'Lock to the key or selection';
       lockBtn.setAttribute('aria-label', lockBtn.title);
     }
 
     lockBtn.addEventListener(evt.click, () => {
       locked = !locked;
       renderLock();
+      renderStage();
     });
 
-    const controls = modalRow(null, choiceToggle(SOUNDS, sound, (id) => {
-      if (id === sound) return;
-      sound = id;
-      syncSound();
+    const modeField = labeledField('Play', choiceToggle(MODES, mode, (id) => {
+      if (id === mode) return;
+      mode = id;
+      syncMode();
       renderKey();
-    }), voicingToggle, lockBtn);
+    }));
+    const controls = modalRow(null, modeField, voicingField, labeledField('Lock', lockBtn));
     controls.classList.add('circle-controls');
 
     let voice = null;
@@ -308,10 +342,10 @@ export function createCircleControl() {
       for (const p of pressed) p.classList.add(cls.pressed);
     }
 
-    function wedgeVoice(el, chord) {
+    function wedgeVoice(el) {
       const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === ringId.inner };
       const key = locked ? selected : tapped;
-      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord, keyTonic(key.index, key.minor), inversion));
+      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, mode === modeId.chord, keyTonic(key.index, key.minor), inversion));
       if (!locked && (tapped.index !== selected.index || tapped.minor !== selected.minor)) {
         selected = tapped;
         chordIndex = 0;
@@ -320,7 +354,7 @@ export function createCircleControl() {
       return stop;
     }
 
-    function chipVoice(slot, chord) {
+    function chipVoice(slot) {
       const item = chipItems.get(slot);
       const index = items.indexOf(item);
       if (index !== chordIndex) {
@@ -328,17 +362,24 @@ export function createCircleControl() {
         syncChips();
         stageDirty = view !== viewId.fifths;
       }
-      return startNotes(chordNotes(item.pc, item.quality, chord, tonic(), inversion));
+      return startNotes(chordNotes(item.pc, item.quality, mode === modeId.chord, tonic(), inversion));
+    }
+
+    function pickScale(id) {
+      scaleChoice = id;
+      syncChips();
+      renderStage();
+      playRun(scaleRun(tonic(), id));
     }
 
     function begin(target) {
       const el = target.closest(PLAYABLE);
-      if (!el) return;
+      if (!el || el.classList.contains(cls.blocked)) return;
       end();
-      const chord = sound === soundId.chord;
-      const { ring, slot, notes } = el.dataset;
-      if (ring && ring !== ringId.dim) voice = wedgeVoice(el, chord);
-      else if (slot) voice = chipVoice(slot, chord);
+      const { ring, slot, notes, scale } = el.dataset;
+      if (scale) pickScale(scale);
+      else if (ring && ring !== ringId.dim) voice = wedgeVoice(el);
+      else if (slot) voice = chipVoice(slot);
       else voice = startNotes(notes.split(',').map(Number));
       press(el.isConnected ? el : null);
     }
@@ -367,11 +408,11 @@ export function createCircleControl() {
       });
     }
 
-    function syncSound() {
-      voicingToggle.hidden = noteMode();
+    function syncMode() {
+      voicingField.hidden = mode !== modeId.chord;
     }
 
-    syncSound();
+    syncMode();
     renderKey();
     renderLock();
     return { header, rows: [stage, controls, chords], onClose: end };

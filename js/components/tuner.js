@@ -1,7 +1,7 @@
 import { listen } from '../audio/listen.js';
 import { attachDialog } from './modal.js';
 import { signed } from '../sheet/transpose.js';
-import { div, p, small, span, iconButton, cls } from '../core/dom.js';
+import { div, small, span, iconButton, cls } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { iconId } from '../core/icons.js';
 
@@ -46,7 +46,9 @@ export function createTunerControl() {
 
   function open() {
     const display = buildDisplay();
-    const status = p('modal-note tuner-status', 'Play a single note');
+    const status = span('tuner-status', 'Play a single note');
+    const header = div('tool-header tuner-header');
+    header.append(status);
     let closed = false;
     let stopListening = null;
     listen(display.render).then(
@@ -59,7 +61,8 @@ export function createTunerControl() {
       },
     );
     return {
-      rows: [display.root, status],
+      header,
+      rows: [display.root],
       onClose: () => {
         closed = true;
         stopListening?.();

@@ -15,12 +15,13 @@ const TOOLS = [
 ];
 
 function toolNode(tool, open) {
+  const mark = icon(tool.icon);
   const head = summary('row tool-row');
-  head.append(icon(tool.icon), rowMain(tool), icon(iconId.chevronDown));
+  head.append(mark, rowMain(tool), icon(iconId.chevronDown));
   const node = details('tool');
   node.open = open;
   node.append(head);
-  return node;
+  return { node, mark };
 }
 
 export function createToolsPanel() {
@@ -28,7 +29,8 @@ export function createToolsPanel() {
   const list = div('list');
   const parts = TOOLS.map((tool) => {
     const control = tool.create();
-    const node = toolNode(tool, openIds.has(tool.id));
+    const { node, mark } = toolNode(tool, openIds.has(tool.id));
+    control.attachIndicator?.(mark);
     const close = attachAccordion(node, control.open);
     node.addEventListener(evt.toggle, () => {
       if (node.open) openIds.add(tool.id);

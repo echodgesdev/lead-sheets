@@ -120,3 +120,40 @@ export function wedgeNotes(index, minor, chord, tonic, inversion = 0) {
 export function voicing(pc, quality, inversion, tonic) {
   return chordNotes(pc, quality, true, tonic, inversion);
 }
+
+export const scaleId = Object.freeze({
+  ionian: 'ionian',
+  dorian: 'dorian',
+  phrygian: 'phrygian',
+  lydian: 'lydian',
+  mixolydian: 'mixolydian',
+  aeolian: 'aeolian',
+  locrian: 'locrian',
+  majorPentatonic: 'majorPentatonic',
+  minorPentatonic: 'minorPentatonic',
+});
+
+export const SCALES = [
+  { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', tag: '1', steps: [0, 2, 4, 5, 7, 9, 11] },
+  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', tag: '2', steps: [0, 2, 3, 5, 7, 9, 10] },
+  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', tag: '3', steps: [0, 1, 3, 5, 7, 8, 10] },
+  { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', tag: '4', steps: [0, 2, 4, 6, 7, 9, 11] },
+  { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', tag: '5', steps: [0, 2, 4, 5, 7, 9, 10] },
+  { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', tag: '6', steps: [0, 2, 3, 5, 7, 8, 10] },
+  { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', tag: '7', steps: [0, 1, 3, 5, 6, 8, 10] },
+  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Pent.', tag: 'maj', steps: [0, 2, 4, 7, 9] },
+  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Pent.', tag: 'min', steps: [0, 3, 5, 7, 10] },
+];
+
+export function scaleOf(id) {
+  return SCALES.find((scale) => scale.id === id);
+}
+
+export function scalePitches(tonic, id) {
+  return scaleOf(id).steps.map((step) => (tonic + step) % WEDGES);
+}
+
+export function scaleRun(tonic, id) {
+  const base = noteMidi(tonic, tonic);
+  return [...scaleOf(id).steps.map((step) => base + step), base + WEDGES];
+}

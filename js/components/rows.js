@@ -60,6 +60,12 @@ export function choiceToggle(options, value, save) {
   return segToggle(...buttons.map(([, b]) => b));
 }
 
+export function labeledField(label, control) {
+  const field = div('field-stack');
+  field.append(span('modal-label', label), control);
+  return field;
+}
+
 export function choiceRow(label, options, value, save) {
   return modalRow(label, choiceToggle(options, value, save));
 }

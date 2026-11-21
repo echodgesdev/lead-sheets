@@ -9,6 +9,8 @@ const DECAY_S = 0.4;
 const RELEASE_S = 0.6;
 const MAX_HOLD_S = 30;
 const SILENT = 0.0001;
+const RUN_STEP_S = 0.32;
+const RUN_NOTE_S = 0.5;
 
 function hz(midi) {
   return A4_HZ * 2 ** ((midi - A4_MIDI) / 12);
@@ -40,4 +42,23 @@ export function startNotes(midis) {
     gain.gain.exponentialRampToValueAtTime(SILENT, t + RELEASE_S);
     for (const osc of oscs) osc.stop(t + RELEASE_S);
   };
+}
+
+export function playRun(midis) {
+  const ctx = audioContext();
+  const start = ctx.currentTime;
+  midis.forEach((midi, i) => {
+    const at = start + i * RUN_STEP_S;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(SILENT, at);
+    gain.gain.exponentialRampToValueAtTime(LEVEL, at + ATTACK_S);
+    gain.gain.exponentialRampToValueAtTime(SILENT, at + RUN_NOTE_S);
+    gain.connect(ctx.destination);
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    osc.frequency.value = hz(midi);
+    osc.connect(gain);
+    osc.start(at);
+    osc.stop(at + RUN_NOTE_S);
+  });
 }

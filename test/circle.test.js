@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, chordPitches, noteMidi, voicing } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, chordPitches, noteMidi, voicing, scalePitches, scaleRun } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -66,4 +66,11 @@ test('circle chord sounds follow the voicing', () => {
   eq(chordNotes(0, 'major', true, C, 1), [64, 67, 72]);
   eq(wedgeNotes(1, false, true, C, 2), [74, 79, 83]);
   eq(wedgeNotes(1, false, false, C, 2), [67]);
+});
+
+test('circle scales from the tonic', () => {
+  eq(scalePitches(C, 'dorian'), [0, 2, 3, 5, 7, 9, 10]);
+  eq(scalePitches(G, 'minorPentatonic'), [7, 10, 0, 2, 5]);
+  eq(scaleRun(C, 'majorPentatonic'), [60, 62, 64, 67, 69, 72]);
+  eq(scaleRun(G, 'ionian'), [55, 57, 59, 60, 62, 64, 66, 67]);
 });

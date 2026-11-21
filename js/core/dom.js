@@ -4,6 +4,7 @@ export const cls = Object.freeze({
   active: 'active',
   away: 'away',
   beat: 'beat',
+  blocked: 'blocked',
   down: 'down',
   dragging: 'dragging',
   idle: 'idle',
@@ -12,6 +13,7 @@ export const cls = Object.freeze({
   intro: 'intro',
   pressed: 'pressed',
   roman: 'roman',
+  root: 'root',
   voiced: 'voiced',
 });
 

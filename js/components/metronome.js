@@ -35,6 +35,7 @@ export function createMetronomeControl(tempo) {
   let pattern = getMetronomePattern();
   let sync = null;
   let showBeat = null;
+  let indicator = null;
   let disposed = false;
 
   const headerBtn = iconButton(iconId.metronome, 'Metronome', 'metro-btn');
@@ -43,18 +44,31 @@ export function createMetronomeControl(tempo) {
   const metronome = createMetronome(onBeat);
   metronome.setPattern(pattern);
 
+  function pulse(el, down) {
+    el.classList.remove(cls.beat, cls.down);
+    void el.getBoundingClientRect();
+    el.classList.add(cls.beat);
+    el.classList.toggle(cls.down, down);
+  }
+
   function onBeat(beat, level) {
     if (disposed) return;
-    headerBtn.classList.remove(cls.beat, cls.down);
-    void headerBtn.offsetWidth;
-    headerBtn.classList.add(cls.beat);
-    headerBtn.classList.toggle(cls.down, level === levelId.primary);
+    const down = level === levelId.primary;
+    pulse(headerBtn, down);
+    if (indicator) pulse(indicator, down);
     showBeat?.(beat);
   }
 
   function syncButton() {
     headerBtn.classList.toggle(cls.active, metronome.running);
-    if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
+    if (metronome.running) return;
+    headerBtn.classList.remove(cls.beat, cls.down);
+    indicator?.classList.remove(cls.beat, cls.down);
+  }
+
+  function attachIndicator(el) {
+    indicator?.classList.remove(cls.beat, cls.down);
+    indicator = el;
   }
 
   function setBpm(n) {
@@ -87,8 +101,8 @@ export function createMetronomeControl(tempo) {
     const tapBtn = labeledButton(null, 'Tap');
     tapBtn.title = 'Tap tempo';
     const startBtn = button('', 'Start');
-    const actions = div('modal-row metro-actions');
-    actions.append(tapBtn, startBtn);
+    const header = div('tool-header metro-header');
+    header.append(tapBtn, startBtn);
 
     const pad = (level, i) => {
       const b = button('', `Beat ${i + 1}: ${level}`, 'metro-pad');
@@ -133,7 +147,8 @@ export function createMetronomeControl(tempo) {
 
     sync();
     return {
-      rows: [settings, pads, actions],
+      header,
+      rows: [settings, pads],
       onClose: () => {
         sync = null;
         showBeat = null;
@@ -147,8 +162,9 @@ export function createMetronomeControl(tempo) {
   function dispose() {
     disposed = true;
     metronome.stop();
+    attachIndicator(null);
     closeDialog();
   }
 
-  return { button: headerBtn, open, dispose };
+  return { button: headerBtn, open, dispose, attachIndicator };
 }
