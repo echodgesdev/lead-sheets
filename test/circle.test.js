@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, chordPitches, noteMidi, voicing } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -45,4 +45,19 @@ test('circle wedge notes follow the key', () => {
   eq(wedgeNotes(1, false, false, C), [67]);
   eq(wedgeNotes(0, true, true, C), [69, 72, 76]);
   eq(wedgeNotes(0, false, false, G), [60]);
+});
+
+test('circle note names follow the key side', () => {
+  eq(pitchNames(0)[10], 'A#');
+  eq(pitchNames(9)[10], 'Bb');
+  eq(displayName('Bb'), 'B♭');
+  eq(displayName('F#m'), 'F♯m');
+});
+
+test('circle chord pitches and voicings', () => {
+  eq(chordPitches(9, 'minor'), [9, 0, 4]);
+  eq(noteMidi(0, C), 60);
+  eq(voicing(0, 'major', 0, C), [60, 64, 67]);
+  eq(voicing(0, 'major', 1, C), [64, 67, 72]);
+  eq(voicing(0, 'major', 2, C), [67, 72, 76]);
 });

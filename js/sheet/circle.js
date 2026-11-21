@@ -6,6 +6,8 @@ export const WEDGES = 12;
 const FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
 const MAJOR = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
 const MINOR = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'D#m', 'Bbm', 'Fm', 'Cm', 'Gm', 'Dm'];
+const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const ENHARMONIC = { 6: { major: 'Gb', minor: 'Ebm' } };
 const RELATIVE_MINOR = 9;
 const SHARP_SIDE = 6;
@@ -85,11 +87,37 @@ export function keyChords(index, minor) {
   });
 }
 
+export function displayName(name) {
+  return name.replace(/#/g, '♯').replace(/([A-G])b/g, '$1♭');
+}
+
+export function pitchNames(keyIndex) {
+  return keyIndex > SHARP_SIDE ? FLAT_NAMES : SHARP_NAMES;
+}
+
+export function chordSteps(quality) {
+  return TRIADS[quality];
+}
+
+export function chordPitches(pc, quality) {
+  return TRIADS[quality].map((step) => (pc + step) % WEDGES);
+}
+
+export function noteMidi(pc, tonic) {
+  return LOWEST_TONIC + wrap(tonic - LOWEST_TONIC) + wrap(pc - tonic);
+}
+
 export function chordNotes(pc, quality, chord, tonic) {
-  const root = LOWEST_TONIC + wrap(tonic - LOWEST_TONIC) + wrap(pc - tonic);
+  const root = noteMidi(pc, tonic);
   return chord ? TRIADS[quality].map((step) => root + step) : [root];
 }
 
 export function wedgeNotes(index, minor, chord, tonic) {
   return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic);
+}
+
+export function voicing(pc, quality, inversion, tonic) {
+  return chordNotes(pc, quality, true, tonic)
+    .map((midi, i) => (i < inversion ? midi + WEDGES : midi))
+    .sort((a, b) => a - b);
 }

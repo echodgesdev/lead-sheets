@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v72';
+const CACHE = 'tabs-v73';
 
 const ASSETS = [
   './',
@@ -56,6 +56,7 @@ const ASSETS = [
   './js/components/share.js',
   './js/components/sheet.js',
   './js/components/toast.js',
+  './js/components/theory-views.js',
   './js/components/tuner.js',
   './js/views/edit.js',
   './js/views/list.js',
