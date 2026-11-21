@@ -99,6 +99,31 @@ export function accordionRow(title, ...rows) {
   return node;
 }
 
+export function attachAccordion(node, open) {
+  let opened = null;
+
+  function sync() {
+    if (node.open && !opened) {
+      opened = open();
+      node.append(...opened.rows);
+    } else if (!node.open && opened) {
+      teardown();
+    }
+  }
+
+  function teardown() {
+    const current = opened;
+    opened = null;
+    if (!current) return;
+    for (const row of current.rows) row.remove();
+    current.onClose?.();
+  }
+
+  node.addEventListener(evt.toggle, sync);
+  sync();
+  return teardown;
+}
+
 export function liveSettingsRows(onSize) {
   return [
     textSizeRow(onSize),

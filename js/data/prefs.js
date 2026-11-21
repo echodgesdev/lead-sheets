@@ -14,6 +14,7 @@ const PEDAL_KEY = 'tabs.pedal';
 const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
 const LIST_OPTIONS_KEY = 'tabs.listOptions';
+const OPEN_TOOLS_KEY = 'tabs.openTools';
 const METRONOME_KEY = 'tabs.metronome';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
@@ -21,7 +22,7 @@ export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 export const modeId = Object.freeze({
   live: 'live',
   edit: 'edit',
-  learn: 'learn',
+  tools: 'tools',
 });
 
 export const pedalId = Object.freeze({
@@ -31,6 +32,12 @@ export const pedalId = Object.freeze({
 
 export const listOptionId = Object.freeze({
   rowMenus: 'rowMenus',
+});
+
+export const toolId = Object.freeze({
+  tuner: 'tuner',
+  metronome: 'metronome',
+  circle: 'circle',
 });
 
 export const editorId = Object.freeze({
@@ -78,6 +85,8 @@ export const PEDAL_MODES = [
 export const LIST_OPTIONS = [
   { id: listOptionId.rowMenus, label: 'Song Menus' },
 ];
+
+const REMEMBERED_TOOLS = [{ id: toolId.metronome }, { id: toolId.circle }];
 
 export const EDITOR_OPTIONS = [
   { id: editorId.autofix, label: 'Fix Format On Preview' },
@@ -252,6 +261,14 @@ export function setListOptions(ids) {
 
 export function hasListOption(id) {
   return getListOptions().includes(id);
+}
+
+export function getOpenTools() {
+  return shownIds(OPEN_TOOLS_KEY, REMEMBERED_TOOLS, []);
+}
+
+export function setOpenTools(ids) {
+  write(OPEN_TOOLS_KEY, ids);
 }
 
 export function getEditorOptions() {

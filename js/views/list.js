@@ -22,7 +22,7 @@ import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
 import { segToggle } from '../components/controls.js';
-import { createLearnPanel } from '../components/learn.js';
+import { createToolsPanel } from '../components/tools.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
@@ -61,7 +61,7 @@ export function mount(el) {
   const modeBtns = {
     [modeId.live]: modeButton(iconId.play, 'Live'),
     [modeId.edit]: modeButton(iconId.penToSquare, 'Edit'),
-    [modeId.learn]: modeButton(iconId.metronome, 'Learn'),
+    [modeId.tools]: modeButton(iconId.wrench, 'Tools'),
   };
   const modeToggle = segToggle(...Object.values(modeBtns));
   modeToggle.setAttribute('role', 'group');
@@ -87,11 +87,11 @@ export function mount(el) {
 
   const groupsEl = div('groups');
   const empty = p({ class: 'status', hidden: '' });
-  const learnEl = div();
-  let learnPanel = null;
+  const toolsEl = div();
+  let toolsPanel = null;
 
   top.append(headerEl, searchBar);
-  screen.append(top, groupsEl, empty, learnEl);
+  screen.append(top, groupsEl, empty, toolsEl);
   el.append(screen);
 
   function hrefFor(rec, set) {
@@ -153,7 +153,7 @@ export function mount(el) {
   }
 
   function renderList() {
-    if (mode === modeId.learn) return;
+    if (mode === modeId.tools) return;
     const songs = store.search(search.value);
     const bySet = groupBy === groupId.setlist;
     const groups = bySet ? groupSetlists(songs, setlists.all(), !search.value.trim()) : groupSongs(songs, groupBy);
@@ -171,24 +171,24 @@ export function mount(el) {
       btn.setAttribute('aria-pressed', String(id === mode));
     }
     const edit = mode === modeId.edit;
-    const learn = mode === modeId.learn;
+    const tools = mode === modeId.tools;
     newLink.hidden = !edit;
-    searchBar.hidden = learn;
-    groupsEl.hidden = learn;
-    if (learn) {
+    searchBar.hidden = tools;
+    groupsEl.hidden = tools;
+    if (tools) {
       empty.hidden = true;
-      learnPanel ??= createLearnPanel();
-      learnEl.replaceChildren(learnPanel.el);
+      toolsPanel ??= createToolsPanel();
+      toolsEl.replaceChildren(toolsPanel.el);
       return;
     }
-    disposeLearn();
+    disposeTools();
     renderList();
   }
 
-  function disposeLearn() {
-    learnPanel?.dispose();
-    learnPanel = null;
-    learnEl.replaceChildren();
+  function disposeTools() {
+    toolsPanel?.dispose();
+    toolsPanel = null;
+    toolsEl.replaceChildren();
   }
 
   function setMode(next) {
@@ -219,6 +219,6 @@ export function mount(el) {
 
   return () => {
     clearTimeout(introTimer);
-    disposeLearn();
+    disposeTools();
   };
 }

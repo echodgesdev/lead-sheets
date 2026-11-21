@@ -147,9 +147,25 @@ export function createCircleControl() {
     const playRow = choiceRow('Play', SOUNDS, sound, (id) => { sound = id; });
     playRow.append(lockBtn);
 
+    let pressed = null;
+
+    function press(target) {
+      pressed?.classList.remove(cls.pressed);
+      pressed = target?.closest('.wedge') ?? null;
+      pressed?.classList.add(cls.pressed);
+    }
+
     art.addEventListener(evt.click, (e) => activate(e.target));
+    art.addEventListener(evt.pointerdown, (e) => press(e.target));
+    for (const name of [evt.pointerup, evt.pointercancel, evt.pointerleave, evt.keyup]) {
+      art.addEventListener(name, () => press(null));
+    }
     art.addEventListener(evt.keydown, (e) => {
-      if ((e.key === keys.enter || e.key === keys.space) && activate(e.target)) e.preventDefault();
+      if ((e.key !== keys.enter && e.key !== keys.space) || !e.target.closest('.wedge')) return;
+      e.preventDefault();
+      if (e.repeat) return;
+      press(e.target);
+      activate(e.target);
     });
 
     render();
@@ -158,5 +174,5 @@ export function createCircleControl() {
   }
 
   const dispose = attachDialog(button, 'Circle of fifths', open);
-  return { button, dispose };
+  return { button, open, dispose };
 }

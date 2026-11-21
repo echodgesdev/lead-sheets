@@ -148,5 +148,5 @@ export function createMetronomeControl(tempo) {
     closeDialog();
   }
 
-  return { button: headerBtn, dispose };
+  return { button: headerBtn, open, dispose };
 }

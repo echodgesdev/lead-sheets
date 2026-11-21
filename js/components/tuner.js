@@ -69,5 +69,5 @@ export function createTunerControl() {
 
   const dispose = attachDialog(button, 'Tuner', open);
 
-  return { button, dispose };
+  return { button, open, dispose };
 }
