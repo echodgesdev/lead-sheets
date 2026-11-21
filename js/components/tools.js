@@ -11,7 +11,7 @@ import { icon, iconId } from '../core/icons.js';
 const TOOLS = [
   { id: toolId.tuner, title: 'Tuner', icon: iconId.guitar, create: createTunerControl },
   { id: toolId.metronome, title: 'Metronome', icon: iconId.metronome, create: createMetronomeControl },
-  { id: toolId.circle, title: 'Theory', icon: iconId.chartPie, create: createCircleControl },
+  { id: toolId.circle, title: 'Theory', icon: iconId.bookOpen, create: createCircleControl },
 ];
 
 function toolNode(tool, open) {

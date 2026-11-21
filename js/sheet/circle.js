@@ -44,12 +44,6 @@ export const shapeId = Object.freeze({
   add9: 'add9',
 });
 
-export const roleId = Object.freeze({
-  tonic: 'tonic',
-  subdominant: 'subdominant',
-  dominant: 'dominant',
-});
-
 const STACK_SIZES = {
   [shapeId.triad]: 3,
   [shapeId.stack7]: 4,
@@ -97,9 +91,6 @@ const STACK_NAMES = {
   '0,3,6,10,13,17': 'ø11♭9',
   '0,3,6,10,14,17': 'ø11',
 };
-
-const MAJOR_ROLES = [roleId.tonic, roleId.subdominant, roleId.tonic, roleId.subdominant, roleId.dominant, roleId.tonic, roleId.dominant];
-const MINOR_ROLES = [roleId.tonic, roleId.subdominant, roleId.tonic, roleId.subdominant, roleId.dominant, roleId.subdominant, roleId.dominant];
 
 const MAJOR_LAYOUT = [
   [0, ringId.outer, qualityId.major],
@@ -152,7 +143,7 @@ export function keyChords(index, minor) {
     const [offset, ring, quality] = layout[i];
     const at = wrap(index + offset);
     const root = ring === ringId.dim ? keyTonic(wrap(index + DIM_ROOT_OFFSET), true) : keyTonic(at, ring === ringId.inner);
-    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality, role: (minor ? MINOR_ROLES : MAJOR_ROLES)[i] };
+    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality };
   });
 }
 
@@ -187,10 +178,23 @@ export function chordShape(item, keyPcs, shape = shapeId.triad) {
   return { steps: steps ?? [...TRIADS[item.quality], ...add], name: `${root}${sus ? shape : SUFFIXES[item.quality][shape]}` };
 }
 
-export function shapeSize(shape) {
-  if (STACK_SIZES[shape]) return STACK_SIZES[shape];
-  const { steps, add } = BORROWED[shape];
-  return steps ? steps.length : TRIADS[qualityId.major].length + add.length;
+const SHAPE_ORDER = [
+  shapeId.triad,
+  shapeId.stack7,
+  shapeId.stack9,
+  shapeId.stack11,
+  shapeId.sus2,
+  shapeId.sus4,
+  shapeId.add9,
+  shapeId.seventh,
+  shapeId.major7,
+];
+
+export function shapeChoices(item, keyPcs) {
+  const seen = new Set();
+  return SHAPE_ORDER.map((id) => ({ id, ...chordShape(item, keyPcs, id) }))
+    .filter(({ steps }) => !seen.has(steps.join()) && seen.add(steps.join()))
+    .map((choice) => ({ ...choice, inKey: stepPitches(item.pc, choice.steps).every((pc) => keyPcs.includes(pc)) }));
 }
 
 export function stepPitches(pc, steps) {

@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, chordShape, stepPitches, voiceNotes, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, chordShape, shapeChoices, stepPitches, voiceNotes, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -27,7 +27,7 @@ test('circle key chords sit on their wedges', () => {
   const at = (c) => `${c.chord}@${c.ring}${c.index}`;
   eq(keyChords(0, false).map(at), ['C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1', 'Am@inner0', 'Bdim@dim0']);
   eq(keyChords(0, true).map(at), ['Am@inner0', 'Bdim@dim0', 'C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1']);
-  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished', role: 'dominant' });
+  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished' });
 });
 
 test('circle notes rise through the key from its tonic', () => {
@@ -87,8 +87,6 @@ test('circle chord shapes stack within the key', () => {
   eq(chordShape(items[3], cMajor, '11th').name, 'Fmaj9♯11');
   eq(chordShape(items[0], cMajor, '9th').steps, [0, 4, 7, 11, 14]);
   eq(chordShape(items[0], cMajor, 'triad').name, 'C');
-  eq(items.map((item) => item.role), ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant']);
-  eq(keyChords(0, true).map((item) => item.role), ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'subdominant', 'dominant']);
 });
 
 test('circle borrowed chord shapes', () => {
@@ -111,4 +109,16 @@ test('circle scale roots in the key or on the tonic', () => {
   eq(wedgeOf(7), 1);
   eq(wedgeOf(2, true), 11);
   eq(wedgeOf(9, true), 0);
+});
+
+test('circle shape choices are split by the notes of each chord', () => {
+  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+  const items = keyChords(0, false);
+  const split = (item) => {
+    const choices = shapeChoices(item, cMajor);
+    return [choices.filter((c) => c.inKey).map((c) => c.name), choices.filter((c) => !c.inKey).map((c) => c.name)];
+  };
+  eq(split(items[0]), [['C', 'Cmaj7', 'Cmaj9', 'Cmaj11', 'Csus2', 'Csus4', 'Cadd9'], ['C7']]);
+  eq(split(items[4]), [['G', 'G7', 'G9', 'G11', 'Gsus2', 'Gsus4', 'Gadd9'], ['Gmaj7']]);
+  eq(split(items[6])[1], ['Bsus2', 'Bsus4', 'B°add9', 'B°M7']);
 });
