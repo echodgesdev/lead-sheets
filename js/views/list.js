@@ -1,6 +1,7 @@
 import * as store from '../data/store.js';
 import * as setlists from '../data/setlists.js';
 import { openSettings } from '../components/settings.js';
+import { openSongActions } from '../components/menu.js';
 import { icon, iconId } from '../core/icons.js';
 import { GROUPS, groupId, groupSongs, groupSetlists } from '../data/group.js';
 import { transposeKey } from '../sheet/transpose.js';
@@ -97,7 +98,7 @@ export function mount(el) {
   }
 
   function rowFor(rec, ids, set) {
-    const row = a({ class: 'row', href: hrefFor(rec, set) });
+    const row = a({ class: 'row', href: hrefFor(rec, set), 'data-id': rec.id });
     row.append(rowMain(rec, subtitleOf(rec, groupBy)));
     const shift = set?.entries.find((e) => e.songId === rec.id)?.shift ?? 0;
     if (rec.key) row.append(span('badge', transposeKey(rec.key, shift)));
@@ -184,6 +185,12 @@ export function mount(el) {
     groupBy = groupSelect.value;
     setListGroup(groupBy);
     renderList();
+  });
+  groupsEl.addEventListener(evt.contextmenu, (e) => {
+    const rec = store.get(e.target.closest('.row[data-id]')?.dataset.id);
+    if (!rec) return;
+    e.preventDefault();
+    openSongActions(rec, { onEdit: () => { location.hash = routes.edit(rec.id); } });
   });
   for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
   menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));

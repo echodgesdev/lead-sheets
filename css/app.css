@@ -613,6 +613,9 @@ select.field {
 }
 
 .row {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   display: flex;
   align-items: center;
   gap: 12px;

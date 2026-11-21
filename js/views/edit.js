@@ -4,7 +4,6 @@ import { attachKeybar } from '../components/keybar.js';
 import { iconId } from '../core/icons.js';
 import { toast } from '../components/toast.js';
 import { editorId, getEditorOptions } from '../data/prefs.js';
-import { shareSong } from '../components/share.js';
 import { div, h1, header, span, textarea, iconButton, labeledButton } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
@@ -31,7 +30,6 @@ export function mount(el, { id, back = null }) {
   const title = h1('hdr-title');
   const status = span('hdr-alert');
   const inferBtn = iconButton(iconId.wandMagicSparkles, 'Infer format');
-  const shareBtn = iconButton(iconId.arrowUpFromBracket, 'Share');
   const deleteBtn = iconButton(iconId.trashCan, 'Delete', 'danger');
   const editor = textarea({
     class: 'editor',
@@ -41,7 +39,7 @@ export function mount(el, { id, back = null }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  headerEl.append(deleteBtn, title, status, inferBtn, shareBtn, previewBtn);
+  headerEl.append(deleteBtn, title, status, inferBtn, previewBtn);
   screen.append(headerEl, editor);
   el.append(screen);
 
@@ -55,7 +53,6 @@ export function mount(el, { id, back = null }) {
 
   function syncChrome() {
     deleteBtn.hidden = !currentId;
-    shareBtn.hidden = !currentId;
   }
 
   function adopt(newId) {
@@ -113,10 +110,6 @@ export function mount(el, { id, back = null }) {
     location.hash = currentId ? (back ?? routes.preview(currentId)) : routes.home;
   }
 
-  function onShare() {
-    shareSong(titleOf(editor.value), editor.value);
-  }
-
   async function onDelete() {
     if (!currentId || !confirm('Delete this song?')) return;
     await autosave.cancel();
@@ -134,7 +127,6 @@ export function mount(el, { id, back = null }) {
   editor.addEventListener(evt.input, onInput);
   previewBtn.addEventListener(evt.click, onPreview);
   inferBtn.addEventListener(evt.click, onInfer);
-  shareBtn.addEventListener(evt.click, onShare);
   deleteBtn.addEventListener(evt.click, onDelete);
   document.addEventListener(evt.keydown, onKeydown, { signal: listening.signal });
 

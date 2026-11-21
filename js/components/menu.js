@@ -6,6 +6,20 @@ import { strings } from '../strings.js';
 import { iconId } from '../core/icons.js';
 import { shareSong } from './share.js';
 
+export function openSongActions(rec, { onEdit }) {
+  const shareBtn = labeledButton(iconId.arrowUpFromBracket, 'Share song');
+  const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
+  const dialog = openModal(rec.title || strings.untitled, modalRow(null, shareBtn, editBtn));
+  shareBtn.addEventListener(evt.click, () => {
+    dialog.close();
+    shareSong(rec.title || strings.untitled, rec.text);
+  });
+  editBtn.addEventListener(evt.click, () => {
+    dialog.close();
+    onEdit();
+  });
+}
+
 export function openSongMenu(rec, { onSize, onClose, onEdit }) {
   const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
   const shareBtn = labeledButton(iconId.arrowUpFromBracket, 'Share song');

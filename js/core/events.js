@@ -4,6 +4,7 @@ export const evt = Object.freeze({
   change: 'change',
   click: 'click',
   close: 'close',
+  contextmenu: 'contextmenu',
   controllerchange: 'controllerchange',
   focus: 'focus',
   hashchange: 'hashchange',
