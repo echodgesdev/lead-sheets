@@ -20,7 +20,7 @@ export const ringId = Object.freeze({
   dim: 'dim',
 });
 
-const qualityId = Object.freeze({
+export const qualityId = Object.freeze({
   major: 'major',
   minor: 'minor',
   diminished: 'diminished',

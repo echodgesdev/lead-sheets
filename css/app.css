@@ -1572,15 +1572,12 @@ button.row:active {
   transition-duration: 0.08s;
 }
 
-.clock-hub {
-  fill: var(--surface-2);
-  cursor: pointer;
-  outline: none;
-  transition: fill 0.15s;
-}
-
-.clock-hub.pressed {
-  fill: color-mix(in srgb, var(--accent) 35%, var(--surface-2));
+.clock-center {
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  pointer-events: none;
 }
 
 .chain {

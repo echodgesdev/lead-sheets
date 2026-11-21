@@ -1,6 +1,6 @@
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
-import { displayName, chordSteps, chordPitches } from '../sheet/circle.js';
+import { qualityId, displayName, chordSteps, chordPitches } from '../sheet/circle.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -8,7 +8,8 @@ const OCTAVE = 12;
 const CLOCK_RINGS = [42, 63, 84];
 const CLOCK_HIT = [16, 100];
 const CLOCK_LABEL = 93;
-const CLOCK_HUB = 14;
+const HUB_MAIN_DY = '-0.25em';
+const HUB_SUB_DY = '1.6em';
 const DOT = 4.5;
 const BASS_DOT = 6;
 const INTERVALS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
@@ -20,6 +21,18 @@ export const alignId = Object.freeze({
   root: 'root',
   key: 'key',
 });
+
+const QUALITY_LABELS = {
+  [qualityId.major]: 'Major',
+  [qualityId.minor]: 'minor',
+  [qualityId.diminished]: 'diminished',
+};
+
+export function hubText(main, sub, className = '') {
+  const text = svg('text', { class: `hub-name ${className}`.trim(), x: 0, y: 0 });
+  text.append(svg('tspan', { x: 0, dy: HUB_MAIN_DY }, main), svg('tspan', { x: 0, dy: HUB_SUB_DY, class: 'hub-quality' }, sub));
+  return text;
+}
 
 function notesAttr(midis) {
   return midis.join(',');
@@ -73,14 +86,9 @@ export function renderClock({ names, scalePcs, chord, voiced, tonicMidi, noteMid
       'data-notes': notesAttr([midi]),
     }));
   });
-  art.append(svg('circle', {
-    class: 'clock-hub',
-    r: CLOCK_HUB,
-    role: 'button',
-    tabindex: 0,
-    'aria-label': `Play ${displayName(chord.chord)}`,
-    'data-notes': notesAttr(voiced),
-  }));
+  const root = displayName(chord.chord.replace(/(m|dim)$/, ''));
+  const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
+  art.append(hubText(`${root}${bass}`, QUALITY_LABELS[chord.quality], 'clock-center'));
   return art;
 }
 

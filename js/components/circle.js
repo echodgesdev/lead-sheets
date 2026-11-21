@@ -1,6 +1,6 @@
 import { attachDialog } from './modal.js';
 import { modalRow, choiceToggle } from './rows.js';
-import { renderClock, renderChain, renderKeys, alignId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, hubText, alignId } from './theory-views.js';
 import {
   WEDGES,
   ringId,
@@ -29,8 +29,6 @@ const HUB_RADIUS = 29;
 const GRADIENT_ID = 'circle-accent';
 const MAIN_DY = '-0.4em';
 const ALT_DY = '1.15em';
-const HUB_KEY_DY = '-0.25em';
-const HUB_QUALITY_DY = '1.6em';
 const PLAYABLE = '[data-slot], [data-notes]';
 
 const soundId = Object.freeze({
@@ -194,7 +192,7 @@ export function createCircleControl() {
       }
     }
     const hub = svg('circle', { class: 'hub', r: HUB_RADIUS });
-    const hubName = svg('text', { class: 'hub-name', x: 0, y: 0 });
+    let hubName = hubText('', '');
     art.append(hub, hubName);
 
     const stage = div('modal-row circle-row');
@@ -233,6 +231,7 @@ export function createCircleControl() {
     });
 
     function renderStage() {
+      lockBtn.hidden = view !== viewId.fifths;
       stage.replaceChildren(view === viewId.fifths ? art : RENDERERS[view](model()));
     }
 
@@ -249,10 +248,9 @@ export function createCircleControl() {
         w.label = wedgeText(w.index, w.minor, selected.index);
         w.el.append(w.label);
       }
-      hubName.replaceChildren(
-        svg('tspan', { x: 0, dy: HUB_KEY_DY }, keyRoot(selected.index, selected.minor)),
-        svg('tspan', { x: 0, dy: HUB_QUALITY_DY, class: 'hub-quality' }, selected.minor ? 'minor' : 'Major'),
-      );
+      const label = hubText(keyRoot(selected.index, selected.minor), selected.minor ? 'minor' : 'Major');
+      hubName.replaceWith(label);
+      hubName = label;
       items = keyChords(selected.index, selected.minor).map((item) => ({ ...item, slot: slotOf(item.index, item.ring) }));
       chipItems = new Map(items.map((item) => [item.slot, item]));
       dimEl?.remove();
@@ -278,7 +276,10 @@ export function createCircleControl() {
       renderLock();
     });
 
-    const controls = modalRow(null, choiceToggle(SOUNDS, sound, (id) => { sound = id; }), voicingToggle, lockBtn);
+    const controls = modalRow(null, choiceToggle(SOUNDS, sound, (id) => {
+      sound = id;
+      voicingToggle.hidden = sound !== soundId.chord;
+    }), voicingToggle, lockBtn);
     controls.classList.add('circle-controls');
 
     let voice = null;
