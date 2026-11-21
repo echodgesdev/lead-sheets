@@ -447,6 +447,16 @@ input:focus-visible {
   background: var(--bg);
 }
 
+.modal .seg-toggle {
+  max-width: 100%;
+}
+
+.modal .seg-toggle .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 0 10px;
+}
+
 @media (max-width: 600px) {
   .modal {
     width: 100%;

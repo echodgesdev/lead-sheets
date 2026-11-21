@@ -38,6 +38,7 @@ export function createMetronomeControl(tempo) {
   let disposed = false;
 
   const headerBtn = button('', 'Metronome', 'live-key');
+  headerBtn.append(icon(iconId.metronome));
 
   const tapper = createTapper();
   const metronome = createMetronome(onBeat);
@@ -53,7 +54,6 @@ export function createMetronomeControl(tempo) {
   }
 
   function renderButton() {
-    headerBtn.replaceChildren(icon(iconId.metronome), span(null, String(bpm)));
     headerBtn.classList.toggle(cls.active, metronome.running);
     if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
   }
