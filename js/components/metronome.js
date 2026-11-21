@@ -13,14 +13,14 @@ import {
   createMetronome,
 } from '../audio/click.js';
 import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
-import { attachDialog } from './modal.js';
+import { attachDialog, promptNumber } from './modal.js';
 import { stepper } from './controls.js';
 import { icon, iconId } from '../core/icons.js';
-import { div, span, button, iconButton, labeledButton, cls } from '../core/dom.js';
+import { div, span, button, iconButton, labeledButton, plainButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 
 function valueStepper(downTitle, upTitle) {
-  const value = span('metro-value');
+  const value = plainButton('', 'metro-value');
   return { value, ...stepper(value, downTitle, upTitle) };
 }
 
@@ -126,6 +126,8 @@ export function createMetronomeControl(tempo) {
     tempoStep.up.addEventListener(evt.click, () => setBpm(bpm + 1));
     beatsStep.down.addEventListener(evt.click, () => setPattern(resizePattern(pattern, pattern.length - 1)));
     beatsStep.up.addEventListener(evt.click, () => setPattern(resizePattern(pattern, pattern.length + 1)));
+    tempoStep.value.addEventListener(evt.click, () => promptNumber('Tempo (BPM)', bpm, { min: MIN_BPM, max: MAX_BPM }, setBpm));
+    beatsStep.value.addEventListener(evt.click, () => promptNumber('Beats', pattern.length, { min: MIN_BEATS, max: MAX_BEATS }, (n) => setPattern(resizePattern(pattern, n))));
     tapBtn.addEventListener(evt.click, onTap);
     startBtn.addEventListener(evt.click, toggleRunning);
 

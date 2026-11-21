@@ -58,6 +58,10 @@
   white-space: pre;
 }
 
+.sheet.roman .seg > b {
+  font-family: var(--serif);
+}
+
 .sheet .seg > span {
   display: block;
   min-height: 1.35em;

@@ -9,14 +9,14 @@ import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
 const TOOLS = [
-  { id: toolId.tuner, title: 'Tuner', sub: 'Tune with the microphone', icon: iconId.guitar, create: createTunerControl },
-  { id: toolId.metronome, title: 'Metronome', sub: 'Tempo, beats and accents', icon: iconId.metronome, create: createMetronomeControl },
-  { id: toolId.circle, title: 'Circle of fifths', sub: 'Hear each key, its notes and chords', icon: iconId.chartPie, create: createCircleControl },
+  { id: toolId.tuner, title: 'Tuner', icon: iconId.guitar, create: createTunerControl },
+  { id: toolId.metronome, title: 'Metronome', icon: iconId.metronome, create: createMetronomeControl },
+  { id: toolId.circle, title: 'Circle of fifths', icon: iconId.chartPie, create: createCircleControl },
 ];
 
 function toolNode(tool, open) {
   const head = summary('row tool-row');
-  head.append(icon(tool.icon), rowMain(tool, tool.sub), icon(iconId.chevronDown));
+  head.append(icon(tool.icon), rowMain(tool), icon(iconId.chevronDown));
   const node = details('tool');
   node.open = open;
   node.append(head);

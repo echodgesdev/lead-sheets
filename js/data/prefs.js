@@ -44,7 +44,7 @@ export const editorId = Object.freeze({
   autofix: 'autofix',
 });
 
-const numberStyleId = Object.freeze({
+export const numberStyleId = Object.freeze({
   nashville: 'nashville',
   roman: 'roman',
 });

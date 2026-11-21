@@ -1,6 +1,6 @@
 import { attachDialog } from './modal.js';
 import { choiceRow } from './rows.js';
-import { WEDGES, keyOf, wedgeLabel, signature, keyWedges, keyChords, chordNotes, wedgeNotes } from '../sheet/circle.js';
+import { WEDGES, ringId, keyOf, keyTonic, wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes } from '../sheet/circle.js';
 import { startNotes } from '../audio/tone.js';
 import { svg } from '../core/svg.js';
 import { div, span, iconButton, plainButton, cls } from '../core/dom.js';
@@ -8,10 +8,12 @@ import { evt, keys } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
 const STEP = 360 / WEDGES;
-const RINGS = { outer: [64, 97], inner: [38, 64] };
-const LABEL_RADIUS = { outer: 80.5, inner: 51 };
-const HUB_RADIUS = 36;
+const RINGS = { [ringId.outer]: [66, 97], [ringId.inner]: [44, 66], [ringId.dim]: [29, 44] };
+const LABEL_RADIUS = { [ringId.outer]: 81.5, [ringId.inner]: 55, [ringId.dim]: 36.5 };
+const HUB_RADIUS = 29;
 const GRADIENT_ID = 'circle-accent';
+const MAIN_DY = '-0.4em';
+const ALT_DY = '1.15em';
 
 const soundId = Object.freeze({
   note: 'note',
@@ -25,6 +27,33 @@ const SOUNDS = [
 
 function pretty(name) {
   return name.replace(/#/g, '♯').replace(/([A-G])b/g, '$1♭');
+}
+
+function nameParts(name) {
+  const [, root, quality] = /^([A-G][#b]?)(m|dim)?$/.exec(name);
+  if (!quality) return [pretty(root), ''];
+  return [pretty(root).toLowerCase(), quality === 'dim' ? '°' : 'm'];
+}
+
+function appendName(node, name) {
+  const [root, suffix] = nameParts(name);
+  node.append(root);
+  if (suffix) node.append(svg('tspan', { class: 'suffix' }, suffix));
+}
+
+function labelText(x, y, names) {
+  const text = svg('text', { x, y });
+  if (names.length === 1) {
+    appendName(text, names[0]);
+    return text;
+  }
+  const [main, alt] = names.map((name, i) => {
+    const line = svg('tspan', { x, dy: i ? ALT_DY : MAIN_DY, class: i ? 'alt' : '' });
+    appendName(line, name);
+    return line;
+  });
+  text.append(main, alt);
+  return text;
 }
 
 function keyTitle(index, minor) {
@@ -47,9 +76,14 @@ function sectorPath([r0, r1], index) {
   return `M${x0} ${y0}A${r1} ${r1} 0 0 1 ${x1} ${y1}L${x2} ${y2}A${r0} ${r0} 0 0 0 ${x3} ${y3}Z`;
 }
 
+function wedgeText(index, minor, keyIndex) {
+  const ring = minor ? ringId.inner : ringId.outer;
+  const [x, y] = point(LABEL_RADIUS[ring], index * STEP - 90);
+  return labelText(x, y, wedgeNames(index, minor, keyIndex));
+}
+
 function wedge(index, minor) {
-  const ring = minor ? 'inner' : 'outer';
-  const label = wedgeLabel(index, minor);
+  const ring = minor ? ringId.inner : ringId.outer;
   const g = svg('g', {
     class: `wedge ${ring}`,
     role: 'button',
@@ -57,13 +91,9 @@ function wedge(index, minor) {
     'aria-label': keyTitle(index, minor),
     'data-index': index,
     'data-ring': ring,
-    'data-slot': slotOf(index, minor),
+    'data-slot': slotOf(index, ring),
   });
-  const [x, y] = point(LABEL_RADIUS[ring], index * STEP - 90);
-  g.append(
-    svg('path', { d: sectorPath(RINGS[ring], index) }),
-    svg('text', { x, y, class: label.includes('/') ? 'enh' : '' }, pretty(label)),
-  );
+  g.append(svg('path', { d: sectorPath(RINGS[ring], index) }));
   return g;
 }
 
@@ -75,14 +105,29 @@ function gradient() {
   return defs;
 }
 
-function slotOf(index, minor) {
-  return `${index}${minor ? 'm' : ''}`;
+function slotOf(index, ring) {
+  return `${ring}${index}`;
+}
+
+function dimWedge(item) {
+  const g = svg('g', {
+    class: `wedge ${ringId.dim}`,
+    role: 'button',
+    tabindex: 0,
+    'aria-label': `${pretty(item.chord.replace(/dim$/, ''))} diminished`,
+    'data-index': item.index,
+    'data-ring': ringId.dim,
+    'data-slot': slotOf(item.index, ringId.dim),
+  });
+  const [x, y] = point(LABEL_RADIUS[ringId.dim], item.index * STEP - 90);
+  g.append(svg('path', { d: sectorPath(RINGS[ringId.dim], item.index) }), labelText(x, y, [item.chord]));
+  return g;
 }
 
 function chordChip(item) {
   const chip = plainButton(span('circle-numeral', item.numeral), 'circle-chord');
   chip.append(span(null, pretty(item.chord)));
-  chip.dataset.slot = slotOf(item.index, item.minor);
+  chip.dataset.slot = slotOf(item.index, item.ring);
   chip.setAttribute('aria-label', `${pretty(item.chord)}, ${item.numeral}`);
   return chip;
 }
@@ -102,30 +147,37 @@ export function createCircleControl() {
     for (const minor of [false, true]) {
       for (let index = 0; index < WEDGES; index++) {
         const el = wedge(index, minor);
-        wedges.push({ el, index, minor });
-        wedgeEls.set(slotOf(index, minor), el);
+        wedges.push({ el, index, minor, label: null });
+        wedgeEls.set(slotOf(index, minor ? ringId.inner : ringId.outer), el);
         art.append(el);
       }
     }
-    const hubName = svg('text', { class: 'hub-name', x: 0, y: -5 });
-    const hubSig = svg('text', { class: 'hub-sig', x: 0, y: 10 });
-    art.append(svg('circle', { class: 'hub', r: HUB_RADIUS }), hubName, hubSig);
+    const hub = svg('circle', { class: 'hub', r: HUB_RADIUS });
+    const hubName = svg('text', { class: 'hub-name', x: 0, y: 0 });
+    let dimEl = null;
+    art.append(hub, hubName);
 
     const artRow = div('modal-row circle-row');
     artRow.append(art);
     const chords = div('circle-chords');
 
     function render() {
-      const { outer, inner, diminished } = keyWedges(selected.index);
+      const { outer, inner } = keyWedges(selected.index);
       for (const w of wedges) {
         w.el.classList.toggle(cls.inKey, (w.minor ? inner : outer).includes(w.index));
         w.el.classList.toggle(cls.active, w.index === selected.index && w.minor === selected.minor);
-        w.el.classList.toggle(cls.diminished, w.minor && w.index === diminished);
+        w.label?.remove();
+        w.label = wedgeText(w.index, w.minor, selected.index);
+        w.el.append(w.label);
       }
       hubName.textContent = keyTitle(selected.index, selected.minor);
-      hubSig.textContent = signature(selected.index) || 'No ♯ or ♭';
       const items = keyChords(selected.index, selected.minor);
-      chipItems = new Map(items.map((item) => [slotOf(item.index, item.minor), item]));
+      chipItems = new Map(items.map((item) => [slotOf(item.index, item.ring), item]));
+      if (dimEl) wedgeEls.delete(dimEl.dataset.slot);
+      dimEl?.remove();
+      dimEl = dimWedge(items.find((item) => item.ring === ringId.dim));
+      wedgeEls.set(dimEl.dataset.slot, dimEl);
+      art.insertBefore(dimEl, hub);
       chords.replaceChildren(...items.map(chordChip));
     }
 
@@ -156,10 +208,15 @@ export function createCircleControl() {
       for (const el of pressed) el.classList.add(cls.pressed);
     }
 
+    function tonic() {
+      return keyTonic(selected.index, selected.minor);
+    }
+
     function wedgeVoice(el, chord) {
-      const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === 'inner' };
-      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord));
-      if (!locked) {
+      const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === ringId.inner };
+      const key = locked ? selected : tapped;
+      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord, keyTonic(key.index, key.minor)));
+      if (!locked && (tapped.index !== selected.index || tapped.minor !== selected.minor)) {
         selected = tapped;
         render();
       }
@@ -168,7 +225,7 @@ export function createCircleControl() {
 
     function chipVoice(slot, chord) {
       const item = chipItems.get(slot);
-      return startNotes(chordNotes(item.pc, item.quality, chord));
+      return startNotes(chordNotes(item.pc, item.quality, chord, tonic()));
     }
 
     function begin(target) {
@@ -177,7 +234,7 @@ export function createCircleControl() {
       end();
       const wedgeEl = target.closest('.wedge');
       const chord = sound === soundId.chord;
-      voice = wedgeEl ? wedgeVoice(wedgeEl, chord) : chipVoice(slot, chord);
+      voice = wedgeEl && wedgeEl.dataset.ring !== ringId.dim ? wedgeVoice(wedgeEl, chord) : chipVoice(slot, chord);
       press(slot);
     }
 

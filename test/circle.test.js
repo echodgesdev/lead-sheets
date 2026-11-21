@@ -1,25 +1,21 @@
 import { test, eq } from './harness.js';
-import { wedgeLabel, signature, keyWedges, keyChords, chordNotes, wedgeNotes } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes } from '../js/sheet/circle.js';
 
-test('circle labels', () => {
-  eq(wedgeLabel(0, false), 'C');
-  eq(wedgeLabel(0, true), 'Am');
-  eq(wedgeLabel(6, false), 'F#/Gb');
-  eq(wedgeLabel(6, true), 'D#m/Ebm');
-  eq(wedgeLabel(11, true), 'Dm');
-});
+const C = 0;
+const G = 7;
 
-test('circle key signatures', () => {
-  eq(signature(0), '');
-  eq(signature(2), '2♯');
-  eq(signature(6), '6♯/6♭');
-  eq(signature(9), '3♭');
-  eq(signature(11), '1♭');
+test('circle wedge names lead with the key spelling', () => {
+  eq(wedgeNames(0, false, 0), ['C']);
+  eq(wedgeNames(11, true, 0), ['Dm']);
+  eq(wedgeNames(6, false, 0), ['F#', 'Gb']);
+  eq(wedgeNames(6, false, 6), ['F#', 'Gb']);
+  eq(wedgeNames(6, false, 9), ['Gb', 'F#']);
+  eq(wedgeNames(6, true, 10), ['Ebm', 'D#m']);
 });
 
 test('circle key window wraps around', () => {
-  eq(keyWedges(0), { outer: [11, 0, 1], inner: [11, 0, 1], diminished: 2 });
-  eq(keyWedges(11), { outer: [10, 11, 0], inner: [10, 11, 0], diminished: 1 });
+  eq(keyWedges(0), { outer: [11, 0, 1], inner: [11, 0, 1] });
+  eq(keyWedges(11), { outer: [10, 11, 0], inner: [10, 11, 0] });
 });
 
 test('circle key chords with numerals', () => {
@@ -27,21 +23,26 @@ test('circle key chords with numerals', () => {
   eq(keyChords(0, true).map((c) => `${c.chord} ${c.numeral}`), ['Am i', 'Bdim ii°', 'C ♭III', 'Dm iv', 'Em v', 'F ♭VI', 'G ♭VII']);
 });
 
-test('circle wedge notes', () => {
-  eq(wedgeNotes(0, false, false), [60]);
-  eq(wedgeNotes(1, false, true), [55, 59, 62]);
-  eq(wedgeNotes(0, true, true), [57, 60, 64]);
-  eq(wedgeNotes(6, false, false), [66]);
+test('circle key chords sit on their wedges', () => {
+  const at = (c) => `${c.chord}@${c.ring}${c.index}`;
+  eq(keyChords(0, false).map(at), ['C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1', 'Am@inner0', 'Bdim@dim0']);
+  eq(keyChords(0, true).map(at), ['Am@inner0', 'Bdim@dim0', 'C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1']);
+  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished' });
 });
 
-test('circle key chords sit on their wedges', () => {
-  const at = (c) => `${c.chord}@${c.minor ? 'in' : 'out'}${c.index}`;
-  eq(keyChords(0, false).map(at), ['C@out0', 'Dm@in11', 'Em@in1', 'F@out11', 'G@out1', 'Am@in0', 'Bdim@in2']);
-  eq(keyChords(0, true).map(at), ['Am@in0', 'Bdim@in2', 'C@out0', 'Dm@in11', 'Em@in1', 'F@out11', 'G@out1']);
+test('circle notes rise through the key from its tonic', () => {
+  eq([0, 2, 4, 5, 7, 9, 11].map((pc) => chordNotes(pc, 'major', false, C)), [[60], [62], [64], [65], [67], [69], [71]]);
+  eq([7, 9, 11, 0, 2, 4, 6].map((pc) => chordNotes(pc, 'major', false, G)), [[55], [57], [59], [60], [62], [64], [66]]);
 });
 
 test('circle chord notes by quality', () => {
-  eq(chordNotes(11, 'diminished', true), [59, 62, 65]);
-  eq(chordNotes(11, 'diminished', false), [59]);
-  eq(chordNotes(0, 'major', true), [60, 64, 67]);
+  eq(chordNotes(11, 'diminished', true, C), [71, 74, 77]);
+  eq(chordNotes(0, 'major', true, C), [60, 64, 67]);
+});
+
+test('circle wedge notes follow the key', () => {
+  eq(wedgeNotes(0, false, false, C), [60]);
+  eq(wedgeNotes(1, false, false, C), [67]);
+  eq(wedgeNotes(0, true, true, C), [69, 72, 76]);
+  eq(wedgeNotes(0, false, false, G), [60]);
 });

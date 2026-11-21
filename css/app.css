@@ -1,5 +1,6 @@
 :root {
   --font: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --serif: Georgia, 'Times New Roman', Times, serif;
   --mono: ui-monospace, 'SF Mono', SFMono-Regular, 'Cascadia Mono', 'Roboto Mono', Menlo, Consolas, 'Liberation Mono', monospace;
   --r-sm: 8px;
   --r-md: 12px;
@@ -15,6 +16,7 @@
   --nav-muted: #b0bec5;
   --nav-line: rgba(255, 255, 255, 0.08);
   --lime: #c6d74c;
+  --orange: #f5a524;
 
   --bg: #0f1923;
   --surface: #16232f;
@@ -51,6 +53,7 @@
   --line: #d4dee7;
   --accent: #0091c5;
   --chord: #005b7f;
+  --orange: #d97a00;
   --danger: #c62828;
   --badge-bg: #e8f4fb;
   --badge-fg: #005b7f;
@@ -230,6 +233,8 @@ input:focus-visible {
 
 .btn {
   display: inline-flex;
+  -webkit-user-select: none;
+  user-select: none;
   align-items: center;
   justify-content: center;
   gap: 6px;
@@ -1166,6 +1171,12 @@ button.row:active {
 .metro-value {
   min-width: 48px;
   align-self: center;
+  padding: 0;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
   background: var(--accent-grad);
   -webkit-background-clip: text;
   background-clip: text;
@@ -1223,8 +1234,8 @@ button.row:active {
   position: absolute;
   inset: 25%;
   border-radius: 3px;
-  background: var(--lime);
-  box-shadow: 0 0 8px color-mix(in srgb, var(--lime) 45%, transparent);
+  background: var(--orange);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--orange) 45%, transparent);
 }
 
 .metro-pad.beat {
@@ -1333,12 +1344,13 @@ button.row:active {
   font-size: 7px;
 }
 
-.wedge text.enh {
-  font-size: 6px;
+.wedge .suffix {
+  font-size: 0.72em;
 }
 
-.wedge.inner text.enh {
-  font-size: 4.5px;
+.wedge .alt {
+  font-size: 0.62em;
+  opacity: 0.75;
 }
 
 .wedge.in-key path {
@@ -1349,9 +1361,26 @@ button.row:active {
   fill: var(--fg);
 }
 
-.wedge.diminished path {
-  stroke: var(--accent);
-  stroke-dasharray: 2 2;
+.wedge.dim {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dim-in 0.3s var(--spring);
+}
+
+.wedge.dim path {
+  fill: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+}
+
+.wedge.dim text {
+  fill: var(--fg);
+  font-size: 6.5px;
+}
+
+@keyframes dim-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
 }
 
 .wedge.active path {
@@ -1374,16 +1403,10 @@ button.row:active {
 
 .hub-name {
   fill: var(--fg);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   text-anchor: middle;
-}
-
-.hub-sig {
-  fill: var(--muted);
-  font-size: 7px;
-  font-weight: 600;
-  text-anchor: middle;
+  dominant-baseline: central;
 }
 
 .circle-chords {
@@ -1424,7 +1447,8 @@ button.row:active {
 
 .circle-numeral {
   color: var(--muted);
-  font-size: 11px;
+  font-family: var(--serif);
+  font-size: 12px;
 }
 
 @media (hover: hover) {

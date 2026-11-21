@@ -4,7 +4,6 @@ export const cls = Object.freeze({
   active: 'active',
   away: 'away',
   beat: 'beat',
-  diminished: 'diminished',
   down: 'down',
   dragging: 'dragging',
   idle: 'idle',
@@ -12,6 +11,7 @@ export const cls = Object.freeze({
   inTune: 'in-tune',
   intro: 'intro',
   pressed: 'pressed',
+  roman: 'roman',
 });
 
 function create(tag, attrs, text) {

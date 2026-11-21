@@ -1,12 +1,17 @@
-import { dialog, div, h2, iconButton } from '../core/dom.js';
-import { evt } from '../core/events.js';
+import { dialog, div, h2, iconButton, labeledButton } from '../core/dom.js';
+import { evt, keys } from '../core/events.js';
 import { iconId } from '../core/icons.js';
+import { textField } from './controls.js';
+import { modalRow } from './rows.js';
+
+let modalCount = 0;
 
 export function openModal(title, ...rows) {
-  const modal = dialog(title ? { class: 'modal', 'aria-labelledby': 'modal-title' } : 'modal');
+  const titleId = `modal-title-${++modalCount}`;
+  const modal = dialog(title ? { class: 'modal', 'aria-labelledby': titleId } : 'modal');
   const head = div('modal-head');
   const closeBtn = iconButton(iconId.xmark, 'Close', 'modal-close');
-  if (title) head.append(h2({ class: 'modal-title', id: 'modal-title' }, title));
+  if (title) head.append(h2({ class: 'modal-title', id: titleId }, title));
   head.append(closeBtn);
 
   modal.append(head, ...rows);
@@ -49,4 +54,26 @@ export function attachDialog(trigger, title, open) {
     teardown();
     current?.close();
   };
+}
+
+export function promptNumber(title, value, { min, max }, onSet) {
+  const field = textField(title, null, { type: 'number', inputmode: 'numeric', min, max, step: 1 });
+  field.value = String(value);
+  const setBtn = labeledButton(iconId.check, 'Set', 'primary');
+  const modal = openModal(title, modalRow(null, field, setBtn));
+
+  function apply() {
+    const n = Number(field.value);
+    if (field.value.trim() && Number.isFinite(n)) onSet(Math.round(n));
+    modal.close();
+  }
+
+  setBtn.addEventListener(evt.click, apply);
+  field.addEventListener(evt.keydown, (e) => {
+    if (e.key !== keys.enter) return;
+    e.preventDefault();
+    apply();
+  });
+  field.focus();
+  field.select();
 }

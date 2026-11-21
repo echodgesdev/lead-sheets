@@ -15,6 +15,7 @@ import {
 import {
   TAGS,
   NUMBER_STYLES,
+  numberStyleId,
   tagId,
   controlId,
   pedalId,
@@ -137,6 +138,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   function renderContent() {
     const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
     renderSheet(viewChords(parsed, view), sheet);
+    sheet.classList.toggle(cls.roman, view.numbers === numberStyleId.roman);
     fillTags(tags, shownRec());
     capoBtn.replaceChildren(...keyFace('Capo', fret));
     capoBtn.classList.toggle(cls.active, fret !== base.capo);
