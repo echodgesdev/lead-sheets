@@ -632,6 +632,7 @@ select.field {
 
 .row-item {
   position: relative;
+  min-width: 0;
 }
 
 .row-item > .row {
