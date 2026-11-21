@@ -15,11 +15,11 @@ import {
   displayName,
   pitchNames,
   noteMidi,
-  voicing,
   shapeId,
-  shapePitches,
-  shapeName,
-  shapeSteps,
+  chordShape,
+  shapeSize,
+  stepPitches,
+  voiceNotes,
   scaleId,
   SCALES,
   scaleOf,
@@ -27,7 +27,7 @@ import {
   scaleRun,
   scaleRoot,
   wedgeOf,
-  qualityId,
+  roleId,
 } from '../sheet/circle.js';
 import { startNotes, playRun } from '../audio/tone.js';
 import { svg, polar, annularSector } from '../core/svg.js';
@@ -59,17 +59,29 @@ const MODES = [
 ];
 
 const MAIN_SHAPES = [
-  { id: shapeId.triad, label: 'Triad' },
-  { id: shapeId.seventh, label: '7' },
-  { id: shapeId.major7, label: 'maj7' },
+  { id: shapeId.triad, label: 'Triad', title: 'Three notes from the key' },
+  { id: shapeId.stack7, label: '7th', title: 'Add the next note of the key: the 7th that belongs to each chord' },
+  { id: shapeId.stack9, label: '9th', title: 'Stack the 9th from the key as well' },
 ];
 
-const MORE_SHAPES = [
-  { id: shapeId.sus2, label: 'sus2' },
-  { id: shapeId.sus4, label: 'sus4' },
-  { id: shapeId.add9, label: 'add9' },
-  { id: shapeId.ninth, label: '9' },
-  { id: shapeId.eleventh, label: '11' },
+const STACKED_SHAPES = [
+  { id: shapeId.stack11, label: '11th', title: 'Stack the 11th from the key as well' },
+];
+
+const BORROWED_SHAPES = [
+  { id: shapeId.seventh, label: '7', title: 'Flat 7 on every chord, even where the key has a major 7' },
+  { id: shapeId.major7, label: 'maj7', title: 'Major 7 on every chord' },
+  { id: shapeId.sus2, label: 'sus2', title: 'The 3rd replaced by the 2nd' },
+  { id: shapeId.sus4, label: 'sus4', title: 'The 3rd replaced by the 4th' },
+  { id: shapeId.add9, label: 'add9', title: 'The triad plus the 9th, no 7th' },
+];
+
+const MORE_SHAPES = [...STACKED_SHAPES, ...BORROWED_SHAPES];
+
+const ROLES = [
+  { id: roleId.tonic, label: 'Home' },
+  { id: roleId.subdominant, label: 'Away' },
+  { id: roleId.dominant, label: 'Tension' },
 ];
 
 const rootingId = Object.freeze({
@@ -200,17 +212,19 @@ function scaleChip(scale, top) {
   return chip;
 }
 
-function inversionOptions(shape) {
-  return shapeSteps(qualityId.major, shape).map((_, i) => ({ id: i, label: i ? String(i) : 'R', title: INVERSION_TITLES[i] }));
+function inversionOptions(count) {
+  return Array.from({ length: count }).map((_, i) => ({ id: i, label: i ? String(i) : 'R', title: INVERSION_TITLES[i] }));
 }
 
-function chordChip(item, degree, bare, shape) {
+function chordChip(item, degree, bare, shaped) {
   const numeral = bare ? String(degree) : item.numeral;
-  const name = displayName(bare ? chordRoot(item.chord) : shapeName(item.chord, item.quality, shape));
+  const name = displayName(bare ? chordRoot(item.chord) : shaped.name);
   const chip = plainButton(span(bare ? 'circle-degree' : 'circle-numeral', numeral), 'circle-chord');
   chip.append(span(null, name));
   chip.dataset.slot = item.slot;
-  chip.setAttribute('aria-label', bare ? `${name}, degree ${degree}` : `${name}, ${numeral}`);
+  if (!bare) chip.dataset.role = item.role;
+  const role = ROLES.find((r) => r.id === item.role).label;
+  chip.setAttribute('aria-label', bare ? `${name}, degree ${degree}` : `${name}, ${numeral}, ${role}`);
   return chip;
 }
 
@@ -248,6 +262,12 @@ export function createCircleControl() {
 
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
+    const legend = div('circle-legend');
+    for (const role of ROLES) {
+      const entry = span('legend-item', role.label);
+      entry.dataset.role = role.id;
+      legend.append(entry);
+    }
 
     function tonic() {
       return keyTonic(selected.index, selected.minor);
@@ -265,16 +285,21 @@ export function createCircleControl() {
       return scaleRoot(selected.index, selected.minor, id, rooting === rootingId.inKey);
     }
 
+    function shapeOf(item) {
+      return chordShape(item, items.map((each) => each.pc), shape);
+    }
+
     function model() {
       const t = tonic();
       const chord = items[chordIndex];
       const keyPcs = items.map((item) => item.pc);
-      const voiced = voicing(chord.pc, chord.quality, inversion, t, shape);
+      const shaped = shapeOf(chord);
+      const voiced = voiceNotes(chord.pc, shaped.steps, t, inversion);
       const note = { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) };
       const root = currentScaleRoot();
       const scale = { name: scaleOf(scaleChoice).name, pcs: scalePitches(root, scaleChoice), run: scaleRun(root, scaleChoice) };
       const display = mode === modeId.scale ? root : t;
-      const chordPcs = shapePitches(chord.pc, chord.quality, shape);
+      const chordPcs = stepPitches(chord.pc, shaped.steps);
       const byMode = {
         [modeId.chord]: { shown: voiced, shownPcs: chordPcs, rootPc: chord.pc, allowed: chordPcs },
         [modeId.note]: { shown: [note.midi], shownPcs: [note.pc], rootPc: note.pc, allowed: keyPcs },
@@ -290,6 +315,7 @@ export function createCircleControl() {
         note,
         scale,
         shape,
+        shapeOf,
         locked,
         tonic: display,
         tonicMidi: noteMidi(display, display),
@@ -306,7 +332,7 @@ export function createCircleControl() {
       renderStage();
     }));
     function voicingToggle() {
-      return choiceToggle(inversionOptions(shape), inversion, (id) => {
+      return choiceToggle(inversionOptions(shapeSize(shape)), inversion, (id) => {
         if (id === inversion) return;
         inversion = id;
         renderStage();
@@ -334,7 +360,7 @@ export function createCircleControl() {
     function setShape(id) {
       if (id === shape) return;
       shape = id;
-      inversion = Math.min(inversion, inversionOptions(shape).length - 1);
+      inversion = Math.min(inversion, shapeSize(shape) - 1);
       voicingField.lastChild.replaceWith(voicingToggle());
       syncShape();
       renderChips();
@@ -343,11 +369,16 @@ export function createCircleControl() {
 
     for (const [id, b] of shapeButtons) b.addEventListener(evt.click, () => setShape(id));
     moreBtn.addEventListener(evt.click, () => {
-      const sheet = openModal('More shapes', modalRow(null, choiceToggle(MORE_SHAPES, shape, (id) => {
+      const pick = (id) => {
         if (id === shape) return;
         setShape(id);
         sheet.close();
-      })));
+      };
+      const sheet = openModal(
+        'More shapes',
+        modalRow('In key', choiceToggle(STACKED_SHAPES, shape, pick)),
+        modalRow('Borrowed', choiceToggle(BORROWED_SHAPES, shape, pick)),
+      );
     });
 
     function renderStage() {
@@ -365,7 +396,7 @@ export function createCircleControl() {
       const names = pitchNames(selected.index, items.map((item) => item.pc));
       const top = (scale) => (rooting === rootingId.inKey ? displayName(names[currentScaleRoot(scale.id)]) : scale.tag);
       if (mode === modeId.scale) chords.replaceChildren(...SCALES.map((scale) => scaleChip(scale, top(scale))));
-      else chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, noteMode(), shape)));
+      else chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, noteMode(), shapeOf(item))));
       syncChips();
     }
 
@@ -440,7 +471,7 @@ export function createCircleControl() {
     function wedgeVoice(el) {
       const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === ringId.inner };
       const key = locked ? selected : tapped;
-      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, mode === modeId.chord, keyTonic(key.index, key.minor), inversion, shape));
+      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, mode === modeId.chord, keyTonic(key.index, key.minor), inversion));
       if (!locked && (tapped.index !== selected.index || tapped.minor !== selected.minor)) {
         selected = tapped;
         chordIndex = 0;
@@ -457,7 +488,7 @@ export function createCircleControl() {
         syncChips();
         stageDirty = view !== viewId.fifths;
       }
-      return startNotes(chordNotes(item.pc, item.quality, mode === modeId.chord, tonic(), inversion, shape));
+      return startNotes(mode === modeId.chord ? voiceNotes(item.pc, shapeOf(item).steps, tonic(), inversion) : chordNotes(item.pc, item.quality, false, tonic()));
     }
 
     let run = null;
@@ -526,6 +557,7 @@ export function createCircleControl() {
       voicingField.hidden = mode !== modeId.chord;
       shapeField.hidden = mode !== modeId.chord;
       rootingField.hidden = mode !== modeId.scale;
+      legend.hidden = mode !== modeId.chord;
     }
 
     syncMode();
@@ -534,7 +566,7 @@ export function createCircleControl() {
     renderLock();
     return {
       header,
-      rows: [stage, controls, chords],
+      rows: [stage, controls, chords, legend],
       onClose: () => {
         end();
         stopRun();

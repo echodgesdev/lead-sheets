@@ -17,6 +17,7 @@
   --nav-line: rgba(255, 255, 255, 0.08);
   --lime: #c6d74c;
   --orange: #f5a524;
+  --tension: #ef6f8a;
   --key-white: #e6edf3;
   --key-black: #0b1117;
 
@@ -56,6 +57,7 @@
   --accent: #0091c5;
   --chord: #005b7f;
   --orange: #d97a00;
+  --tension: #c2185b;
   --key-white: #ffffff;
   --key-black: #1e2a36;
   --danger: #c62828;
@@ -1594,6 +1596,55 @@ button.row:active {
 
 .circle-chord.active {
   box-shadow: inset 0 0 0 1.5px var(--accent);
+}
+
+.circle-chord[data-role],
+.legend-item {
+  position: relative;
+}
+
+.circle-chord[data-role]::after {
+  content: '';
+  position: absolute;
+  right: 10px;
+  bottom: 3px;
+  left: 10px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--role);
+}
+
+[data-role="tonic"] {
+  --role: var(--lime);
+}
+
+[data-role="subdominant"] {
+  --role: var(--accent);
+}
+
+[data-role="dominant"] {
+  --role: var(--tension);
+}
+
+.circle-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 0 16px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.legend-item::before {
+  content: '';
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  border-radius: 2px;
+  vertical-align: middle;
+  background: var(--role);
 }
 
 .clock-hit {

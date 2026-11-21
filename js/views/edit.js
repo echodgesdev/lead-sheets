@@ -40,7 +40,7 @@ export function mount(el, { id, back = null }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  headerEl.append(backBtn, title, status, inferBtn, deleteBtn, previewBtn);
+  headerEl.append(backBtn, title, status, deleteBtn, inferBtn, previewBtn);
   inferBtn.hidden = getEditorOptions().includes(editorId.hideFormat);
   screen.append(headerEl, editor);
   el.append(screen);

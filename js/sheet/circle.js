@@ -34,31 +34,72 @@ const TRIADS = {
 
 export const shapeId = Object.freeze({
   triad: 'triad',
+  stack7: '7th',
+  stack9: '9th',
+  stack11: '11th',
   seventh: '7',
   major7: 'maj7',
   sus2: 'sus2',
   sus4: 'sus4',
   add9: 'add9',
-  ninth: '9',
-  eleventh: '11',
 });
 
-const SHAPES = {
-  [shapeId.triad]: { add: [] },
+export const roleId = Object.freeze({
+  tonic: 'tonic',
+  subdominant: 'subdominant',
+  dominant: 'dominant',
+});
+
+const STACK_SIZES = {
+  [shapeId.triad]: 3,
+  [shapeId.stack7]: 4,
+  [shapeId.stack9]: 5,
+  [shapeId.stack11]: 6,
+};
+
+const BORROWED = {
   [shapeId.seventh]: { add: [10] },
   [shapeId.major7]: { add: [11] },
   [shapeId.sus2]: { steps: [0, 2, 7] },
   [shapeId.sus4]: { steps: [0, 5, 7] },
   [shapeId.add9]: { add: [14] },
-  [shapeId.ninth]: { add: [10, 14] },
-  [shapeId.eleventh]: { add: [10, 14, 17] },
 };
 
 const SUFFIXES = {
-  [qualityId.major]: { [shapeId.triad]: '', [shapeId.seventh]: '7', [shapeId.major7]: 'maj7', [shapeId.add9]: 'add9', [shapeId.ninth]: '9', [shapeId.eleventh]: '11' },
-  [qualityId.minor]: { [shapeId.triad]: 'm', [shapeId.seventh]: 'm7', [shapeId.major7]: 'mM7', [shapeId.add9]: 'madd9', [shapeId.ninth]: 'm9', [shapeId.eleventh]: 'm11' },
-  [qualityId.diminished]: { [shapeId.triad]: 'dim', [shapeId.seventh]: 'ø7', [shapeId.major7]: '°M7', [shapeId.add9]: '°add9', [shapeId.ninth]: 'ø9', [shapeId.eleventh]: 'ø11' },
+  [qualityId.major]: { [shapeId.seventh]: '7', [shapeId.major7]: 'maj7', [shapeId.add9]: 'add9' },
+  [qualityId.minor]: { [shapeId.seventh]: 'm7', [shapeId.major7]: 'mM7', [shapeId.add9]: 'madd9' },
+  [qualityId.diminished]: { [shapeId.seventh]: 'ø7', [shapeId.major7]: '°M7', [shapeId.add9]: '°add9' },
 };
+
+const STACK_NAMES = {
+  '0,4,7': '',
+  '0,3,7': 'm',
+  '0,3,6': 'dim',
+  '0,4,7,11': 'maj7',
+  '0,4,7,10': '7',
+  '0,3,7,10': 'm7',
+  '0,3,6,10': 'ø7',
+  '0,3,7,11': 'mM7',
+  '0,3,6,9': '°7',
+  '0,4,7,11,14': 'maj9',
+  '0,4,7,10,14': '9',
+  '0,4,7,10,13': '7♭9',
+  '0,3,7,10,14': 'm9',
+  '0,3,7,10,13': 'm7♭9',
+  '0,3,6,10,13': 'ø7♭9',
+  '0,3,6,10,14': 'ø9',
+  '0,4,7,11,14,17': 'maj11',
+  '0,4,7,11,14,18': 'maj9♯11',
+  '0,4,7,10,14,17': '11',
+  '0,4,7,10,13,17': '11♭9',
+  '0,3,7,10,14,17': 'm11',
+  '0,3,7,10,13,17': 'm11♭9',
+  '0,3,6,10,13,17': 'ø11♭9',
+  '0,3,6,10,14,17': 'ø11',
+};
+
+const MAJOR_ROLES = [roleId.tonic, roleId.subdominant, roleId.tonic, roleId.subdominant, roleId.dominant, roleId.tonic, roleId.dominant];
+const MINOR_ROLES = [roleId.tonic, roleId.subdominant, roleId.tonic, roleId.subdominant, roleId.dominant, roleId.subdominant, roleId.dominant];
 
 const MAJOR_LAYOUT = [
   [0, ringId.outer, qualityId.major],
@@ -111,7 +152,7 @@ export function keyChords(index, minor) {
     const [offset, ring, quality] = layout[i];
     const at = wrap(index + offset);
     const root = ring === ringId.dim ? keyTonic(wrap(index + DIM_ROOT_OFFSET), true) : keyTonic(at, ring === ringId.inner);
-    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality };
+    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality, role: (minor ? MINOR_ROLES : MAJOR_ROLES)[i] };
   });
 }
 
@@ -128,32 +169,49 @@ export function noteMidi(pc, tonic) {
   return LOWEST_TONIC + wrap(tonic - LOWEST_TONIC) + wrap(pc - tonic);
 }
 
-export function shapeSteps(quality, shape = shapeId.triad) {
-  const { steps, add } = SHAPES[shape];
-  return steps ?? [...TRIADS[quality], ...add];
+function stackSteps(keyPcs, degree, size) {
+  return Array.from({ length: size }, (_, k) => {
+    const pc = keyPcs[(degree + 2 * k) % keyPcs.length];
+    return ((pc - keyPcs[degree] + WEDGES) % WEDGES) + (2 * k >= keyPcs.length ? WEDGES : 0);
+  });
 }
 
-export function shapePitches(pc, quality, shape) {
-  return shapeSteps(quality, shape).map((step) => (pc + step) % WEDGES);
+export function chordShape(item, keyPcs, shape = shapeId.triad) {
+  const root = item.chord.replace(/(m|dim)$/, '');
+  if (STACK_SIZES[shape]) {
+    const steps = stackSteps(keyPcs, keyPcs.indexOf(item.pc), STACK_SIZES[shape]);
+    return { steps, name: `${root}${STACK_NAMES[steps.join(',')] ?? ''}` };
+  }
+  const { steps, add } = BORROWED[shape];
+  const sus = shape === shapeId.sus2 || shape === shapeId.sus4;
+  return { steps: steps ?? [...TRIADS[item.quality], ...add], name: `${root}${sus ? shape : SUFFIXES[item.quality][shape]}` };
 }
 
-export function shapeName(chord, quality, shape) {
-  const root = chord.replace(/(m|dim)$/, '');
-  return shape === shapeId.sus2 || shape === shapeId.sus4 ? `${root}${shape}` : `${root}${SUFFIXES[quality][shape]}`;
+export function shapeSize(shape) {
+  if (STACK_SIZES[shape]) return STACK_SIZES[shape];
+  const { steps, add } = BORROWED[shape];
+  return steps ? steps.length : TRIADS[qualityId.major].length + add.length;
 }
 
-export function chordNotes(pc, quality, chord, tonic, inversion = 0, shape = shapeId.triad) {
+export function stepPitches(pc, steps) {
+  return steps.map((step) => (pc + step) % WEDGES);
+}
+
+export function voiceNotes(pc, steps, tonic, inversion = 0) {
   const root = noteMidi(pc, tonic);
-  if (!chord) return [root];
-  return shapeSteps(quality, shape).map((step, i) => root + step + (i < inversion ? WEDGES : 0)).sort((a, b) => a - b);
+  return steps.map((step, i) => root + step + (i < inversion ? WEDGES : 0)).sort((a, b) => a - b);
 }
 
-export function wedgeNotes(index, minor, chord, tonic, inversion = 0, shape = shapeId.triad) {
-  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic, inversion, shape);
+export function chordNotes(pc, quality, chord, tonic, inversion = 0) {
+  return chord ? voiceNotes(pc, TRIADS[quality], tonic, inversion) : [noteMidi(pc, tonic)];
 }
 
-export function voicing(pc, quality, inversion, tonic, shape = shapeId.triad) {
-  return chordNotes(pc, quality, true, tonic, inversion, shape);
+export function wedgeNotes(index, minor, chord, tonic, inversion = 0) {
+  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic, inversion);
+}
+
+export function voicing(pc, quality, inversion, tonic) {
+  return voiceNotes(pc, TRIADS[quality], tonic, inversion);
 }
 
 export const scaleId = Object.freeze({
@@ -176,8 +234,8 @@ export const SCALES = [
   { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', tag: '5', offset: 7, steps: [0, 2, 4, 5, 7, 9, 10] },
   { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', tag: '6', offset: 9, steps: [0, 2, 3, 5, 7, 8, 10] },
   { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', tag: '7', offset: 11, steps: [0, 1, 3, 5, 6, 8, 10] },
-  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Pent.', tag: 'maj', offset: 0, steps: [0, 2, 4, 7, 9] },
-  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Pent.', tag: 'min', offset: 9, steps: [0, 3, 5, 7, 10] },
+  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Maj pent', tag: 'maj', offset: 0, steps: [0, 2, 4, 7, 9] },
+  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Min pent', tag: 'min', offset: 9, steps: [0, 3, 5, 7, 10] },
 ];
 
 export function scaleOf(id) {

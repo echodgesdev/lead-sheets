@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, shapeSteps, shapePitches, shapeName, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, chordShape, stepPitches, voiceNotes, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -27,7 +27,7 @@ test('circle key chords sit on their wedges', () => {
   const at = (c) => `${c.chord}@${c.ring}${c.index}`;
   eq(keyChords(0, false).map(at), ['C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1', 'Am@inner0', 'Bdim@dim0']);
   eq(keyChords(0, true).map(at), ['Am@inner0', 'Bdim@dim0', 'C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1']);
-  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished' });
+  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished', role: 'dominant' });
 });
 
 test('circle notes rise through the key from its tonic', () => {
@@ -59,7 +59,7 @@ test('circle note names follow the key side', () => {
 });
 
 test('circle chord pitches and voicings', () => {
-  eq(shapePitches(9, 'minor', 'triad'), [9, 0, 4]);
+  eq(stepPitches(9, [0, 3, 7]), [9, 0, 4]);
   eq(noteMidi(0, C), 60);
   eq(voicing(0, 'major', 0, C), [60, 64, 67]);
   eq(voicing(0, 'major', 1, C), [64, 67, 72]);
@@ -79,16 +79,26 @@ test('circle scales from the tonic', () => {
   eq(scaleRun(G, 'ionian'), [55, 57, 59, 60, 62, 64, 66, 67]);
 });
 
-test('circle chord shapes', () => {
-  eq(shapeSteps('major', '7'), [0, 4, 7, 10]);
-  eq(shapeSteps('minor', 'maj7'), [0, 3, 7, 11]);
-  eq(shapeSteps('major', 'sus4'), [0, 5, 7]);
-  eq(shapeSteps('minor', '11'), [0, 3, 7, 10, 14, 17]);
-  eq(shapePitches(0, 'major', '7'), [0, 4, 7, 10]);
-  eq(['triad', '7', 'maj7', 'sus2', 'add9', '9'].map((s) => shapeName('C', 'major', s)), ['C', 'C7', 'Cmaj7', 'Csus2', 'Cadd9', 'C9']);
-  eq(['triad', '7', 'maj7'].map((s) => shapeName('Dm', 'minor', s)), ['Dm', 'Dm7', 'DmM7']);
-  eq(shapeName('Bdim', 'diminished', '7'), 'Bø7');
-  eq(chordNotes(0, 'major', true, C, 1, '7'), [64, 67, 70, 72]);
+test('circle chord shapes stack within the key', () => {
+  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+  const items = keyChords(0, false);
+  eq(items.map((item) => chordShape(item, cMajor, '7th').name), ['Cmaj7', 'Dm7', 'Em7', 'Fmaj7', 'G7', 'Am7', 'Bø7']);
+  eq(items.map((item) => chordShape(item, cMajor, '9th').name), ['Cmaj9', 'Dm9', 'Em7♭9', 'Fmaj9', 'G9', 'Am9', 'Bø7♭9']);
+  eq(chordShape(items[3], cMajor, '11th').name, 'Fmaj9♯11');
+  eq(chordShape(items[0], cMajor, '9th').steps, [0, 4, 7, 11, 14]);
+  eq(chordShape(items[0], cMajor, 'triad').name, 'C');
+  eq(items.map((item) => item.role), ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'tonic', 'dominant']);
+  eq(keyChords(0, true).map((item) => item.role), ['tonic', 'subdominant', 'tonic', 'subdominant', 'dominant', 'subdominant', 'dominant']);
+});
+
+test('circle borrowed chord shapes', () => {
+  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+  const items = keyChords(0, false);
+  eq(chordShape(items[0], cMajor, '7'), { steps: [0, 4, 7, 10], name: 'C7' });
+  eq(chordShape(items[1], cMajor, 'maj7').name, 'DmM7');
+  eq(chordShape(items[0], cMajor, 'sus4'), { steps: [0, 5, 7], name: 'Csus4' });
+  eq(chordShape(items[6], cMajor, '7').name, 'Bø7');
+  eq(voiceNotes(0, [0, 4, 7, 10], C, 1), [64, 67, 70, 72]);
 });
 
 test('circle scale roots in the key or on the tonic', () => {

@@ -1,6 +1,6 @@
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
-import { qualityId, shapeId, displayName, shapeSteps, shapePitches, shapeName } from '../sheet/circle.js';
+import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -68,12 +68,12 @@ function isOutside({ scalePcs }, pc) {
   return !scalePcs.includes(pc);
 }
 
-function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape }) {
+function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape, shapeOf }) {
   if (mode === modeId.note) return hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center');
   if (mode === modeId.scale) return hubText(displayName(names[tonic]), scale.name, 'clock-center');
   const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
   const root = rootLetter(chord.chord);
-  const sub = shape === shapeId.triad ? QUALITY_LABELS[chord.quality] : displayName(shapeName(chord.chord, chord.quality, shape)).slice(root.length);
+  const sub = shape === shapeId.triad ? QUALITY_LABELS[chord.quality] : displayName(shapeOf(chord).name).slice(root.length);
   return hubText(`${root}${bass}`, sub, 'clock-center');
 }
 
@@ -140,9 +140,10 @@ function rowName(top, topClass, letter, slot) {
 function chordRow(item, picked, model) {
   const { align, names, tonic, tonicMidi, scalePcs, noteMidiOf } = model;
   const row = div(classes('chain-row', picked && cls.active));
-  row.append(rowName(item.numeral, 'circle-numeral', displayName(shapeName(item.chord, item.quality, model.shape)), item.slot));
-  const steps = shapeSteps(item.quality, model.shape).map((step) => step % NOTES);
-  const pcs = shapePitches(item.pc, item.quality, model.shape);
+  const shaped = model.shapeOf(item);
+  row.append(rowName(item.numeral, 'circle-numeral', displayName(shaped.name), item.slot));
+  const steps = shaped.steps.map((step) => step % NOTES);
+  const pcs = stepPitches(item.pc, shaped.steps);
   const rootMidi = noteMidiOf(item.pc);
   const byRoot = align === alignId.root;
   for (let c = 0; c < NOTES; c++) {
