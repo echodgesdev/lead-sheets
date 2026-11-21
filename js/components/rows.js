@@ -2,6 +2,7 @@ import {
   TEXT_SIZE,
   TAGS,
   EDITOR_OPTIONS,
+  LIST_OPTIONS,
   CONTROLS,
   NUMBER_STYLES,
   PEDAL_MODES,
@@ -17,6 +18,8 @@ import {
   setPedalMode,
   getShownTags,
   setShownTags,
+  getListOptions,
+  setListOptions,
   getEditorOptions,
   setEditorOptions,
 } from '../data/prefs.js';
@@ -102,6 +105,10 @@ export function liveSettingsRows(onSize) {
     ...liveControlRows(),
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
   ];
+}
+
+export function listSettingsRows() {
+  return [chipsRow(null, LIST_OPTIONS, getListOptions(), setListOptions)];
 }
 
 export function editorSettingsRows() {

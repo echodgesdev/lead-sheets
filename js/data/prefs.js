@@ -13,6 +13,7 @@ const NUMBER_STYLE_KEY = 'tabs.numberStyle';
 const PEDAL_KEY = 'tabs.pedal';
 const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
+const LIST_OPTIONS_KEY = 'tabs.listOptions';
 const METRONOME_KEY = 'tabs.metronome';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
@@ -26,6 +27,10 @@ export const modeId = Object.freeze({
 export const pedalId = Object.freeze({
   page: 'page',
   song: 'song',
+});
+
+export const listOptionId = Object.freeze({
+  rowMenus: 'rowMenus',
 });
 
 export const editorId = Object.freeze({
@@ -68,6 +73,10 @@ export const barId = Object.freeze({
 export const PEDAL_MODES = [
   { id: pedalId.page, label: 'Page' },
   { id: pedalId.song, label: 'Song' },
+];
+
+export const LIST_OPTIONS = [
+  { id: listOptionId.rowMenus, label: 'Song Menus' },
 ];
 
 export const EDITOR_OPTIONS = [
@@ -233,6 +242,18 @@ export function getTextSize() {
 
 export function setTextSize(n) {
   write(TEXT_SIZE_KEY, n);
+}
+
+export function getListOptions() {
+  return shownIds(LIST_OPTIONS_KEY, LIST_OPTIONS, []);
+}
+
+export function setListOptions(ids) {
+  write(LIST_OPTIONS_KEY, ids);
+}
+
+export function hasListOption(id) {
+  return getListOptions().includes(id);
 }
 
 export function getEditorOptions() {

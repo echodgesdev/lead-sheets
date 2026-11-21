@@ -14,6 +14,8 @@ import {
   getListQuery,
   setListQuery,
   setSongOrder,
+  listOptionId,
+  hasListOption,
 } from '../data/prefs.js';
 import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
@@ -97,16 +99,25 @@ export function mount(el) {
     return set ? routes.set(set.id, rec.id) : routes.live(rec.id);
   }
 
-  function rowFor(rec, ids, set) {
+  function rowFor(rec, ids, set, menus) {
     const row = a({ class: 'row', href: hrefFor(rec, set), 'data-id': rec.id });
     row.append(rowMain(rec, subtitleOf(rec, groupBy)));
     const shift = set?.entries.find((e) => e.songId === rec.id)?.shift ?? 0;
     if (rec.key) row.append(span('badge', transposeKey(rec.key, shift)));
     row.addEventListener(evt.click, () => setSongOrder(ids));
-    return row;
+    if (!menus) return row;
+    const item = div('row-item');
+    const more = iconButton(iconId.ellipsis, 'Song menu', 'row-menu');
+    more.addEventListener(evt.click, () => openActions(rec));
+    item.append(row, more);
+    return item;
   }
 
-  function renderGroup(group) {
+  function openActions(rec) {
+    openSongActions(rec, { onEdit: () => { location.hash = routes.edit(rec.id); } });
+  }
+
+  function renderGroup(group, menus) {
     const ids = group.songs.map((rec) => rec.id);
     const labelEl = div(group.empty ? 'section-label muted-group' : 'section-label');
     labelEl.append(span('group-name', group.name), span('group-count', String(ids.length)));
@@ -116,7 +127,7 @@ export function mount(el) {
       labelEl.append(pen);
     }
     const list = div('list');
-    list.append(...group.songs.map((rec) => rowFor(rec, ids, group.set)));
+    list.append(...group.songs.map((rec) => rowFor(rec, ids, group.set, menus)));
     return [labelEl, list];
   }
 
@@ -138,7 +149,8 @@ export function mount(el) {
     const songs = store.search(search.value);
     const bySet = groupBy === groupId.setlist;
     const groups = bySet ? groupSetlists(songs, setlists.all(), !search.value.trim()) : groupSongs(songs, groupBy);
-    const nodes = groups.flatMap(renderGroup);
+    const menus = hasListOption(listOptionId.rowMenus);
+    const nodes = groups.flatMap((group) => renderGroup(group, menus));
     if (bySet && mode === modeId.edit) nodes.push(newSetRow());
     groupsEl.replaceChildren(...nodes);
     empty.hidden = bySet ? groups.length > 0 || mode === modeId.edit : songs.length > 0;
@@ -190,7 +202,7 @@ export function mount(el) {
     const rec = store.get(e.target.closest('.row[data-id]')?.dataset.id);
     if (!rec) return;
     e.preventDefault();
-    openSongActions(rec, { onEdit: () => { location.hash = routes.edit(rec.id); } });
+    openActions(rec);
   });
   for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
   menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));

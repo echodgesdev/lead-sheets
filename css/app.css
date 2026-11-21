@@ -630,6 +630,24 @@ select.field {
   transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.3s var(--spring);
 }
 
+.row-item {
+  position: relative;
+}
+
+.row-item > .row {
+  padding-right: 52px;
+}
+
+.row-menu {
+  position: absolute;
+  inset: 0 4px 0 auto;
+  height: 44px;
+  margin: auto 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--muted);
+}
+
 a.row:active,
 button.row:active {
   transform: scale(0.985);
