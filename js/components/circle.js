@@ -225,14 +225,17 @@ export function createCircleControl() {
     }
 
     const viewRow = choiceRow(null, VIEWS, view, (id) => {
+      if (id === view) return;
       view = id;
       renderStage();
     });
     const voicingRow = choiceRow('Voicing', INVERSIONS, inversion, (id) => {
+      if (id === inversion) return;
       inversion = id;
       renderStage();
     });
     const alignRow = choiceRow('Align', ALIGNS, align, (id) => {
+      if (id === align) return;
       align = id;
       renderStage();
     });
