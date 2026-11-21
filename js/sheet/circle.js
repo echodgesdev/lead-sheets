@@ -9,10 +9,39 @@ const MINOR = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'D#m', 'Bbm', 'Fm', 'Cm', 
 const ENHARMONIC = { 6: { major: 'Gb', minor: 'Ebm' } };
 const SHARP_SIDE = 6;
 const RELATIVE_MINOR = 9;
-const MAJOR_THIRD = 4;
-const MINOR_THIRD = 3;
-const FIFTH = 7;
 const LOWEST_ROOT = 55;
+
+const qualityId = Object.freeze({
+  major: 'major',
+  minor: 'minor',
+  diminished: 'diminished',
+});
+
+const TRIADS = {
+  [qualityId.major]: [0, 4, 7],
+  [qualityId.minor]: [0, 3, 7],
+  [qualityId.diminished]: [0, 3, 6],
+};
+
+const MAJOR_LAYOUT = [
+  [0, false, qualityId.major],
+  [-1, true, qualityId.minor],
+  [1, true, qualityId.minor],
+  [-1, false, qualityId.major],
+  [1, false, qualityId.major],
+  [0, true, qualityId.minor],
+  [2, true, qualityId.diminished],
+];
+
+const MINOR_LAYOUT = [
+  [0, true, qualityId.minor],
+  [2, true, qualityId.diminished],
+  [0, false, qualityId.major],
+  [-1, true, qualityId.minor],
+  [1, true, qualityId.minor],
+  [-1, false, qualityId.major],
+  [1, false, qualityId.major],
+];
 
 function wrap(i) {
   return ((i % WEDGES) + WEDGES) % WEDGES;
@@ -44,11 +73,19 @@ export function keyWedges(index) {
 
 export function keyChords(index, minor) {
   const pc = rootPc(index, minor);
-  return diatonic(keyOf(index, minor)).map((chord) => ({ chord, numeral: roman(chord, { pc }) }));
+  const layout = minor ? MINOR_LAYOUT : MAJOR_LAYOUT;
+  return diatonic(keyOf(index, minor)).map((chord, i) => {
+    const [offset, onInner, quality] = layout[i];
+    const at = wrap(index + offset);
+    return { chord, numeral: roman(chord, { pc }), index: at, minor: onInner, pc: rootPc(at, onInner), quality };
+  });
+}
+
+export function chordNotes(pc, quality, chord) {
+  const root = LOWEST_ROOT + wrap(pc - LOWEST_ROOT);
+  return chord ? TRIADS[quality].map((step) => root + step) : [root];
 }
 
 export function wedgeNotes(index, minor, chord) {
-  const root = LOWEST_ROOT + wrap(rootPc(index, minor) - LOWEST_ROOT);
-  if (!chord) return [root];
-  return [root, root + (minor ? MINOR_THIRD : MAJOR_THIRD), root + FIFTH];
+  return chordNotes(rootPc(index, minor), minor ? qualityId.minor : qualityId.major, chord);
 }

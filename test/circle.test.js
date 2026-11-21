@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeLabel, signature, keyWedges, keyChords, wedgeNotes } from '../js/sheet/circle.js';
+import { wedgeLabel, signature, keyWedges, keyChords, chordNotes, wedgeNotes } from '../js/sheet/circle.js';
 
 test('circle labels', () => {
   eq(wedgeLabel(0, false), 'C');
@@ -32,4 +32,16 @@ test('circle wedge notes', () => {
   eq(wedgeNotes(1, false, true), [55, 59, 62]);
   eq(wedgeNotes(0, true, true), [57, 60, 64]);
   eq(wedgeNotes(6, false, false), [66]);
+});
+
+test('circle key chords sit on their wedges', () => {
+  const at = (c) => `${c.chord}@${c.minor ? 'in' : 'out'}${c.index}`;
+  eq(keyChords(0, false).map(at), ['C@out0', 'Dm@in11', 'Em@in1', 'F@out11', 'G@out1', 'Am@in0', 'Bdim@in2']);
+  eq(keyChords(0, true).map(at), ['Am@in0', 'Bdim@in2', 'C@out0', 'Dm@in11', 'Em@in1', 'F@out11', 'G@out1']);
+});
+
+test('circle chord notes by quality', () => {
+  eq(chordNotes(11, 'diminished', true), [59, 62, 65]);
+  eq(chordNotes(11, 'diminished', false), [59]);
+  eq(chordNotes(0, 'major', true), [60, 64, 67]);
 });

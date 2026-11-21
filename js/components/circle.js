@@ -1,9 +1,9 @@
 import { attachDialog } from './modal.js';
 import { choiceRow } from './rows.js';
-import { WEDGES, keyOf, wedgeLabel, signature, keyWedges, keyChords, wedgeNotes } from '../sheet/circle.js';
+import { WEDGES, keyOf, wedgeLabel, signature, keyWedges, keyChords, chordNotes, wedgeNotes } from '../sheet/circle.js';
 import { playNotes } from '../audio/tone.js';
 import { svg } from '../core/svg.js';
-import { div, span, iconButton, cls } from '../core/dom.js';
+import { div, span, iconButton, plainButton, cls } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
@@ -57,6 +57,7 @@ function wedge(index, minor) {
     'aria-label': keyTitle(index, minor),
     'data-index': index,
     'data-ring': ring,
+    'data-slot': slotOf(index, minor),
   });
   const [x, y] = point(LABEL_RADIUS[ring], index * STEP - 90);
   g.append(
@@ -74,9 +75,15 @@ function gradient() {
   return defs;
 }
 
-function chordChip({ chord, numeral }) {
-  const chip = div('circle-chord');
-  chip.append(span('circle-numeral', numeral), span(null, pretty(chord)));
+function slotOf(index, minor) {
+  return `${index}${minor ? 'm' : ''}`;
+}
+
+function chordChip(item) {
+  const chip = plainButton(span('circle-numeral', item.numeral), 'circle-chord');
+  chip.append(span(null, pretty(item.chord)));
+  chip.dataset.slot = slotOf(item.index, item.minor);
+  chip.setAttribute('aria-label', `${pretty(item.chord)}, ${item.numeral}`);
   return chip;
 }
 
@@ -88,12 +95,15 @@ export function createCircleControl() {
 
   function open() {
     const wedges = [];
+    const wedgeEls = new Map();
+    let chipItems = new Map();
     const art = svg('svg', { class: 'circle-art', viewBox: '-100 -100 200 200', role: 'group', 'aria-label': 'Circle of fifths' });
     art.append(gradient());
     for (const minor of [false, true]) {
       for (let index = 0; index < WEDGES; index++) {
         const el = wedge(index, minor);
         wedges.push({ el, index, minor });
+        wedgeEls.set(slotOf(index, minor), el);
         art.append(el);
       }
     }
@@ -114,7 +124,9 @@ export function createCircleControl() {
       }
       hubName.textContent = keyTitle(selected.index, selected.minor);
       hubSig.textContent = signature(selected.index) || 'No ♯ or ♭';
-      chords.replaceChildren(...keyChords(selected.index, selected.minor).map(chordChip));
+      const items = keyChords(selected.index, selected.minor);
+      chipItems = new Map(items.map((item) => [slotOf(item.index, item.minor), item]));
+      chords.replaceChildren(...items.map(chordChip));
     }
 
     function activate(target) {
@@ -147,19 +159,31 @@ export function createCircleControl() {
     const playRow = choiceRow('Play', SOUNDS, sound, (id) => { sound = id; });
     playRow.append(lockBtn);
 
-    let pressed = null;
+    let pressed = [];
 
     function press(target) {
-      pressed?.classList.remove(cls.pressed);
-      pressed = target?.closest('.wedge') ?? null;
-      pressed?.classList.add(cls.pressed);
+      for (const el of pressed) el.classList.remove(cls.pressed);
+      const slot = target?.closest('[data-slot]')?.dataset.slot;
+      pressed = slot ? [wedgeEls.get(slot), chords.querySelector(`[data-slot="${slot}"]`)].filter(Boolean) : [];
+      for (const el of pressed) el.classList.add(cls.pressed);
     }
 
-    art.addEventListener(evt.click, (e) => activate(e.target));
-    art.addEventListener(evt.pointerdown, (e) => press(e.target));
-    for (const name of [evt.pointerup, evt.pointercancel, evt.pointerleave, evt.keyup]) {
-      art.addEventListener(name, () => press(null));
+    function playChip(target) {
+      const item = chipItems.get(target.closest('[data-slot]')?.dataset.slot);
+      if (item) playNotes(chordNotes(item.pc, item.quality, sound === soundId.chord));
     }
+
+    for (const area of [art, chords]) {
+      area.addEventListener(evt.pointerdown, (e) => press(e.target));
+      for (const name of [evt.pointerup, evt.pointercancel, evt.pointerleave, evt.keyup]) {
+        area.addEventListener(name, () => press(null));
+      }
+    }
+    art.addEventListener(evt.click, (e) => activate(e.target));
+    chords.addEventListener(evt.click, (e) => playChip(e.target));
+    chords.addEventListener(evt.keydown, (e) => {
+      if ((e.key === keys.enter || e.key === keys.space) && !e.repeat) press(e.target);
+    });
     art.addEventListener(evt.keydown, (e) => {
       if ((e.key !== keys.enter && e.key !== keys.space) || !e.target.closest('.wedge')) return;
       e.preventDefault();
