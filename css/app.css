@@ -683,6 +683,8 @@ button.row:active {
 }
 
 .tool > summary {
+  min-height: 48px;
+  padding-block: 6px;
   list-style: none;
   border-radius: 0;
   box-shadow: none;
@@ -708,6 +710,23 @@ button.row:active {
 
 .tool > summary + * {
   border-top: 1px solid var(--line);
+}
+
+.tool .modal-row {
+  padding: 10px 12px;
+}
+
+.circle-views .seg-toggle {
+  width: 100%;
+}
+
+.circle-views .seg-toggle .btn {
+  flex: 1 1 0;
+}
+
+.circle-controls {
+  justify-content: center;
+  gap: 8px;
 }
 
 @media (hover: hover) {

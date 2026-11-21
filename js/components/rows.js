@@ -35,17 +35,33 @@ export function modalRow(label, ...controls) {
   return row;
 }
 
-export function choiceRow(label, options, value, save) {
-  const buttons = options.map((o) => [o.id, labeledButton(o.icon, o.label)]);
+function optionButton(o) {
+  const b = labeledButton(o.icon, o.label);
+  if (o.title) {
+    b.title = o.title;
+    b.setAttribute('aria-label', o.title);
+  }
+  return b;
+}
+
+export function choiceToggle(options, value, save) {
+  const buttons = options.map((o) => [o.id, optionButton(o)]);
 
   function apply(id) {
     save(id);
-    for (const [bid, b] of buttons) b.classList.toggle(cls.active, bid === id);
+    for (const [bid, b] of buttons) {
+      b.classList.toggle(cls.active, bid === id);
+      b.setAttribute('aria-pressed', String(bid === id));
+    }
   }
 
   for (const [id, b] of buttons) b.addEventListener(evt.click, () => apply(id));
   apply(value);
-  return modalRow(label, segToggle(...buttons.map(([, b]) => b)));
+  return segToggle(...buttons.map(([, b]) => b));
+}
+
+export function choiceRow(label, options, value, save) {
+  return modalRow(label, choiceToggle(options, value, save));
 }
 
 function chipsRow(label, items, shownIds, save) {

@@ -1,5 +1,5 @@
 import { attachDialog } from './modal.js';
-import { choiceRow } from './rows.js';
+import { modalRow, choiceToggle } from './rows.js';
 import { renderClock, renderChain, renderKeys, alignId } from './theory-views.js';
 import {
   WEDGES,
@@ -41,7 +41,8 @@ const soundId = Object.freeze({
 const viewId = Object.freeze({
   fifths: 'fifths',
   clock: 'clock',
-  chain: 'chain',
+  intervals: 'intervals',
+  notes: 'notes',
   keys: 'keys',
 });
 
@@ -53,24 +54,21 @@ const SOUNDS = [
 const VIEWS = [
   { id: viewId.fifths, label: 'Fifths' },
   { id: viewId.clock, label: 'Clock' },
-  { id: viewId.chain, label: 'Chain' },
+  { id: viewId.intervals, label: 'Intervals' },
+  { id: viewId.notes, label: 'Notes' },
   { id: viewId.keys, label: 'Keys' },
 ];
 
 const INVERSIONS = [
-  { id: 0, label: 'Root' },
-  { id: 1, label: '1st' },
-  { id: 2, label: '2nd' },
-];
-
-const ALIGNS = [
-  { id: alignId.root, label: 'Root' },
-  { id: alignId.key, label: 'Key' },
+  { id: 0, label: 'R', title: 'Root position' },
+  { id: 1, label: '1', title: '1st inversion' },
+  { id: 2, label: '2', title: '2nd inversion' },
 ];
 
 const RENDERERS = {
   [viewId.clock]: renderClock,
-  [viewId.chain]: renderChain,
+  [viewId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
+  [viewId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [viewId.keys]: renderKeys,
 };
 
@@ -176,7 +174,6 @@ export function createCircleControl() {
   let locked = false;
   let view = viewId.fifths;
   let inversion = 0;
-  let align = alignId.root;
   let selected = { index: 0, minor: false };
   let chordIndex = 0;
 
@@ -213,7 +210,6 @@ export function createCircleControl() {
       return {
         items,
         chordIndex,
-        align,
         chord,
         tonic: t,
         tonicMidi: noteMidi(t, t),
@@ -224,24 +220,19 @@ export function createCircleControl() {
       };
     }
 
-    const viewRow = choiceRow(null, VIEWS, view, (id) => {
+    const viewRow = modalRow(null, choiceToggle(VIEWS, view, (id) => {
       if (id === view) return;
       view = id;
       renderStage();
-    });
-    const voicingRow = choiceRow('Voicing', INVERSIONS, inversion, (id) => {
+    }));
+    viewRow.classList.add('circle-views');
+    const voicingToggle = choiceToggle(INVERSIONS, inversion, (id) => {
       if (id === inversion) return;
       inversion = id;
       renderStage();
     });
-    const alignRow = choiceRow('Align', ALIGNS, align, (id) => {
-      if (id === align) return;
-      align = id;
-      renderStage();
-    });
 
     function renderStage() {
-      alignRow.hidden = view !== viewId.chain;
       stage.replaceChildren(view === viewId.fifths ? art : RENDERERS[view](model()));
     }
 
@@ -287,8 +278,8 @@ export function createCircleControl() {
       renderLock();
     });
 
-    const playRow = choiceRow('Play', SOUNDS, sound, (id) => { sound = id; });
-    playRow.append(lockBtn);
+    const controls = modalRow(null, choiceToggle(SOUNDS, sound, (id) => { sound = id; }), voicingToggle, lockBtn);
+    controls.classList.add('circle-controls');
 
     let voice = null;
     let pressed = [];
@@ -363,7 +354,7 @@ export function createCircleControl() {
 
     renderKey();
     renderLock();
-    return { rows: [playRow, viewRow, stage, voicingRow, alignRow, chords], onClose: end };
+    return { rows: [viewRow, stage, controls, chords], onClose: end };
   }
 
   const dispose = attachDialog(button, 'Circle of fifths', open);
