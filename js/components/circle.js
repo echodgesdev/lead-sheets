@@ -1,7 +1,7 @@
 import { attachDialog } from './modal.js';
 import { choiceRow } from './rows.js';
 import { WEDGES, keyOf, wedgeLabel, signature, keyWedges, keyChords, chordNotes, wedgeNotes } from '../sheet/circle.js';
-import { playNotes } from '../audio/tone.js';
+import { startNotes } from '../audio/tone.js';
 import { svg } from '../core/svg.js';
 import { div, span, iconButton, plainButton, cls } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
@@ -129,18 +129,6 @@ export function createCircleControl() {
       chords.replaceChildren(...items.map(chordChip));
     }
 
-    function activate(target) {
-      const el = target.closest('.wedge');
-      if (!el) return false;
-      const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === 'inner' };
-      playNotes(wedgeNotes(tapped.index, tapped.minor, sound === soundId.chord));
-      if (!locked) {
-        selected = tapped;
-        render();
-      }
-      return true;
-    }
-
     const lockBtn = iconButton(iconId.lockOpen, 'Lock key');
 
     function renderLock() {
@@ -159,42 +147,64 @@ export function createCircleControl() {
     const playRow = choiceRow('Play', SOUNDS, sound, (id) => { sound = id; });
     playRow.append(lockBtn);
 
+    let voice = null;
     let pressed = [];
 
-    function press(target) {
+    function press(slot) {
       for (const el of pressed) el.classList.remove(cls.pressed);
-      const slot = target?.closest('[data-slot]')?.dataset.slot;
       pressed = slot ? [wedgeEls.get(slot), chords.querySelector(`[data-slot="${slot}"]`)].filter(Boolean) : [];
       for (const el of pressed) el.classList.add(cls.pressed);
     }
 
-    function playChip(target) {
-      const item = chipItems.get(target.closest('[data-slot]')?.dataset.slot);
-      if (item) playNotes(chordNotes(item.pc, item.quality, sound === soundId.chord));
+    function wedgeVoice(el, chord) {
+      const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === 'inner' };
+      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord));
+      if (!locked) {
+        selected = tapped;
+        render();
+      }
+      return stop;
+    }
+
+    function chipVoice(slot, chord) {
+      const item = chipItems.get(slot);
+      return startNotes(chordNotes(item.pc, item.quality, chord));
+    }
+
+    function begin(target) {
+      const slot = target.closest('[data-slot]')?.dataset.slot;
+      if (!slot) return;
+      end();
+      const wedgeEl = target.closest('.wedge');
+      const chord = sound === soundId.chord;
+      voice = wedgeEl ? wedgeVoice(wedgeEl, chord) : chipVoice(slot, chord);
+      press(slot);
+    }
+
+    function end() {
+      voice?.();
+      voice = null;
+      press(null);
     }
 
     for (const area of [art, chords]) {
-      area.addEventListener(evt.pointerdown, (e) => press(e.target));
+      area.addEventListener(evt.pointerdown, (e) => {
+        if (e.button === 0) begin(e.target);
+      });
       for (const name of [evt.pointerup, evt.pointercancel, evt.pointerleave, evt.keyup]) {
-        area.addEventListener(name, () => press(null));
+        area.addEventListener(name, end);
       }
+      area.addEventListener(evt.contextmenu, (e) => e.preventDefault());
+      area.addEventListener(evt.keydown, (e) => {
+        if ((e.key !== keys.enter && e.key !== keys.space) || !e.target.closest('[data-slot]')) return;
+        e.preventDefault();
+        if (!e.repeat) begin(e.target);
+      });
     }
-    art.addEventListener(evt.click, (e) => activate(e.target));
-    chords.addEventListener(evt.click, (e) => playChip(e.target));
-    chords.addEventListener(evt.keydown, (e) => {
-      if ((e.key === keys.enter || e.key === keys.space) && !e.repeat) press(e.target);
-    });
-    art.addEventListener(evt.keydown, (e) => {
-      if ((e.key !== keys.enter && e.key !== keys.space) || !e.target.closest('.wedge')) return;
-      e.preventDefault();
-      if (e.repeat) return;
-      press(e.target);
-      activate(e.target);
-    });
 
     render();
     renderLock();
-    return { rows: [playRow, artRow, chords] };
+    return { rows: [playRow, artRow, chords], onClose: end };
   }
 
   const dispose = attachDialog(button, 'Circle of fifths', open);

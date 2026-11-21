@@ -1274,6 +1274,7 @@ button.row:active {
   width: min(100%, 360px);
   height: auto;
   aspect-ratio: 1;
+  -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
@@ -1394,6 +1395,9 @@ button.row:active {
 
 .circle-chord {
   display: flex;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
   flex-direction: column;
   align-items: center;
   gap: 2px;
