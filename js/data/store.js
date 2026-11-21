@@ -3,7 +3,6 @@ import { SONGS, dbAll, dbPut, dbDelete } from './db.js';
 
 const DEFAULT_SCROLL = 3;
 const FIELD_TOKEN = /^(title|artist|album|genre|key|meta|tags?):(.+)$/;
-const SETLIST_LINE_RE = /^[ \t]*setlists?[ \t]*:.*(?:\r?\n|$)/gim;
 const PLAIN_FIELDS = ['title', 'artist', 'album', 'genre', ...LIST_FIELDS];
 const songs = new Map();
 let loading = null;
@@ -11,9 +10,7 @@ let loading = null;
 export function load() {
   loading ??= (async () => {
     for (const stored of await dbAll(SONGS)) {
-      const text = stored.text.replace(SETLIST_LINE_RE, '');
-      const rec = makeRecord(stored.id, text, stored.updatedAt, stored.scrollSpeed ?? DEFAULT_SCROLL);
-      if (text !== stored.text) await dbPut(SONGS, rec);
+      const rec = makeRecord(stored.id, stored.text, stored.updatedAt, stored.scrollSpeed ?? DEFAULT_SCROLL);
       songs.set(rec.id, rec);
     }
     navigator.storage?.persist?.();

@@ -5,19 +5,20 @@ import { evt } from '../core/events.js';
 import { strings } from '../strings.js';
 import { iconId } from '../core/icons.js';
 import { shareSong } from './share.js';
+import { songTitle } from './parts.js';
 
 export function openSongActions(rec, { onEdit, onDelete }) {
   const shareBtn = labeledButton(iconId.arrowUpFromBracket, 'Share song');
   const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
   const deleteBtn = labeledButton(iconId.trashCan, 'Delete', 'danger');
-  const dialog = openModal(rec.title || strings.untitled, modalRow(null, shareBtn, editBtn, deleteBtn));
+  const dialog = openModal(songTitle(rec), modalRow(null, shareBtn, editBtn, deleteBtn));
   deleteBtn.addEventListener(evt.click, () => {
     dialog.close();
-    if (confirm('Delete this song?')) onDelete();
+    if (confirm(strings.confirmDeleteSong)) onDelete();
   });
   shareBtn.addEventListener(evt.click, () => {
     dialog.close();
-    shareSong(rec.title || strings.untitled, rec.text);
+    shareSong(songTitle(rec), rec.text);
   });
   editBtn.addEventListener(evt.click, () => {
     dialog.close();
@@ -29,7 +30,7 @@ export function openSongMenu(rec, { onSize, onClose, onEdit }) {
   const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
   const shareBtn = labeledButton(iconId.arrowUpFromBracket, 'Share song');
   const dialog = openModal(null, ...liveSettingsRows(onSize), modalRow(null, editBtn, shareBtn));
-  shareBtn.addEventListener(evt.click, () => shareSong(rec.title || strings.untitled, rec.text));
+  shareBtn.addEventListener(evt.click, () => shareSong(songTitle(rec), rec.text));
   dialog.addEventListener(evt.close, onClose);
   editBtn.addEventListener(evt.click, () => {
     dialog.close();

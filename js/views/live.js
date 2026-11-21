@@ -39,7 +39,7 @@ import { evt, keys } from '../core/events.js';
 import { routes } from '../routes.js';
 import { clamp } from '../core/math.js';
 import { strings } from '../strings.js';
-import { mountNotFound } from '../components/parts.js';
+import { mountNotFound, songTitle } from '../components/parts.js';
 import { createAutoscroll, MIN_SPEED, MAX_SPEED, DEFAULT_SPEED } from '../core/autoscroll.js';
 import { holdWakeLock } from '../core/wakelock.js';
 
@@ -107,7 +107,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   lead.append(homeBtn, transpose);
   headerEl.append(lead, capoToggle, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
   const tags = div('live-tags');
-  const title = h1('live-title', rec.title || strings.untitled);
+  const title = h1('live-title', songTitle(rec));
 
   const sheet = div('sheet');
   const setSize = (px) => sheet.style.setProperty('--sheet-size', `${px}px`);

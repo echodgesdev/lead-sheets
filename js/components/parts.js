@@ -16,9 +16,13 @@ export function searchBox() {
   return { box, input: field };
 }
 
+export function songTitle(rec) {
+  return rec.title || strings.untitled;
+}
+
 export function rowMain(rec, sub) {
   const main = div('row-main');
-  main.append(div('row-title', rec.title || strings.untitled));
+  main.append(div('row-title', songTitle(rec)));
   if (sub) main.append(div('row-sub', sub));
   return main;
 }

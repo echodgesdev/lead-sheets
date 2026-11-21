@@ -1,5 +1,5 @@
 import { toast } from './toast.js';
-import { songLink } from '../data/backup.js';
+import { songLink } from '../data/links.js';
 
 export async function shareSong(title, text) {
   return shareLink(title, await songLink(text));

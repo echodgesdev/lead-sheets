@@ -1,13 +1,11 @@
 import * as store from './store.js';
 import * as setlists from './setlists.js';
 import { a } from '../core/dom.js';
-import { compress, decompress, toBase64Url, fromBase64Url } from '../core/compress.js';
-import { routes } from '../routes.js';
+import { compress, decompress } from '../core/compress.js';
 
 const FORMAT = { app: 'tabs', version: 3 };
 const VERSIONS = [1, 2, 3];
 const GZIP = 'gzip';
-const DEFLATE = 'deflate-raw';
 const GZIP_MAGIC = [0x1f, 0x8b];
 
 function localDate() {
@@ -44,15 +42,6 @@ export async function exportAll() {
   download(file, name);
 }
 
-export async function songLink(text) {
-  const code = toBase64Url(await compress(text, DEFLATE));
-  return new URL(routes.shared(code), location.href).href;
-}
-
-export async function receiveSong(code) {
-  const text = await decompress(fromBase64Url(code), DEFLATE);
-  return store.all().find((rec) => rec.text === text) ?? store.save(null, text);
-}
 
 async function applyBackup(data) {
   if (data?.app !== FORMAT.app || !VERSIONS.includes(data.version) || !Array.isArray(data.songs)) {

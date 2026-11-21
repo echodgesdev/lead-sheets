@@ -37,7 +37,7 @@ export const editorId = Object.freeze({
   autofix: 'autofix',
 });
 
-export const numberStyleId = Object.freeze({
+const numberStyleId = Object.freeze({
   nashville: 'nashville',
   roman: 'roman',
 });
@@ -111,7 +111,6 @@ export const CONTROLS = [
   { id: controlId.songNav, label: 'Prev / Next', bar: barId.bottom },
 ];
 
-const LEGACY_UNSEEN_CONTROLS = [controlId.songNav];
 
 function read(key) {
   try {
@@ -200,7 +199,6 @@ export function setShownTags(ids) {
 export function getShownControls() {
   const saved = read(CONTROLS_KEY);
   const ids = CONTROLS.map((c) => c.id);
-  if (Array.isArray(saved)) return ids.filter((id) => saved.includes(id) || LEGACY_UNSEEN_CONTROLS.includes(id));
   if (!Array.isArray(saved?.shown) || !Array.isArray(saved?.known)) return ids;
   return ids.filter((id) => saved.shown.includes(id) || !saved.known.includes(id));
 }

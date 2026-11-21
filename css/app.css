@@ -1191,11 +1191,11 @@ button.row:active {
   flex: 1 1 0;
 }
 
-.live-key.beat {
+.metro-btn.beat {
   animation: beat 0.16s ease-out;
 }
 
-.live-key.beat.down {
+.metro-btn.beat.down {
   animation-name: beat-down;
 }
 

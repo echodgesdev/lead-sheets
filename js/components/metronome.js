@@ -16,7 +16,7 @@ import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
 import { attachDialog } from './modal.js';
 import { stepper } from './controls.js';
 import { icon, iconId } from '../core/icons.js';
-import { div, span, button, labeledButton, cls } from '../core/dom.js';
+import { div, span, button, iconButton, labeledButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 
 function valueStepper(downTitle, upTitle) {
@@ -37,8 +37,7 @@ export function createMetronomeControl(tempo) {
   let showBeat = null;
   let disposed = false;
 
-  const headerBtn = button('', 'Metronome', 'live-key');
-  headerBtn.append(icon(iconId.metronome));
+  const headerBtn = iconButton(iconId.metronome, 'Metronome', 'metro-btn');
 
   const tapper = createTapper();
   const metronome = createMetronome(onBeat);
@@ -53,7 +52,7 @@ export function createMetronomeControl(tempo) {
     showBeat?.(beat);
   }
 
-  function renderButton() {
+  function syncButton() {
     headerBtn.classList.toggle(cls.active, metronome.running);
     if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
   }
@@ -61,7 +60,6 @@ export function createMetronomeControl(tempo) {
   function setBpm(n) {
     bpm = clampBpm(n);
     if (metronome.running) metronome.setBpm(bpm);
-    renderButton();
     sync?.();
   }
 
@@ -75,7 +73,7 @@ export function createMetronomeControl(tempo) {
   function toggleRunning() {
     if (metronome.running) metronome.stop();
     else metronome.start(bpm);
-    renderButton();
+    syncButton();
     sync?.();
   }
 
@@ -142,7 +140,7 @@ export function createMetronomeControl(tempo) {
   }
 
   const closeDialog = attachDialog(headerBtn, 'Metronome', open);
-  renderButton();
+  syncButton();
 
   function dispose() {
     disposed = true;

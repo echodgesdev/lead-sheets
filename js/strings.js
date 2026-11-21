@@ -1,6 +1,7 @@
 export const strings = Object.freeze({
   untitled: 'Untitled',
   untitledSetlist: 'Untitled setlist',
+  confirmDeleteSong: 'Delete this song?',
   notSaved: 'Not saved',
   searchSongs: 'Search songs',
   backToSongs: 'Back to songs',

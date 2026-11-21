@@ -1,4 +1,4 @@
-import { receiveSong } from '../data/backup.js';
+import { receiveSong } from '../data/links.js';
 import { mountNotFound } from '../components/parts.js';
 import { p } from '../core/dom.js';
 import { routes } from '../routes.js';

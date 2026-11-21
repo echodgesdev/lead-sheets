@@ -111,7 +111,7 @@ export function mount(el, { id, back = null }) {
   }
 
   async function onDelete() {
-    if (!currentId || !confirm('Delete this song?')) return;
+    if (!currentId || !confirm(strings.confirmDeleteSong)) return;
     await autosave.cancel();
     await store.remove(currentId);
     location.hash = routes.home;

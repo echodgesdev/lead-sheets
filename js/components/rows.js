@@ -48,7 +48,7 @@ export function choiceRow(label, options, value, save) {
   return modalRow(label, segToggle(...buttons.map(([, b]) => b)));
 }
 
-export function chipsRow(label, items, shownIds, save) {
+function chipsRow(label, items, shownIds, save) {
   const chips = div('chips');
   const shown = new Set(shownIds);
 
@@ -71,7 +71,7 @@ export function chipsRow(label, items, shownIds, save) {
   return modalRow(label, chips);
 }
 
-export function textSizeRow(onSize) {
+function textSizeRow(onSize) {
   const slider = input({
     class: 'slider',
     type: 'range',

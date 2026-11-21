@@ -20,7 +20,7 @@ export function isChord(token) {
   return NC_RE.test(token) || CHORD_RE.test(token);
 }
 
-export function chordName(token) {
+function chordName(token) {
   return token.replace(/\*+$/, '');
 }
 

@@ -2,7 +2,7 @@ import { TAGS, tagValue } from '../data/prefs.js';
 import { openModal } from './modal.js';
 import { modalRow } from './rows.js';
 import { p, span } from '../core/dom.js';
-import { strings } from '../strings.js';
+import { songTitle } from './parts.js';
 
 function capitalize(name) {
   return name.replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase());
@@ -18,5 +18,5 @@ function infoRows(rec) {
 }
 
 export function openSongDetails(rec) {
-  openModal(rec.title || strings.untitled, ...infoRows(rec));
+  openModal(songTitle(rec), ...infoRows(rec));
 }
