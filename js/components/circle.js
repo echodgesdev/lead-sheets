@@ -5,7 +5,7 @@ import { playNotes } from '../audio/tone.js';
 import { svg } from '../core/svg.js';
 import { div, span, iconButton, cls } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
-import { iconId } from '../core/icons.js';
+import { icon, iconId } from '../core/icons.js';
 
 const STEP = 360 / WEDGES;
 const RINGS = { outer: [64, 97], inner: [38, 64] };
@@ -83,6 +83,7 @@ function chordChip({ chord, numeral }) {
 export function createCircleControl() {
   const button = iconButton(iconId.chartPie, 'Circle of fifths');
   let sound = soundId.note;
+  let locked = false;
   let selected = { index: 0, minor: false };
 
   function open() {
@@ -119,11 +120,32 @@ export function createCircleControl() {
     function activate(target) {
       const el = target.closest('.wedge');
       if (!el) return false;
-      selected = { index: Number(el.dataset.index), minor: el.dataset.ring === 'inner' };
-      playNotes(wedgeNotes(selected.index, selected.minor, sound === soundId.chord));
-      render();
+      const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === 'inner' };
+      playNotes(wedgeNotes(tapped.index, tapped.minor, sound === soundId.chord));
+      if (!locked) {
+        selected = tapped;
+        render();
+      }
       return true;
     }
+
+    const lockBtn = iconButton(iconId.lockOpen, 'Lock key');
+
+    function renderLock() {
+      lockBtn.replaceChildren(icon(locked ? iconId.lock : iconId.lockOpen));
+      lockBtn.classList.toggle(cls.active, locked);
+      lockBtn.setAttribute('aria-pressed', String(locked));
+      lockBtn.title = locked ? 'Unlock key' : 'Lock key';
+      lockBtn.setAttribute('aria-label', lockBtn.title);
+    }
+
+    lockBtn.addEventListener(evt.click, () => {
+      locked = !locked;
+      renderLock();
+    });
+
+    const playRow = choiceRow('Play', SOUNDS, sound, (id) => { sound = id; });
+    playRow.append(lockBtn);
 
     art.addEventListener(evt.click, (e) => activate(e.target));
     art.addEventListener(evt.keydown, (e) => {
@@ -131,9 +153,8 @@ export function createCircleControl() {
     });
 
     render();
-    return {
-      rows: [choiceRow('Play', SOUNDS, sound, (id) => { sound = id; }), artRow, chords],
-    };
+    renderLock();
+    return { rows: [playRow, artRow, chords] };
   }
 
   const dispose = attachDialog(button, 'Circle of fifths', open);
