@@ -1,6 +1,11 @@
 import { toast } from './toast.js';
+import { songLink } from '../data/backup.js';
 
-export async function shareLink(title, url) {
+export async function shareSong(title, text) {
+  return shareLink(title, await songLink(text));
+}
+
+async function shareLink(title, url) {
   if (navigator.share) {
     try {
       await navigator.share({ title, url });

@@ -57,6 +57,10 @@ async function start() {
 }
 
 if ('serviceWorker' in navigator) {
+  const updating = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener(evt.controllerchange, () => {
+    if (updating) location.reload();
+  });
   navigator.serviceWorker.register('./sw.js').catch((err) => console.error(err));
 }
 

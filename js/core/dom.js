@@ -8,6 +8,7 @@ export const cls = Object.freeze({
   dragging: 'dragging',
   idle: 'idle',
   inTune: 'in-tune',
+  intro: 'intro',
 });
 
 function create(tag, attrs, text) {

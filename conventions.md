@@ -41,7 +41,7 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
   - State classes toggled at runtime come from `cls` (`classList.toggle(cls.active, on)`).
   - Navigation uses `routes.*` (`location.hash = routes.live(id)`), never a hand-built `#/...` string.
   - Icon names come from `iconId` in `core/icons.js`.
-  - Option ids come from the id map next to their option list: `controlId`, `barId`, `tagId`, `modeId`, `pedalId`, `editorId`, `featureId`, `numberStyleId` in `prefs.js`, `groupId` in `group.js`, `themeId` in `theme.js`, and `levelId` in `audio/click.js`. The list entries reference the map, so each id is written once.
+  - Option ids come from the id map next to their option list: `controlId`, `barId`, `tagId`, `modeId`, `pedalId`, `editorId`, `numberStyleId` in `prefs.js`, `groupId` in `group.js`, `themeId` in `theme.js`, and `levelId` in `audio/click.js`. The list entries reference the map, so each id is written once.
   - Add a new entry to the frozen map rather than writing the literal. Structural class names passed to the `dom.js` builders stay as plain strings, as do CSS selectors.
 - Handlers are named `const onX = () => ...` and added with `addEventListener`. Listeners on the view's own elements need no removal; they go when the router replaces the view. Listeners on anything that outlives the view (`window`, `document`, `visualViewport`) take `{ signal }` from one `AbortController`, and cleanup calls `abort()`. Cleanup also releases anything held (wake lock, rAF, timers, audio, media streams) and sets a `disposed` flag that async callbacks check.
 - Build DOM with the tag builders in `core/dom.js`: `div(attrs, text)`, `span(…)`, `p(…)` and so on. `attrs` is a class string (`div('row-title', title)`), an attribute object (`input({ type: 'range', min: 1 })`), or `null`. Never call `document.createElement` or pass a tag name as a string; a tag the code needs that has no builder gets one in `dom.js`. Don't name a local after a builder you import (`headerEl`, not `header`). SVG is the exception (`core/icons.js`, `createElementNS`).
@@ -79,6 +79,7 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
 - Font Awesome Free 6.7.2 **solid**, inlined in `js/core/icons.js` as `[iconId.name]: [viewBox, pathD]`.
 - Refer to icons only through `iconId` (`iconButton(iconId.xmark, 'Close')`), never by name string. A new icon needs an `iconId` entry (camelCase key, Font Awesome name as value) and an `ICONS` entry.
 - Copy the viewBox and path exactly from the Font Awesome 6.7.2 source. Never hand-write or approximate a path.
+- When Font Awesome Free has no fitting icon, take the fill variant from Phosphor Icons 2.1.1 (MIT) and credit it in the header comment of `icons.js` (`metronome`).
 
 ## CSS
 

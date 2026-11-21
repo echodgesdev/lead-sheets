@@ -7,8 +7,6 @@ import { transposeKey } from '../sheet/transpose.js';
 import { importText } from '../data/backup.js';
 import {
   modeId,
-  featureId,
-  hasFeature,
   getListMode,
   setListMode,
   getListGroup,
@@ -18,7 +16,7 @@ import {
   setSongOrder,
 } from '../data/prefs.js';
 import { toast } from '../components/toast.js';
-import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, cls } from '../core/dom.js';
+import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
@@ -27,23 +25,42 @@ import { createLearnPanel } from '../components/learn.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
+const APP_NAME = 'Lead Sheets';
+const INTRO_MS = 1200;
+
+let introPlayed = false;
 
 function subtitleOf(rec, by) {
   return [by !== 'artist' && rec.artist, by !== 'album' && rec.album].filter(Boolean).join(' · ');
 }
 
+function modeButton(name, text) {
+  const btn = labeledButton(name, span('mode-label', text));
+  btn.title = text;
+  btn.setAttribute('aria-label', text);
+  return btn;
+}
+
 export function mount(el) {
+  const intro = !introPlayed;
+  introPlayed = true;
+  if (intro) setListMode(modeId.live);
   let mode = getListMode();
   let groupBy = getListGroup();
 
   const screen = div();
   const top = div('list-top');
 
-  const headerEl = header('hdr');
+  const headerEl = header(classes('hdr list-hdr', intro && cls.intro));
+  const brand = h1('brand');
+  brand.append(
+    span({ class: 'brand-logo', role: 'img', 'aria-label': APP_NAME }),
+    span({ class: 'brand-name', 'aria-hidden': 'true' }, APP_NAME),
+  );
   const modeBtns = {
-    [modeId.live]: labeledButton(iconId.play, 'Live'),
-    [modeId.edit]: labeledButton(iconId.penToSquare, 'Edit'),
-    [modeId.learn]: labeledButton(null, 'Learn'),
+    [modeId.live]: modeButton(iconId.play, 'Live'),
+    [modeId.edit]: modeButton(iconId.penToSquare, 'Edit'),
+    [modeId.learn]: modeButton(iconId.metronome, 'Learn'),
   };
   const modeToggle = segToggle(...Object.values(modeBtns));
   modeToggle.setAttribute('role', 'group');
@@ -51,7 +68,10 @@ export function mount(el) {
   const gearBtn = iconButton(iconId.gear, 'Settings');
   const newLink = iconLink(iconId.plus, 'New song', routes.edit(NEW_ID));
   const pasteBtn = iconButton(iconId.paste, 'Paste song');
-  headerEl.append(h1('hdr-title brand', 'Lead Sheets'), modeToggle, pasteBtn, newLink, gearBtn);
+  const actions = div('hdr-actions');
+  actions.append(pasteBtn, newLink, gearBtn);
+  headerEl.append(brand, modeToggle, actions);
+  const introTimer = intro ? setTimeout(() => headerEl.classList.remove(cls.intro), INTRO_MS) : 0;
 
   const searchBar = div('toolbar');
   const { box: searchField, input: search } = searchBox();
@@ -135,7 +155,7 @@ export function mount(el) {
     const edit = mode === modeId.edit;
     const learn = mode === modeId.learn;
     newLink.hidden = !edit;
-    pasteBtn.hidden = !edit || !hasFeature(featureId.share);
+    pasteBtn.hidden = !edit;
     searchBar.hidden = learn;
     groupsEl.hidden = learn;
     if (learn) {
@@ -199,5 +219,8 @@ export function mount(el) {
 
   applyMode();
 
-  return disposeLearn;
+  return () => {
+    clearTimeout(introTimer);
+    disposeLearn();
+  };
 }

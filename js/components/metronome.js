@@ -14,7 +14,7 @@ import {
 } from '../audio/click.js';
 import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
 import { attachDialog } from './modal.js';
-import { stepper, keyFace } from './controls.js';
+import { stepper } from './controls.js';
 import { icon, iconId } from '../core/icons.js';
 import { div, span, button, labeledButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
@@ -53,7 +53,7 @@ export function createMetronomeControl(tempo) {
   }
 
   function renderButton() {
-    headerBtn.replaceChildren(...keyFace('BPM', bpm));
+    headerBtn.replaceChildren(icon(iconId.metronome), span(null, String(bpm)));
     headerBtn.classList.toggle(cls.active, metronome.running);
     if (!metronome.running) headerBtn.classList.remove(cls.beat, cls.down);
   }

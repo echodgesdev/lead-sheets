@@ -7,9 +7,6 @@ import {
   setShownTags,
   getEditorOptions,
   setEditorOptions,
-  FEATURES,
-  getFeatures,
-  setFeatures,
 } from '../data/prefs.js';
 import { openModal } from './modal.js';
 import { modalRow, choiceRow, chipsRow, textSizeRow, liveControlRows } from './rows.js';
@@ -86,7 +83,6 @@ export function openSettings({ onImport, onClose } = {}) {
     chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
     chipsRow('Editor', EDITOR_OPTIONS, getEditorOptions(), setEditorOptions),
     ...backupRows(onImport),
-    chipsRow('Experimental', FEATURES, getFeatures(), setFeatures),
     versionRow(),
   );
   if (onClose) dialog.addEventListener(evt.close, onClose);

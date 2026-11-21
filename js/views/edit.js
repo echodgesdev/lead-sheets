@@ -3,9 +3,8 @@ import { infer } from '../sheet/infer.js';
 import { attachKeybar } from '../components/keybar.js';
 import { iconId } from '../core/icons.js';
 import { toast } from '../components/toast.js';
-import { editorId, featureId, getEditorOptions, hasFeature } from '../data/prefs.js';
-import { shareLink } from '../components/share.js';
-import { songLink } from '../data/backup.js';
+import { editorId, getEditorOptions } from '../data/prefs.js';
+import { shareSong } from '../components/share.js';
 import { div, h1, header, span, textarea, iconButton, labeledButton } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
@@ -56,7 +55,7 @@ export function mount(el, { id, back = null }) {
 
   function syncChrome() {
     deleteBtn.hidden = !currentId;
-    shareBtn.hidden = !currentId || !hasFeature(featureId.share);
+    shareBtn.hidden = !currentId;
   }
 
   function adopt(newId) {
@@ -114,8 +113,8 @@ export function mount(el, { id, back = null }) {
     location.hash = currentId ? (back ?? routes.preview(currentId)) : routes.home;
   }
 
-  async function onShare() {
-    shareLink(titleOf(editor.value), await songLink(editor.value));
+  function onShare() {
+    shareSong(titleOf(editor.value), editor.value);
   }
 
   async function onDelete() {
