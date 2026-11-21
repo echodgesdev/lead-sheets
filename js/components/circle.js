@@ -14,6 +14,8 @@ const HUB_RADIUS = 29;
 const GRADIENT_ID = 'circle-accent';
 const MAIN_DY = '-0.4em';
 const ALT_DY = '1.15em';
+const HUB_KEY_DY = '-0.25em';
+const HUB_QUALITY_DY = '1.6em';
 
 const soundId = Object.freeze({
   note: 'note',
@@ -56,9 +58,13 @@ function labelText(x, y, names) {
   return text;
 }
 
-function keyTitle(index, minor) {
+function keyRoot(index, minor) {
   const key = keyOf(index, minor);
-  return minor ? `${pretty(key.slice(0, -1))} minor` : `${pretty(key)} major`;
+  return pretty(minor ? key.slice(0, -1) : key);
+}
+
+function keyTitle(index, minor) {
+  return `${keyRoot(index, minor)} ${minor ? 'minor' : 'major'}`;
 }
 
 function point(r, deg) {
@@ -170,7 +176,10 @@ export function createCircleControl() {
         w.label = wedgeText(w.index, w.minor, selected.index);
         w.el.append(w.label);
       }
-      hubName.textContent = keyTitle(selected.index, selected.minor);
+      hubName.replaceChildren(
+        svg('tspan', { x: 0, dy: HUB_KEY_DY }, keyRoot(selected.index, selected.minor)),
+        svg('tspan', { x: 0, dy: HUB_QUALITY_DY, class: 'hub-quality' }, selected.minor ? 'minor' : 'Major'),
+      );
       const items = keyChords(selected.index, selected.minor);
       chipItems = new Map(items.map((item) => [slotOf(item.index, item.ring), item]));
       if (dimEl) wedgeEls.delete(dimEl.dataset.slot);

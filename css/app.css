@@ -1398,15 +1398,20 @@ button.row:active {
 
 .hub {
   fill: var(--surface);
-  stroke: var(--line);
 }
 
 .hub-name {
   fill: var(--fg);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   text-anchor: middle;
   dominant-baseline: central;
+}
+
+.hub-quality {
+  fill: var(--muted);
+  font-size: 0.42em;
+  font-weight: 600;
 }
 
 .circle-chords {
