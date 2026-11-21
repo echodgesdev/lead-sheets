@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v54';
+const CACHE = 'tabs-v56';
 
 const ASSETS = [
   './',

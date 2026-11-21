@@ -107,14 +107,22 @@ export function mount(el) {
     row.addEventListener(evt.click, () => setSongOrder(ids));
     if (!menus) return row;
     const item = div('row-item');
-    const more = iconButton(iconId.ellipsis, 'Song menu', 'row-menu');
+    const more = iconButton(iconId.ellipsisVertical, 'Song menu', 'row-menu');
     more.addEventListener(evt.click, () => openActions(rec));
     item.append(row, more);
     return item;
   }
 
   function openActions(rec) {
-    openSongActions(rec, { onEdit: () => { location.hash = routes.edit(rec.id); } });
+    openSongActions(rec, {
+      onEdit: () => {
+        location.hash = routes.edit(rec.id);
+      },
+      onDelete: async () => {
+        await store.remove(rec.id);
+        renderList();
+      },
+    });
   }
 
   function renderGroup(group, menus) {

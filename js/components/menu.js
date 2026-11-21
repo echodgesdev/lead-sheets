@@ -6,10 +6,15 @@ import { strings } from '../strings.js';
 import { iconId } from '../core/icons.js';
 import { shareSong } from './share.js';
 
-export function openSongActions(rec, { onEdit }) {
+export function openSongActions(rec, { onEdit, onDelete }) {
   const shareBtn = labeledButton(iconId.arrowUpFromBracket, 'Share song');
   const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
-  const dialog = openModal(rec.title || strings.untitled, modalRow(null, shareBtn, editBtn));
+  const deleteBtn = labeledButton(iconId.trashCan, 'Delete', 'danger');
+  const dialog = openModal(rec.title || strings.untitled, modalRow(null, shareBtn, editBtn, deleteBtn));
+  deleteBtn.addEventListener(evt.click, () => {
+    dialog.close();
+    if (confirm('Delete this song?')) onDelete();
+  });
   shareBtn.addEventListener(evt.click, () => {
     dialog.close();
     shareSong(rec.title || strings.untitled, rec.text);
