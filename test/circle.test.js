@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, chordPitches, noteMidi, voicing, scalePitches, scaleRun } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, shapeSteps, shapePitches, shapeName } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -48,14 +48,18 @@ test('circle wedge notes follow the key', () => {
 });
 
 test('circle note names follow the key side', () => {
-  eq(pitchNames(0)[10], 'A#');
-  eq(pitchNames(9)[10], 'Bb');
+  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+  const eMajor = [4, 6, 8, 9, 11, 1, 3];
+  eq(pitchNames(0, cMajor)[10], 'Bb');
+  eq(pitchNames(4, eMajor)[8], 'G#');
+  eq(pitchNames(4, eMajor)[10], 'Bb');
+  eq(pitchNames(9, [8, 10, 0, 1, 3, 5, 7])[10], 'Bb');
   eq(displayName('Bb'), 'B♭');
   eq(displayName('F#m'), 'F♯m');
 });
 
 test('circle chord pitches and voicings', () => {
-  eq(chordPitches(9, 'minor'), [9, 0, 4]);
+  eq(shapePitches(9, 'minor', 'triad'), [9, 0, 4]);
   eq(noteMidi(0, C), 60);
   eq(voicing(0, 'major', 0, C), [60, 64, 67]);
   eq(voicing(0, 'major', 1, C), [64, 67, 72]);
@@ -73,4 +77,16 @@ test('circle scales from the tonic', () => {
   eq(scalePitches(G, 'minorPentatonic'), [7, 10, 0, 2, 5]);
   eq(scaleRun(C, 'majorPentatonic'), [60, 62, 64, 67, 69, 72]);
   eq(scaleRun(G, 'ionian'), [55, 57, 59, 60, 62, 64, 66, 67]);
+});
+
+test('circle chord shapes', () => {
+  eq(shapeSteps('major', '7'), [0, 4, 7, 10]);
+  eq(shapeSteps('minor', 'maj7'), [0, 3, 7, 11]);
+  eq(shapeSteps('major', 'sus4'), [0, 5, 7]);
+  eq(shapeSteps('minor', '11'), [0, 3, 7, 10, 14, 17]);
+  eq(shapePitches(0, 'major', '7'), [0, 4, 7, 10]);
+  eq(['triad', '7', 'maj7', 'sus2', 'add9', '9'].map((s) => shapeName('C', 'major', s)), ['C', 'C7', 'Cmaj7', 'Csus2', 'Cadd9', 'C9']);
+  eq(['triad', '7', 'maj7'].map((s) => shapeName('Dm', 'minor', s)), ['Dm', 'Dm7', 'DmM7']);
+  eq(shapeName('Bdim', 'diminished', '7'), 'Bø7');
+  eq(chordNotes(0, 'major', true, C, 1, '7'), [64, 67, 70, 72]);
 });

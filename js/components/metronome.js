@@ -101,8 +101,8 @@ export function createMetronomeControl(tempo) {
     const tapBtn = labeledButton(null, 'Tap');
     tapBtn.title = 'Tap tempo';
     const startBtn = button('', 'Start');
-    const header = div('tool-header metro-header');
-    header.append(tapBtn, startBtn);
+    const actions = div('modal-row metro-actions');
+    actions.append(tapBtn, startBtn);
 
     const pad = (level, i) => {
       const b = button('', `Beat ${i + 1}: ${level}`, 'metro-pad');
@@ -147,8 +147,7 @@ export function createMetronomeControl(tempo) {
 
     sync();
     return {
-      header,
-      rows: [settings, pads],
+      rows: [settings, pads, actions],
       onClose: () => {
         sync = null;
         showBeat = null;

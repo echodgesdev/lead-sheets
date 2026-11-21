@@ -42,6 +42,7 @@ export const toolId = Object.freeze({
 
 export const editorId = Object.freeze({
   autofix: 'autofix',
+  hideFormat: 'hideFormat',
 });
 
 export const numberStyleId = Object.freeze({
@@ -90,6 +91,7 @@ const REMEMBERED_TOOLS = [{ id: toolId.metronome }, { id: toolId.circle }];
 
 export const EDITOR_OPTIONS = [
   { id: editorId.autofix, label: 'Fix Format On Preview' },
+  { id: editorId.hideFormat, label: 'Hide Format Button' },
 ];
 
 export const NUMBER_STYLES = [

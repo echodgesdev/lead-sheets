@@ -32,6 +32,34 @@ const TRIADS = {
   [qualityId.diminished]: [0, 3, 6],
 };
 
+export const shapeId = Object.freeze({
+  triad: 'triad',
+  seventh: '7',
+  major7: 'maj7',
+  sus2: 'sus2',
+  sus4: 'sus4',
+  add9: 'add9',
+  ninth: '9',
+  eleventh: '11',
+});
+
+const SHAPES = {
+  [shapeId.triad]: { add: [] },
+  [shapeId.seventh]: { add: [10] },
+  [shapeId.major7]: { add: [11] },
+  [shapeId.sus2]: { steps: [0, 2, 7] },
+  [shapeId.sus4]: { steps: [0, 5, 7] },
+  [shapeId.add9]: { add: [14] },
+  [shapeId.ninth]: { add: [10, 14] },
+  [shapeId.eleventh]: { add: [10, 14, 17] },
+};
+
+const SUFFIXES = {
+  [qualityId.major]: { [shapeId.triad]: '', [shapeId.seventh]: '7', [shapeId.major7]: 'maj7', [shapeId.add9]: 'add9', [shapeId.ninth]: '9', [shapeId.eleventh]: '11' },
+  [qualityId.minor]: { [shapeId.triad]: 'm', [shapeId.seventh]: 'm7', [shapeId.major7]: 'mM7', [shapeId.add9]: 'madd9', [shapeId.ninth]: 'm9', [shapeId.eleventh]: 'm11' },
+  [qualityId.diminished]: { [shapeId.triad]: 'dim', [shapeId.seventh]: 'ø7', [shapeId.major7]: '°M7', [shapeId.add9]: '°add9', [shapeId.ninth]: 'ø9', [shapeId.eleventh]: 'ø11' },
+};
+
 const MAJOR_LAYOUT = [
   [0, ringId.outer, qualityId.major],
   [-1, ringId.inner, qualityId.minor],
@@ -91,34 +119,41 @@ export function displayName(name) {
   return name.replace(/#/g, '♯').replace(/([A-G])b/g, '$1♭');
 }
 
-export function pitchNames(keyIndex) {
-  return keyIndex > SHARP_SIDE ? FLAT_NAMES : SHARP_NAMES;
-}
-
-export function chordSteps(quality) {
-  return TRIADS[quality];
-}
-
-export function chordPitches(pc, quality) {
-  return TRIADS[quality].map((step) => (pc + step) % WEDGES);
+export function pitchNames(keyIndex, keyPcs = []) {
+  const names = keyIndex > SHARP_SIDE ? FLAT_NAMES : SHARP_NAMES;
+  return names.map((name, pc) => (keyPcs.includes(pc) ? name : FLAT_NAMES[pc]));
 }
 
 export function noteMidi(pc, tonic) {
   return LOWEST_TONIC + wrap(tonic - LOWEST_TONIC) + wrap(pc - tonic);
 }
 
-export function chordNotes(pc, quality, chord, tonic, inversion = 0) {
+export function shapeSteps(quality, shape = shapeId.triad) {
+  const { steps, add } = SHAPES[shape];
+  return steps ?? [...TRIADS[quality], ...add];
+}
+
+export function shapePitches(pc, quality, shape) {
+  return shapeSteps(quality, shape).map((step) => (pc + step) % WEDGES);
+}
+
+export function shapeName(chord, quality, shape) {
+  const root = chord.replace(/(m|dim)$/, '');
+  return shape === shapeId.sus2 || shape === shapeId.sus4 ? `${root}${shape}` : `${root}${SUFFIXES[quality][shape]}`;
+}
+
+export function chordNotes(pc, quality, chord, tonic, inversion = 0, shape = shapeId.triad) {
   const root = noteMidi(pc, tonic);
   if (!chord) return [root];
-  return TRIADS[quality].map((step, i) => root + step + (i < inversion ? WEDGES : 0)).sort((a, b) => a - b);
+  return shapeSteps(quality, shape).map((step, i) => root + step + (i < inversion ? WEDGES : 0)).sort((a, b) => a - b);
 }
 
-export function wedgeNotes(index, minor, chord, tonic, inversion = 0) {
-  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic, inversion);
+export function wedgeNotes(index, minor, chord, tonic, inversion = 0, shape = shapeId.triad) {
+  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic, inversion, shape);
 }
 
-export function voicing(pc, quality, inversion, tonic) {
-  return chordNotes(pc, quality, true, tonic, inversion);
+export function voicing(pc, quality, inversion, tonic, shape = shapeId.triad) {
+  return chordNotes(pc, quality, true, tonic, inversion, shape);
 }
 
 export const scaleId = Object.freeze({

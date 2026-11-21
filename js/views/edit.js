@@ -31,6 +31,7 @@ export function mount(el, { id, back = null }) {
   const status = span('hdr-alert');
   const inferBtn = iconButton(iconId.wandMagicSparkles, 'Infer format');
   const deleteBtn = iconButton(iconId.trashCan, 'Delete', 'danger');
+  const backBtn = iconButton(iconId.chevronLeft, strings.backToSongs);
   const editor = textarea({
     class: 'editor',
     autocapitalize: 'off',
@@ -39,7 +40,8 @@ export function mount(el, { id, back = null }) {
     spellcheck: 'false',
     wrap: 'off',
   });
-  headerEl.append(deleteBtn, title, status, inferBtn, previewBtn);
+  headerEl.append(backBtn, title, status, inferBtn, deleteBtn, previewBtn);
+  inferBtn.hidden = getEditorOptions().includes(editorId.hideFormat);
   screen.append(headerEl, editor);
   el.append(screen);
 
@@ -110,6 +112,11 @@ export function mount(el, { id, back = null }) {
     location.hash = currentId ? (back ?? routes.preview(currentId)) : routes.home;
   }
 
+  async function onBack() {
+    await autosave.flush();
+    location.hash = routes.home;
+  }
+
   async function onDelete() {
     if (!currentId || !confirm(strings.confirmDeleteSong)) return;
     await autosave.cancel();
@@ -127,6 +134,7 @@ export function mount(el, { id, back = null }) {
   editor.addEventListener(evt.input, onInput);
   previewBtn.addEventListener(evt.click, onPreview);
   inferBtn.addEventListener(evt.click, onInfer);
+  backBtn.addEventListener(evt.click, onBack);
   deleteBtn.addEventListener(evt.click, onDelete);
   document.addEventListener(evt.keydown, onKeydown, { signal: listening.signal });
 

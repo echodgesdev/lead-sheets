@@ -11,6 +11,7 @@ export const cls = Object.freeze({
   inKey: 'in-key',
   inTune: 'in-tune',
   intro: 'intro',
+  outside: 'outside',
   pressed: 'pressed',
   roman: 'roman',
   root: 'root',

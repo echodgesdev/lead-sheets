@@ -1,6 +1,6 @@
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
-import { qualityId, displayName, chordSteps, chordPitches } from '../sheet/circle.js';
+import { qualityId, shapeId, displayName, shapeSteps, shapePitches, shapeName } from '../sheet/circle.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -64,11 +64,17 @@ function isBlocked({ locked, allowed }, pc) {
   return locked && !allowed.includes(pc);
 }
 
-function centerLabel({ mode, chord, voiced, names, note, scale, tonic }) {
+function isOutside({ scalePcs }, pc) {
+  return !scalePcs.includes(pc);
+}
+
+function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape }) {
   if (mode === modeId.note) return hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center');
   if (mode === modeId.scale) return hubText(displayName(names[tonic]), scale.name, 'clock-center');
   const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
-  return hubText(`${rootLetter(chord.chord)}${bass}`, QUALITY_LABELS[chord.quality], 'clock-center');
+  const root = rootLetter(chord.chord);
+  const sub = shape === shapeId.triad ? QUALITY_LABELS[chord.quality] : displayName(shapeName(chord.chord, chord.quality, shape)).slice(root.length);
+  return hubText(`${root}${bass}`, sub, 'clock-center');
 }
 
 export function renderClock(model) {
@@ -89,7 +95,8 @@ export function renderClock(model) {
   for (let pc = 0; pc < NOTES; pc++) {
     const [x, y] = polar(CLOCK_RINGS.at(-1), angle(pc));
     const [lx, ly] = polar(CLOCK_LABEL, angle(pc));
-    const label = classes('clock-label', scalePcs.includes(pc) && cls.inKey, shownPcs.includes(pc) && cls.voiced, isBlocked(model, pc) && cls.blocked);
+    const shownHere = shownPcs.includes(pc);
+    const label = classes('clock-label', scalePcs.includes(pc) && cls.inKey, shownHere && cls.voiced, shownHere && isOutside(model, pc) && cls.outside, isBlocked(model, pc) && cls.blocked);
     art.append(svg('line', { class: 'clock-spoke', x1: 0, y1: 0, x2: x, y2: y }), svg('text', { class: label, x: lx, y: ly }, displayName(names[pc])));
   }
   const keyShape = [...scalePcs].sort((a, b) => a - b).map((pc) => polar(CLOCK_RINGS.at(-1), angle(pc)));
@@ -100,7 +107,7 @@ export function renderClock(model) {
     const [cx, cy] = dots[i];
     const root = midi % OCTAVE === rootPc;
     art.append(svg('circle', {
-      class: classes('clock-dot', root && cls.root),
+      class: classes('clock-dot', root && cls.root, !root && isOutside(model, midi % OCTAVE) && cls.outside),
       cx,
       cy,
       r: root ? ROOT_DOT : DOT,
@@ -133,9 +140,9 @@ function rowName(top, topClass, letter, slot) {
 function chordRow(item, picked, model) {
   const { align, names, tonic, tonicMidi, scalePcs, noteMidiOf } = model;
   const row = div(classes('chain-row', picked && cls.active));
-  row.append(rowName(item.numeral, 'circle-numeral', displayName(item.chord), item.slot));
-  const steps = chordSteps(item.quality);
-  const pcs = chordPitches(item.pc, item.quality);
+  row.append(rowName(item.numeral, 'circle-numeral', displayName(shapeName(item.chord, item.quality, model.shape)), item.slot));
+  const steps = shapeSteps(item.quality, model.shape).map((step) => step % NOTES);
+  const pcs = shapePitches(item.pc, item.quality, model.shape);
   const rootMidi = noteMidiOf(item.pc);
   const byRoot = align === alignId.root;
   for (let c = 0; c < NOTES; c++) {
@@ -147,6 +154,7 @@ function chordRow(item, picked, model) {
       'chain-cell',
       on && cls.voiced,
       on && notePc === item.pc && cls.root,
+      on && notePc !== item.pc && isOutside(model, notePc) && cls.outside,
       !byRoot && scalePcs.includes(pc) && cls.inKey,
       isBlocked(model, notePc) && cls.blocked,
     ));
@@ -169,6 +177,7 @@ function singleRow({ top, topClass, letter, slot, pc, picked, root }, model) {
       'chain-cell',
       on && cls.voiced,
       on && root && cls.root,
+      on && !root && isOutside(model, cellPc) && cls.outside,
       isBlocked(model, cellPc) && cls.blocked,
     ));
     cell.dataset.notes = notesAttr([tonicMidi + c]);
@@ -218,6 +227,7 @@ function pianoKey(midi, pc, index, shade, model) {
     model.scalePcs.includes(pc) && cls.inKey,
     lit && cls.voiced,
     lit && pc === model.rootPc && cls.root,
+    lit && pc !== model.rootPc && isOutside(model, pc) && cls.outside,
     isBlocked(model, pc) && cls.blocked,
   ));
   key.style.setProperty('--i', index);

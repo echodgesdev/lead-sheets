@@ -69,9 +69,7 @@ function versionRow() {
 export function openSettings({ onImport, onClose } = {}) {
   const dialog = openModal(
     'Settings',
-    choiceRow('Theme', THEMES, getTheme(), setTheme),
-    ...backupRows(onImport),
-    versionRow(),
+    accordionRow('App', choiceRow('Theme', THEMES, getTheme(), setTheme), ...backupRows(onImport), versionRow()),
     accordionRow('Song list', ...listSettingsRows()),
     accordionRow('Live settings', ...liveSettingsRows()),
     accordionRow('Editor', ...editorSettingsRows()),

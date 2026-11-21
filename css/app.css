@@ -750,8 +750,16 @@ button.row:active {
   padding: 0 10px;
 }
 
-.tool-header .btn:not(.active) .opt-label {
+.tool-header .btn:not(.active) .opt-label,
+.compact-toggle .btn:not(.active) .opt-label {
   display: none;
+}
+
+.tool-header > .btn {
+  margin-left: auto;
+  min-height: 32px;
+  border-radius: 999px;
+  pointer-events: auto;
 }
 
 .modal .tool-header {
@@ -1339,25 +1347,7 @@ button.row:active {
   animation: beat 0.16s ease-out;
 }
 
-.metro-header {
-  gap: 8px;
-}
-
-.metro-header .btn {
-  pointer-events: auto;
-}
-
-.tool .metro-header .btn {
-  min-height: 32px;
-  border-radius: 999px;
-  box-shadow: none;
-}
-
-.tool .metro-header .btn.active {
-  box-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 35%, transparent);
-}
-
-.modal .metro-header .btn {
+.metro-actions .btn {
   flex: 1 1 0;
 }
 
@@ -1683,6 +1673,14 @@ button.row:active {
   fill: var(--lime);
 }
 
+.clock-dot.outside {
+  fill: var(--orange);
+}
+
+.clock-label.voiced.outside {
+  fill: var(--orange);
+}
+
 .clock-hit.blocked,
 .chain-cell.blocked,
 .key.blocked {
@@ -1796,6 +1794,10 @@ button.row:active {
   background: var(--lime);
 }
 
+.chain-cell.voiced.outside {
+  background: var(--orange);
+}
+
 .chain-cell.pressed {
   transform: scale(0.82);
   filter: brightness(1.3);
@@ -1865,12 +1867,21 @@ button.row:active {
   background: var(--lime);
 }
 
+.key.white.voiced.outside,
+.key.black.voiced.outside {
+  background: var(--orange);
+}
+
 .key.voiced.pressed {
   background: color-mix(in srgb, var(--accent) 70%, var(--fg));
 }
 
 .key.voiced.root.pressed {
   background: color-mix(in srgb, var(--lime) 70%, var(--fg));
+}
+
+.key.voiced.outside.pressed {
+  background: color-mix(in srgb, var(--orange) 70%, var(--fg));
 }
 
 @media (prefers-reduced-motion: reduce) {
