@@ -65,11 +65,11 @@ export function mount(el) {
   const modeToggle = segToggle(...Object.values(modeBtns));
   modeToggle.setAttribute('role', 'group');
   modeToggle.setAttribute('aria-label', 'Mode');
-  const gearBtn = iconButton(iconId.gear, 'Settings');
+  const menuBtn = iconButton(iconId.ellipsisVertical, 'Settings');
   const newLink = iconLink(iconId.plus, 'New song', routes.edit(NEW_ID));
   const pasteBtn = iconButton(iconId.paste, 'Paste song');
   const actions = div('hdr-actions');
-  actions.append(pasteBtn, newLink, gearBtn);
+  actions.append(pasteBtn, newLink, menuBtn);
   headerEl.append(brand, modeToggle, actions);
   const introTimer = intro ? setTimeout(() => headerEl.classList.remove(cls.intro), INTRO_MS) : 0;
 
@@ -215,7 +215,7 @@ export function mount(el) {
   });
   for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
   pasteBtn.addEventListener(evt.click, onPaste);
-  gearBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
+  menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
 
   applyMode();
 

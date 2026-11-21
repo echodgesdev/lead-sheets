@@ -28,6 +28,7 @@ function builder(tag) {
 
 export const a = builder('a');
 export const b = builder('b');
+export const details = builder('details');
 export const dialog = builder('dialog');
 export const div = builder('div');
 export const h1 = builder('h1');
@@ -41,6 +42,7 @@ export const pre = builder('pre');
 export const select = builder('select');
 export const small = builder('small');
 export const span = builder('span');
+export const summary = builder('summary');
 export const textarea = builder('textarea');
 
 export function classes(...names) {

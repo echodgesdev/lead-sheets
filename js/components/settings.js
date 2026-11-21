@@ -1,15 +1,7 @@
 import * as backup from '../data/backup.js';
 import { themeId, getTheme, setTheme } from '../data/theme.js';
-import {
-  TAGS,
-  EDITOR_OPTIONS,
-  getShownTags,
-  setShownTags,
-  getEditorOptions,
-  setEditorOptions,
-} from '../data/prefs.js';
 import { openModal } from './modal.js';
-import { modalRow, choiceRow, chipsRow, textSizeRow, liveControlRows } from './rows.js';
+import { modalRow, choiceRow, accordionRow, liveSettingsRows, editorSettingsRows } from './rows.js';
 import { input, p, span, labeledButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { iconId } from '../core/icons.js';
@@ -78,12 +70,10 @@ export function openSettings({ onImport, onClose } = {}) {
   const dialog = openModal(
     'Settings',
     choiceRow('Theme', THEMES, getTheme(), setTheme),
-    textSizeRow(),
-    ...liveControlRows(),
-    chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
-    chipsRow('Editor', EDITOR_OPTIONS, getEditorOptions(), setEditorOptions),
     ...backupRows(onImport),
     versionRow(),
+    accordionRow('Live settings', ...liveSettingsRows()),
+    accordionRow('Editor', ...editorSettingsRows()),
   );
   if (onClose) dialog.addEventListener(evt.close, onClose);
 }

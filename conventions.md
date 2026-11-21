@@ -58,13 +58,13 @@ Other files: `css/app.css` (app chrome, tokens, components; `sheet.css` the song
 
 - `openModal(title, ...rows)` from `components/modal.js` builds, shows and removes on close. Listen for `close` on the returned dialog for teardown.
 - A button that opens a dialog and owns state across opens (tuner, metronome) uses `attachDialog(button, title, open)`. `open()` returns `{ rows, onClose }`, and the returned function disposes it. Don't track the dialog by hand.
-- Dialog rows come from `modalRow(label, ...controls)` in `components/rows.js` (a `div.modal-row` with a `span.modal-label` first; `null` label for none). Reuse its helpers: `choiceRow`, `chipsRow`, `textSizeRow`.
+- Dialog rows come from `modalRow(label, ...controls)` in `components/rows.js` (a `div.modal-row` with a `span.modal-label` first; `null` label for none). Reuse its helpers: `choiceRow`, `chipsRow`, `textSizeRow`, and `accordionRow(title, ...rows)` for a collapsible group.
 - Shared controls come from `components/controls.js`: `segToggle(...nodes)` for any `.seg-toggle`, `stepper(center, downTitle, upTitle)` for − value + controls, `keyFace(label, value)` for the small-label/value face on `.live-key` buttons, `textField(placeholder, extra, attrs)` for text inputs (the placeholder is also the `aria-label`).
 - Screen pieces built in more than one view (search box, song row title/subtitle, not-found screen) come from `components/parts.js`. A widget's non-UI logic goes in the domain folder it's about (as `sheet/insert.js` does for the keybar), not in the component.
 
 ## Live controls
 
-- Live controls are listed in `CONTROLS` in `prefs.js`, each with a `bar` (`barId.top` header or `barId.bottom` bar). `liveControlRows()` in `components/rows.js` builds the shared Top bar / Numbers / Bottom bar / Page turner rows for both Settings and the ⋮ menu; Numbers is shown only while the Numbers control is on.
+- Live controls are listed in `CONTROLS` in `prefs.js`, each with a `bar` (`barId.top` header or `barId.bottom` bar). `liveSettingsRows(onSize)` in `components/rows.js` builds the shared Text size / Top bar / Numbers / Bottom bar / Page turner / Live tags rows, used by the Live settings accordion in Settings and by the Live ⋮ menu; Numbers is shown only while the Numbers control is on. `editorSettingsRows()` does the same for the Editor accordion.
 - Shown controls are saved as `{ shown, known }`. A control missing from `known` was added after the user last saved and defaults to shown, so new controls appear without resetting anyone's choices. Lists saved in the older array format treat `LEGACY_UNSEEN_CONTROLS` the same way.
 - `live.js` `applyPrefs()` reads `getShownControls()` and sets `hidden` on each control, and hides the bottom bar when none of its controls are shown. A new control needs an entry in `CONTROLS` and a line in `applyPrefs`.
 - Song tempo for Live comes from `rec.tempo`, already overridden by the setlist entry's tempo when playing a set.

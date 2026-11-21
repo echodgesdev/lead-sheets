@@ -1,5 +1,7 @@
 import {
   TEXT_SIZE,
+  TAGS,
+  EDITOR_OPTIONS,
   CONTROLS,
   NUMBER_STYLES,
   PEDAL_MODES,
@@ -13,9 +15,14 @@ import {
   setNumberStyle,
   getPedalMode,
   setPedalMode,
+  getShownTags,
+  setShownTags,
+  getEditorOptions,
+  setEditorOptions,
 } from '../data/prefs.js';
-import { div, input, span, labeledButton, cls } from '../core/dom.js';
+import { details, div, input, span, summary, labeledButton, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
+import { icon, iconId } from '../core/icons.js';
 import { segToggle } from './controls.js';
 
 export function modalRow(label, ...controls) {
@@ -81,7 +88,27 @@ export function textSizeRow(onSize) {
   return modalRow('Text size', out, slider);
 }
 
-export function liveControlRows() {
+export function accordionRow(title, ...rows) {
+  const head = summary();
+  head.append(span('accordion-title', title), icon(iconId.chevronDown));
+  const node = details('modal-accordion');
+  node.append(head, ...rows);
+  return node;
+}
+
+export function liveSettingsRows(onSize) {
+  return [
+    textSizeRow(onSize),
+    ...liveControlRows(),
+    chipsRow('Live tags', TAGS, getShownTags(), setShownTags),
+  ];
+}
+
+export function editorSettingsRows() {
+  return [chipsRow(null, EDITOR_OPTIONS, getEditorOptions(), setEditorOptions)];
+}
+
+function liveControlRows() {
   const shown = new Set(getShownControls());
   const numbersRow = choiceRow('Numbers', NUMBER_STYLES, getNumberStyle(), setNumberStyle);
 

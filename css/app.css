@@ -376,6 +376,7 @@ input:focus-visible {
 .modal-close {
   min-width: 36px;
   margin-right: -6px;
+  margin-left: auto;
   border-radius: 999px;
   background: transparent;
   box-shadow: none;
@@ -398,8 +399,38 @@ input:focus-visible {
   font-size: 14px;
 }
 
-.modal-row + .modal-row {
+.modal-row + .modal-row,
+.modal-accordion,
+.modal-accordion > summary + .modal-row {
   border-top: 1px solid var(--line);
+}
+
+.modal-accordion > summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-size: 15px;
+  font-weight: 650;
+  list-style: none;
+  cursor: pointer;
+}
+
+.modal-accordion > summary::-webkit-details-marker {
+  display: none;
+}
+
+.accordion-title {
+  flex: 1;
+}
+
+.modal-accordion > summary .fa {
+  color: var(--muted);
+  transition: transform 0.2s var(--ease);
+}
+
+.modal-accordion[open] > summary .fa {
+  transform: rotate(180deg);
 }
 
 .modal-label {
