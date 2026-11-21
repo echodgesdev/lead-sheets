@@ -1,10 +1,13 @@
 // Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com (icons: CC BY 4.0)
 // Phosphor Icons 2.1.1 by Phosphor Icons - https://phosphoricons.com (MIT): metronome
+import { svg } from './svg.js';
+
 export const iconId = Object.freeze({
   arrowUpFromBracket: 'arrow-up-from-bracket',
   backwardStep: 'backward-step',
   check: 'check',
   chevronDown: 'chevron-down',
+  chartPie: 'chart-pie',
   chevronLeft: 'chevron-left',
   circleHalfStroke: 'circle-half-stroke',
   circleInfo: 'circle-info',
@@ -30,6 +33,7 @@ export const iconId = Object.freeze({
 
 const ICONS = {
   [iconId.backwardStep]: ['0 0 320 512', 'M267.5 440.6c9.5 7.9 22.8 9.7 34.1 4.4s18.4-16.6 18.4-29l0-320c0-12.4-7.2-23.7-18.4-29s-24.5-3.6-34.1 4.4l-192 160L64 241 64 96c0-17.7-14.3-32-32-32S0 78.3 0 96L0 416c0 17.7 14.3 32 32 32s32-14.3 32-32l0-145 11.5 9.6 192 160z'],
+  [iconId.chartPie]: ['0 0 576 512', 'M304 240l0-223.4c0-9 7-16.6 16-16.6C443.7 0 544 100.3 544 224c0 9-7.6 16-16.6 16L304 240zM32 272C32 150.7 122.1 50.3 239 34.3c9.2-1.3 17 6.1 17 15.4L256 288 412.5 444.5c6.7 6.7 6.2 17.7-1.5 23.1C371.8 495.6 323.8 512 272 512C139.5 512 32 404.6 32 272zm526.4 16c9.3 0 16.6 7.8 15.4 17c-7.7 55.9-34.6 105.6-73.9 142.3c-6 5.6-15.4 5.2-21.2-.7L320 288l238.4 0z'],
   [iconId.check]: ['0 0 448 512', 'M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z'],
   [iconId.circleHalfStroke]: ['0 0 512 512', 'M448 256c0-106-86-192-192-192l0 384c106 0 192-86 192-192zM0 256a256 256 0 1 1 512 0A256 256 0 1 1 0 256z'],
   [iconId.fileImport]: ['0 0 512 512', 'M128 64c0-35.3 28.7-64 64-64L352 0l0 128c0 17.7 14.3 32 32 32l128 0 0 288c0 35.3-28.7 64-64 64l-256 0c-35.3 0-64-28.7-64-64l0-112 174.1 0-39 39c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l80-80c9.4-9.4 9.4-24.6 0-33.9l-80-80c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l39 39L128 288l0-224zm0 224l0 48L24 336c-13.3 0-24-10.7-24-24s10.7-24 24-24l104 0zM512 128l-128 0L384 0 512 128z'],
@@ -56,16 +60,9 @@ const ICONS = {
   [iconId.xmark]: ['0 0 384 512', 'M342.6 150.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192 210.7 86.6 105.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L146.7 256 41.4 361.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192 301.3 297.4 406.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.3 256 342.6 150.6z'],
 };
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
 export function icon(name) {
   const [viewBox, d] = ICONS[name];
-  const svg = document.createElementNS(SVG_NS, 'svg');
-  svg.setAttribute('class', 'fa');
-  svg.setAttribute('viewBox', viewBox);
-  svg.setAttribute('aria-hidden', 'true');
-  const path = document.createElementNS(SVG_NS, 'path');
-  path.setAttribute('d', d);
-  svg.append(path);
-  return svg;
+  const node = svg('svg', { class: 'fa', viewBox, 'aria-hidden': 'true' });
+  node.append(svg('path', { d }));
+  return node;
 }

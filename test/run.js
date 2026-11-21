@@ -1,6 +1,6 @@
 import { report, test, skipped } from './harness.js';
 
-const files = ['./parse.test.js', './infer.test.js', './group.test.js', './transpose.test.js', './audio.test.js', './routes.test.js', './insert.test.js', './compress.test.js'];
+const files = ['./parse.test.js', './infer.test.js', './group.test.js', './transpose.test.js', './audio.test.js', './routes.test.js', './insert.test.js', './compress.test.js', './circle.test.js'];
 
 for (const file of files) {
   try {

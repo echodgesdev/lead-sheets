@@ -27,6 +27,7 @@ export const evt = Object.freeze({
 
 export const keys = Object.freeze({
   space: ' ',
+  enter: 'Enter',
   escape: 'Escape',
   k: 'k',
   s: 's',

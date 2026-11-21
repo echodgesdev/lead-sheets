@@ -4,9 +4,11 @@ export const cls = Object.freeze({
   active: 'active',
   away: 'away',
   beat: 'beat',
+  diminished: 'diminished',
   down: 'down',
   dragging: 'dragging',
   idle: 'idle',
+  inKey: 'in-key',
   inTune: 'in-tune',
   intro: 'intro',
 });

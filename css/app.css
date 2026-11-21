@@ -1219,6 +1219,142 @@ button.row:active {
   animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.circle-row {
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.circle-art {
+  width: min(100%, 360px);
+  height: auto;
+  aspect-ratio: 1;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.circle-art .accent-from {
+  stop-color: var(--lime);
+}
+
+.circle-art .accent-to {
+  stop-color: var(--accent);
+}
+
+.wedge {
+  cursor: pointer;
+  outline: none;
+}
+
+.wedge path {
+  fill: var(--surface-2);
+  stroke: var(--surface);
+  stroke-width: 1.2;
+  transition: fill 0.2s var(--ease);
+}
+
+.wedge.inner path {
+  fill: var(--bg);
+}
+
+.wedge text {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+  transition: fill 0.2s var(--ease);
+}
+
+.wedge.inner text {
+  font-size: 7px;
+}
+
+.wedge text.enh {
+  font-size: 6px;
+}
+
+.wedge.inner text.enh {
+  font-size: 4.5px;
+}
+
+.wedge.in-key path {
+  fill: color-mix(in srgb, var(--accent) 24%, var(--surface-2));
+}
+
+.wedge.in-key text {
+  fill: var(--fg);
+}
+
+.wedge.diminished path {
+  stroke: var(--accent);
+  stroke-dasharray: 2 2;
+}
+
+.wedge.active path {
+  fill: url(#circle-accent);
+}
+
+.wedge.active text {
+  fill: var(--on-accent);
+}
+
+.wedge:focus-visible path {
+  stroke: var(--fg);
+  stroke-width: 1.6;
+}
+
+.hub {
+  fill: var(--surface);
+  stroke: var(--line);
+}
+
+.hub-name {
+  fill: var(--fg);
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+}
+
+.hub-sig {
+  fill: var(--muted);
+  font-size: 7px;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.circle-chords {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+  padding: 0 16px 16px;
+}
+
+.circle-chord {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.circle-numeral {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+@media (hover: hover) {
+  .wedge:hover path {
+    filter: brightness(1.15);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

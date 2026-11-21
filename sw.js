@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v58';
+const CACHE = 'tabs-v59';
 
 const ASSETS = [
   './',
@@ -21,6 +21,7 @@ const ASSETS = [
   './js/core/events.js',
   './js/core/icons.js',
   './js/core/math.js',
+  './js/core/svg.js',
   './js/core/wakelock.js',
   './js/data/backup.js',
   './js/data/db.js',
@@ -31,6 +32,7 @@ const ASSETS = [
   './js/data/store.js',
   './js/data/theme.js',
   './js/sheet/chords.js',
+  './js/sheet/circle.js',
   './js/sheet/infer.js',
   './js/sheet/insert.js',
   './js/sheet/parse.js',
@@ -39,6 +41,8 @@ const ASSETS = [
   './js/audio/context.js',
   './js/audio/listen.js',
   './js/audio/pitch.js',
+  './js/audio/tone.js',
+  './js/components/circle.js',
   './js/components/controls.js',
   './js/components/details.js',
   './js/components/keybar.js',
