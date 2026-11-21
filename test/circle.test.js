@@ -61,3 +61,9 @@ test('circle chord pitches and voicings', () => {
   eq(voicing(0, 'major', 1, C), [64, 67, 72]);
   eq(voicing(0, 'major', 2, C), [67, 72, 76]);
 });
+
+test('circle chord sounds follow the voicing', () => {
+  eq(chordNotes(0, 'major', true, C, 1), [64, 67, 72]);
+  eq(wedgeNotes(1, false, true, C, 2), [74, 79, 83]);
+  eq(wedgeNotes(1, false, false, C, 2), [67]);
+});

@@ -102,14 +102,15 @@ function chainRow(item, picked, { align, names, tonic, tonicMidi, scalePcs, note
   const steps = chordSteps(item.quality);
   const pcs = chordPitches(item.pc, item.quality);
   const rootMidi = noteMidiOf(item.pc);
+  const byRoot = align === alignId.root;
   for (let c = 0; c < NOTES; c++) {
     const pc = (tonic + c) % NOTES;
-    const byRoot = align === alignId.root;
+    const notePc = byRoot ? (item.pc + c) % NOTES : pc;
     const on = byRoot ? steps.includes(c) : pcs.includes(pc);
     const notes = byRoot ? (c ? [rootMidi, rootMidi + c] : [rootMidi]) : [tonicMidi + c];
-    const cell = plainButton('', classes('chain-cell', on && cls.voiced, !byRoot && scalePcs.includes(pc) && cls.inKey));
+    const cell = plainButton(on ? displayName(names[notePc]) : '', classes('chain-cell', on && cls.voiced, !byRoot && scalePcs.includes(pc) && cls.inKey));
     cell.dataset.notes = notesAttr(notes);
-    cell.setAttribute('aria-label', byRoot ? `${displayName(item.chord)} ${INTERVALS[c]}` : displayName(names[pc]));
+    cell.setAttribute('aria-label', byRoot ? `${displayName(item.chord)} ${INTERVALS[c]}, ${displayName(names[notePc])}` : displayName(names[pc]));
     row.append(cell);
   }
   return row;

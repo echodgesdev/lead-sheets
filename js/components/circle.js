@@ -241,7 +241,6 @@ export function createCircleControl() {
     });
 
     function renderStage() {
-      voicingRow.hidden = view !== viewId.clock && view !== viewId.keys;
       alignRow.hidden = view !== viewId.chain;
       stage.replaceChildren(view === viewId.fifths ? art : RENDERERS[view](model()));
     }
@@ -306,7 +305,7 @@ export function createCircleControl() {
     function wedgeVoice(el, chord) {
       const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === ringId.inner };
       const key = locked ? selected : tapped;
-      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord, keyTonic(key.index, key.minor)));
+      const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, chord, keyTonic(key.index, key.minor), inversion));
       if (!locked && (tapped.index !== selected.index || tapped.minor !== selected.minor)) {
         selected = tapped;
         chordIndex = 0;
@@ -323,7 +322,7 @@ export function createCircleControl() {
         syncChips();
         stageDirty = view !== viewId.fifths;
       }
-      return startNotes(chordNotes(item.pc, item.quality, chord, tonic()));
+      return startNotes(chordNotes(item.pc, item.quality, chord, tonic(), inversion));
     }
 
     function begin(target) {

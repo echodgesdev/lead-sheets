@@ -12,6 +12,7 @@ export const cls = Object.freeze({
   intro: 'intro',
   pressed: 'pressed',
   roman: 'roman',
+  voiced: 'voiced',
 });
 
 function create(tag, attrs, text) {

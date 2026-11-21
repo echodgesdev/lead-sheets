@@ -107,17 +107,16 @@ export function noteMidi(pc, tonic) {
   return LOWEST_TONIC + wrap(tonic - LOWEST_TONIC) + wrap(pc - tonic);
 }
 
-export function chordNotes(pc, quality, chord, tonic) {
+export function chordNotes(pc, quality, chord, tonic, inversion = 0) {
   const root = noteMidi(pc, tonic);
-  return chord ? TRIADS[quality].map((step) => root + step) : [root];
+  if (!chord) return [root];
+  return TRIADS[quality].map((step, i) => root + step + (i < inversion ? WEDGES : 0)).sort((a, b) => a - b);
 }
 
-export function wedgeNotes(index, minor, chord, tonic) {
-  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic);
+export function wedgeNotes(index, minor, chord, tonic, inversion = 0) {
+  return chordNotes(keyTonic(index, minor), minor ? qualityId.minor : qualityId.major, chord, tonic, inversion);
 }
 
 export function voicing(pc, quality, inversion, tonic) {
-  return chordNotes(pc, quality, true, tonic)
-    .map((midi, i) => (i < inversion ? midi + WEDGES : midi))
-    .sort((a, b) => a - b);
+  return chordNotes(pc, quality, true, tonic, inversion);
 }
