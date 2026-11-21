@@ -50,8 +50,15 @@ function points(list) {
   return list.map(([x, y]) => `${x},${y}`).join(' ');
 }
 
-export function renderClock({ names, scalePcs, chord, voiced, tonicMidi, noteMidiOf }) {
-  const chordPcs = chordPitches(chord.pc, chord.quality);
+function chordLabel(chord, voiced, names) {
+  const root = displayName(chord.chord.replace(/(m|dim)$/, ''));
+  const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
+  return hubText(`${root}${bass}`, QUALITY_LABELS[chord.quality], 'clock-center');
+}
+
+export function renderClock({ names, scalePcs, chord, voiced, tonicMidi, noteMidiOf, noteMode, note }) {
+  const shown = noteMode ? [note.midi] : voiced;
+  const chordPcs = noteMode ? [note.pc] : chordPitches(chord.pc, chord.quality);
   const art = svg('svg', { class: 'clock-art', viewBox: '-100 -100 200 200', role: 'group', 'aria-label': 'Chromatic clock' });
   for (let pc = 0; pc < NOTES; pc++) {
     art.append(svg('path', {
@@ -71,9 +78,10 @@ export function renderClock({ names, scalePcs, chord, voiced, tonicMidi, noteMid
     art.append(svg('line', { class: 'clock-spoke', x1: 0, y1: 0, x2: x, y2: y }), svg('text', { class: label, x: lx, y: ly }, displayName(names[pc])));
   }
   const scale = [...scalePcs].sort((a, b) => a - b).map((pc) => polar(CLOCK_RINGS.at(-1), angle(pc)));
-  const dots = voiced.map((midi) => polar(ringOf(midi, tonicMidi), angle(midi % OCTAVE)));
-  art.append(svg('polygon', { class: 'clock-scale', points: points(scale) }), svg('polygon', { class: 'clock-chord', points: points(dots) }));
-  voiced.forEach((midi, i) => {
+  const dots = shown.map((midi) => polar(ringOf(midi, tonicMidi), angle(midi % OCTAVE)));
+  art.append(svg('polygon', { class: 'clock-scale', points: points(scale) }));
+  if (!noteMode) art.append(svg('polygon', { class: 'clock-chord', points: points(dots) }));
+  shown.forEach((midi, i) => {
     const [cx, cy] = dots[i];
     art.append(svg('circle', {
       class: classes('clock-dot', i === 0 && 'bass'),
@@ -86,9 +94,7 @@ export function renderClock({ names, scalePcs, chord, voiced, tonicMidi, noteMid
       'data-notes': notesAttr([midi]),
     }));
   });
-  const root = displayName(chord.chord.replace(/(m|dim)$/, ''));
-  const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
-  art.append(hubText(`${root}${bass}`, QUALITY_LABELS[chord.quality], 'clock-center'));
+  art.append(noteMode ? hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center') : chordLabel(chord, voiced, names));
   return art;
 }
 
@@ -124,15 +130,37 @@ function chainRow(item, picked, { align, names, tonic, tonicMidi, scalePcs, note
   return row;
 }
 
+function noteRow(item, degree, picked, { align, tonic, tonicMidi }) {
+  const letter = displayName(item.chord.replace(/(m|dim)$/, ''));
+  const row = div(classes('chain-row', picked && cls.active));
+  const name = plainButton(span('circle-degree', String(degree)), 'chain-name');
+  name.append(span(null, letter));
+  name.dataset.slot = item.slot;
+  row.append(name);
+  const step = (item.pc - tonic + NOTES) % NOTES;
+  for (let c = 0; c < NOTES; c++) {
+    const on = c === step;
+    const cell = plainButton(on ? (align === alignId.root ? INTERVALS[c] : letter) : '', classes('chain-cell', on && cls.voiced));
+    cell.dataset.notes = notesAttr([tonicMidi + c]);
+    cell.setAttribute('aria-label', on ? `${letter}, degree ${degree}` : INTERVALS[c]);
+    row.append(cell);
+  }
+  return row;
+}
+
 export function renderChain(model) {
   const chain = div('chain');
   chain.append(chainHead(model.align, model.names, model.tonic));
-  model.items.forEach((item, i) => chain.append(chainRow(item, i === model.chordIndex, model)));
+  model.items.forEach((item, i) => {
+    const picked = i === model.chordIndex;
+    chain.append(model.noteMode ? noteRow(item, i + 1, picked, model) : chainRow(item, picked, model));
+  });
   return chain;
 }
 
-function pianoKey(midi, pc, index, shade, { names, scalePcs, voiced }) {
-  const key = plainButton('', classes('key', shade, scalePcs.includes(pc) && cls.inKey, voiced.includes(midi) && cls.voiced));
+function pianoKey(midi, pc, index, shade, { names, scalePcs, voiced, noteMode, note }) {
+  const lit = noteMode ? midi === note.midi : voiced.includes(midi);
+  const key = plainButton('', classes('key', shade, scalePcs.includes(pc) && cls.inKey, lit && cls.voiced));
   key.style.setProperty('--i', index);
   key.dataset.notes = notesAttr([midi]);
   key.setAttribute('aria-label', `${displayName(names[pc])}${Math.floor(midi / OCTAVE) - 1}`);

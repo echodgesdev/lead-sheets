@@ -36,7 +36,7 @@ export function modalRow(label, ...controls) {
 }
 
 function optionButton(o) {
-  const b = labeledButton(o.icon, o.label);
+  const b = labeledButton(o.icon, span('opt-label', o.label));
   if (o.title) {
     b.title = o.title;
     b.setAttribute('aria-label', o.title);
@@ -121,7 +121,7 @@ export function attachAccordion(node, open) {
   function sync() {
     if (node.open && !opened) {
       opened = open();
-      node.append(...opened.rows);
+      node.append(...[opened.header].filter(Boolean), ...opened.rows);
     } else if (!node.open && opened) {
       teardown();
     }
@@ -131,6 +131,7 @@ export function attachAccordion(node, open) {
     const current = opened;
     opened = null;
     if (!current) return;
+    current.header?.remove();
     for (const row of current.rows) row.remove();
     current.onClose?.();
   }

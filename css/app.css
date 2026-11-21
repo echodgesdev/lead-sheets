@@ -675,6 +675,7 @@ button.row:active {
 }
 
 .tool {
+  position: relative;
   min-width: 0;
   overflow: hidden;
   border-radius: var(--r-md);
@@ -712,16 +713,62 @@ button.row:active {
   border-top: 1px solid var(--line);
 }
 
-.tool .modal-row {
+.tool > summary .row-main {
+  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
+}
+
+.tool[open]:has(> .tool-header) > summary .row-main {
+  opacity: 0;
+  transform: translateX(-12px);
+}
+
+.tool > .tool-header {
+  position: absolute;
+  top: 0;
+  right: 40px;
+  left: 44px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  height: 48px;
+  border-top: 0;
+  pointer-events: none;
+  animation: tool-header-in 0.3s var(--ease);
+}
+
+.tool > .tool-header + * {
+  border-top: 1px solid var(--line);
+}
+
+.tool-header .seg-toggle {
+  pointer-events: auto;
+}
+
+.tool .tool-header .btn {
+  flex: none;
+  min-width: 36px;
+  padding: 0 10px;
+}
+
+.tool-header .btn:not(.active) .opt-label {
+  display: none;
+}
+
+.modal .tool-header {
+  display: flex;
+  justify-content: center;
   padding: 10px 12px;
 }
 
-.circle-views .seg-toggle {
-  width: 100%;
+@keyframes tool-header-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
 }
 
-.circle-views .seg-toggle .btn {
-  flex: 1 1 0;
+.tool .modal-row {
+  padding: 10px 12px;
 }
 
 .circle-controls {
@@ -1482,6 +1529,12 @@ button.row:active {
   color: var(--muted);
   font-family: var(--serif);
   font-size: 12px;
+}
+
+.circle-degree {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (hover: hover) {

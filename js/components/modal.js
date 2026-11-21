@@ -41,7 +41,7 @@ export function attachDialog(trigger, title, open) {
   trigger.addEventListener(evt.click, () => {
     if (openDialog) return;
     const opened = open();
-    const current = openModal(title, ...opened.rows);
+    const current = openModal(title, ...[opened.header].filter(Boolean), ...opened.rows);
     openDialog = current;
     onClose = opened.onClose;
     current.addEventListener(evt.close, () => {

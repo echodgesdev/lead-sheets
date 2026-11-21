@@ -50,11 +50,11 @@ const SOUNDS = [
 ];
 
 const VIEWS = [
-  { id: viewId.fifths, label: 'Fifths' },
-  { id: viewId.clock, label: 'Clock' },
-  { id: viewId.intervals, label: 'Intervals' },
-  { id: viewId.notes, label: 'Notes' },
-  { id: viewId.keys, label: 'Keys' },
+  { id: viewId.fifths, icon: iconId.chartPie, label: 'Fifths', title: 'Circle of fifths' },
+  { id: viewId.clock, icon: iconId.clock, label: 'Clock', title: 'Clock' },
+  { id: viewId.intervals, icon: iconId.rulerHorizontal, label: 'Intervals', title: 'Intervals' },
+  { id: viewId.notes, icon: iconId.music, label: 'Notes', title: 'Notes' },
+  { id: viewId.keys, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
 ];
 
 const INVERSIONS = [
@@ -76,21 +76,21 @@ function nameParts(name) {
   return [displayName(root).toLowerCase(), quality === 'dim' ? '°' : 'm'];
 }
 
-function appendName(node, name) {
+function appendName(node, name, bare) {
   const [root, suffix] = nameParts(name);
   node.append(root);
-  if (suffix) node.append(svg('tspan', { class: 'suffix' }, suffix));
+  if (suffix && !bare) node.append(svg('tspan', { class: 'suffix' }, suffix));
 }
 
-function labelText(x, y, names) {
+function labelText(x, y, names, bare) {
   const text = svg('text', { x, y });
   if (names.length === 1) {
-    appendName(text, names[0]);
+    appendName(text, names[0], bare);
     return text;
   }
   const [main, alt] = names.map((name, i) => {
     const line = svg('tspan', { x, dy: i ? ALT_DY : MAIN_DY, class: i ? 'alt' : '' });
-    appendName(line, name);
+    appendName(line, name, bare);
     return line;
   });
   text.append(main, alt);
@@ -110,10 +110,10 @@ function wedgeAngle(index) {
   return index * STEP - 90;
 }
 
-function wedgeText(index, minor, keyIndex) {
+function wedgeText(index, minor, keyIndex, bare) {
   const ring = minor ? ringId.inner : ringId.outer;
   const [x, y] = polar(LABEL_RADIUS[ring], wedgeAngle(index));
-  return labelText(x, y, wedgeNames(index, minor, keyIndex));
+  return labelText(x, y, wedgeNames(index, minor, keyIndex), bare);
 }
 
 function slotOf(index, ring) {
@@ -135,7 +135,7 @@ function wedge(index, minor) {
   return g;
 }
 
-function dimWedge(item) {
+function dimWedge(item, bare) {
   const g = svg('g', {
     class: `wedge ${ringId.dim}`,
     role: 'button',
@@ -146,7 +146,7 @@ function dimWedge(item) {
     'data-slot': item.slot,
   });
   const [x, y] = polar(LABEL_RADIUS[ringId.dim], wedgeAngle(item.index));
-  g.append(svg('path', { d: annularSector(RINGS[ringId.dim], wedgeAngle(item.index), STEP) }), labelText(x, y, [item.chord]));
+  g.append(svg('path', { d: annularSector(RINGS[ringId.dim], wedgeAngle(item.index), STEP) }), labelText(x, y, [item.chord], bare));
   return g;
 }
 
@@ -158,17 +158,23 @@ function gradient() {
   return defs;
 }
 
-function chordChip(item) {
-  const chip = plainButton(span('circle-numeral', item.numeral), 'circle-chord');
-  chip.append(span(null, displayName(item.chord)));
+function chordRoot(chord) {
+  return chord.replace(/(m|dim)$/, '');
+}
+
+function chordChip(item, degree, bare) {
+  const numeral = bare ? String(degree) : item.numeral;
+  const name = displayName(bare ? chordRoot(item.chord) : item.chord);
+  const chip = plainButton(span(bare ? 'circle-degree' : 'circle-numeral', numeral), 'circle-chord');
+  chip.append(span(null, name));
   chip.dataset.slot = item.slot;
-  chip.setAttribute('aria-label', `${displayName(item.chord)}, ${item.numeral}`);
+  chip.setAttribute('aria-label', bare ? `${name}, degree ${degree}` : `${name}, ${numeral}`);
   return chip;
 }
 
 export function createCircleControl() {
-  const button = iconButton(iconId.chartPie, 'Circle of fifths');
-  let sound = soundId.note;
+  const button = iconButton(iconId.chartPie, 'Keys & chords');
+  let sound = soundId.chord;
   let locked = false;
   let view = viewId.fifths;
   let inversion = 0;
@@ -202,6 +208,10 @@ export function createCircleControl() {
       return keyTonic(selected.index, selected.minor);
     }
 
+    function noteMode() {
+      return sound === soundId.note;
+    }
+
     function model() {
       const t = tonic();
       const chord = items[chordIndex];
@@ -215,15 +225,17 @@ export function createCircleControl() {
         scalePcs: items.map((item) => item.pc),
         voiced: voicing(chord.pc, chord.quality, inversion, t),
         noteMidiOf: (pc) => noteMidi(pc, t),
+        noteMode: noteMode(),
+        note: { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) },
       };
     }
 
-    const viewRow = modalRow(null, choiceToggle(VIEWS, view, (id) => {
+    const header = div('tool-header');
+    header.append(choiceToggle(VIEWS, view, (id) => {
       if (id === view) return;
       view = id;
       renderStage();
     }));
-    viewRow.classList.add('circle-views');
     const voicingToggle = choiceToggle(INVERSIONS, inversion, (id) => {
       if (id === inversion) return;
       inversion = id;
@@ -245,7 +257,7 @@ export function createCircleControl() {
         w.el.classList.toggle(cls.inKey, (w.minor ? inner : outer).includes(w.index));
         w.el.classList.toggle(cls.active, w.index === selected.index && w.minor === selected.minor);
         w.label?.remove();
-        w.label = wedgeText(w.index, w.minor, selected.index);
+        w.label = wedgeText(w.index, w.minor, selected.index, noteMode());
         w.el.append(w.label);
       }
       const label = hubText(keyRoot(selected.index, selected.minor), selected.minor ? 'minor' : 'Major');
@@ -254,9 +266,9 @@ export function createCircleControl() {
       items = keyChords(selected.index, selected.minor).map((item) => ({ ...item, slot: slotOf(item.index, item.ring) }));
       chipItems = new Map(items.map((item) => [item.slot, item]));
       dimEl?.remove();
-      dimEl = dimWedge(items.find((item) => item.ring === ringId.dim));
+      dimEl = dimWedge(items.find((item) => item.ring === ringId.dim), noteMode());
       art.insertBefore(dimEl, hub);
-      chords.replaceChildren(...items.map(chordChip));
+      chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, noteMode())));
       syncChips();
       renderStage();
     }
@@ -277,8 +289,10 @@ export function createCircleControl() {
     });
 
     const controls = modalRow(null, choiceToggle(SOUNDS, sound, (id) => {
+      if (id === sound) return;
       sound = id;
-      voicingToggle.hidden = sound !== soundId.chord;
+      syncSound();
+      renderKey();
     }), voicingToggle, lockBtn);
     controls.classList.add('circle-controls');
 
@@ -353,11 +367,16 @@ export function createCircleControl() {
       });
     }
 
+    function syncSound() {
+      voicingToggle.hidden = noteMode();
+    }
+
+    syncSound();
     renderKey();
     renderLock();
-    return { rows: [viewRow, stage, controls, chords], onClose: end };
+    return { header, rows: [stage, controls, chords], onClose: end };
   }
 
-  const dispose = attachDialog(button, 'Circle of fifths', open);
+  const dispose = attachDialog(button, 'Keys & chords', open);
   return { button, open, dispose };
 }
