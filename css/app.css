@@ -1863,6 +1863,92 @@ button.row:active {
   transition-duration: 0.08s;
 }
 
+.fret-art {
+  width: 100%;
+  height: auto;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.fret-nut {
+  stroke: var(--fg);
+  stroke-width: 2.5;
+}
+
+.fret-line {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.fret-string {
+  stroke: var(--muted);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.fret-inlay {
+  fill: var(--line);
+  pointer-events: none;
+}
+
+.fret-num {
+  fill: var(--muted);
+  font-size: 7px;
+  font-weight: 700;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.fret-muted {
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.fret-hit {
+  fill: transparent;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.15s;
+}
+
+.fret-hit.pressed {
+  fill: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.fret-hit.blocked {
+  cursor: not-allowed;
+}
+
+.fret-dot {
+  fill: var(--accent);
+  stroke: var(--surface);
+  stroke-width: 1.2;
+  cursor: pointer;
+  outline: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.3s var(--spring);
+}
+
+.fret-dot.root {
+  fill: var(--lime);
+}
+
+.fret-dot.outside {
+  fill: var(--orange);
+}
+
+.fret-dot.pressed {
+  transform: scale(1.35);
+  transition-duration: 0.08s;
+}
+
 .keys {
   position: relative;
   width: 100%;

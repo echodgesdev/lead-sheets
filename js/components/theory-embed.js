@@ -1,4 +1,4 @@
-import { renderClock, renderChain, renderKeys, alignId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, renderFretboard, alignId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic } from '../sheet/circle.js';
@@ -18,6 +18,7 @@ const VIEWS = {
   [visId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
   [visId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [visId.fifths]: fifthsView,
+  [visId.fretboard]: (model) => renderFretboard(model),
 };
 
 function fifthsView(model, key) {

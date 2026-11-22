@@ -12,7 +12,7 @@ An offline lead sheet and tab viewer that installs to your phone's home screen. 
 - **Key and capo:** `Key:` is the sounding key; chords are the shapes you play. `Key: D` with `Capo: 2` and C shapes shows C as 1.
 - **In the body:** `Notes:` shows a note in place, `Key change: A` marks a modulation (numbers restart from the new key), and `A*` keeps a marker on a chord.
 - **Theory views:** a line like `{vis: piano, seq: 1 2 3 5 8 1, controls: play}` shows a small locked Theory view in Live.
-  - `vis`: `piano` (or `keys`), `clock`, `intervals`, `notes`, `fifths`.
+  - `vis`: `piano` (or `keys`), `fretboard` (or `guitar`), `clock`, `intervals`, `notes`, `fifths`.
   - `seq`: degrees of the key (`8` is the octave, `b3` / `#4` shift a semitone) and chord names (`G Em7 C/E`).
   - `key: G` sets the key; otherwise the song's key is used, in the same shapes as the chords.
   - `controls: play` adds a Play button that steps through the sequence.
@@ -33,7 +33,7 @@ The tuner and metronome are also in the Live header. In Tools mode each tool exp
 - **Tuner:** chromatic, uses the mic only while open.
 - **Metronome:** starts at the song's or setlist's tempo. Tap sets it; tap the Tempo or Beats number to type a value. Tap a beat's square to cycle primary, secondary and silent. Keeps clicking when closed or collapsed (its icon pulses) and stops when you leave Tools.
 - **Theory:** pick a key on the circle of fifths and explore its chords and scales. Everything plays while held.
-  - **Views:** Fifths, Clock, Intervals (rows lined up on each chord's root), Notes (rows lined up on the key) and Keys (piano; Settings → Tools → Piano octaves sets two or three).
+  - **Views:** Fifths, Clock, Intervals (rows lined up on each chord's root), Notes (rows lined up on the key), Keys (piano; Settings → Tools → Piano octaves sets two or three) and Guitar (a standard-tuned fretboard: chords as one playable shape with unused strings muted, scales mapped across the neck, runs fingered in one position).
   - **Play:** Note (scale degrees), Chord (the default) or Scale (seven modes plus major and minor pentatonic).
   - **Chords:** the ⋯ under a chord swaps its shape (Cmaj7, Csus2 …), grouped into In key and Outside the key. Voicing picks root position or an inversion.
   - **Scales:** In key builds modes from the key's notes (D Dorian in C); On tonic starts each on the tonic (C Dorian). In Intervals and Notes each scale gets its own row for comparison. Tapping a scale plays it and lights each note.

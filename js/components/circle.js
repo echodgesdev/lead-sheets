@@ -1,6 +1,6 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
-import { renderClock, renderChain, renderKeys, alignId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, renderFretboard, alignId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
@@ -19,6 +19,7 @@ const viewId = Object.freeze({
   intervals: 'intervals',
   notes: 'notes',
   keys: 'keys',
+  fretboard: 'fretboard',
 });
 
 const MODES = [
@@ -45,6 +46,7 @@ const VIEWS = [
   { id: viewId.intervals, icon: iconId.rulerHorizontal, label: 'Intervals', title: 'Intervals' },
   { id: viewId.notes, icon: iconId.music, label: 'Notes', title: 'Notes' },
   { id: viewId.keys, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
+  { id: viewId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
 ];
 
 const RENDERERS = {
@@ -52,6 +54,7 @@ const RENDERERS = {
   [viewId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
   [viewId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [viewId.keys]: renderKeys,
+  [viewId.fretboard]: (model) => renderFretboard(model),
 };
 
 function scaleChip(scale) {

@@ -2,6 +2,7 @@ import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
 import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
+import { GUITAR, fretLayout } from '../sheet/fretboard.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -16,6 +17,18 @@ const ROOT_DOT = 6;
 const INTERVALS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
 const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
 const BLACK_PCS = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
+const FRET_NUT = 20;
+const FRET_W = 22;
+const FRET_END = 4;
+const FRET_TOP = 8;
+const FRET_BOTTOM = 18;
+const STRING_GAP = 13;
+const FRET_DOT_R = 5.2;
+const FRET_INLAY_R = 2.6;
+const FRET_INLAYS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
+const FRET_NUM_DY = 13;
+const FRET_STRING_W = 0.7;
+const FRET_STRING_GROW = 0.25;
 const PATTERN_ROWS = { [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
 
 export const alignId = Object.freeze({
@@ -329,4 +342,81 @@ export function renderKeys(model) {
   const view = div('keys-view');
   view.append(board, dots);
   return view;
+}
+
+function fretX(fret) {
+  return fret ? FRET_NUT + (fret - 0.5) * FRET_W : FRET_NUT / 2;
+}
+
+function stringY(string, count) {
+  return FRET_TOP + (count - 1 - string) * STRING_GAP;
+}
+
+function fretGrid({ strings, frets }) {
+  const bottom = stringY(0, strings.length);
+  const top = stringY(strings.length - 1, strings.length);
+  const end = FRET_NUT + frets * FRET_W;
+  const parts = [svg('line', { class: 'fret-nut', x1: FRET_NUT, y1: top, x2: FRET_NUT, y2: bottom })];
+  for (let fret = 1; fret <= frets; fret++) {
+    const x = FRET_NUT + fret * FRET_W;
+    parts.push(svg('line', { class: 'fret-line', x1: x, y1: top, x2: x, y2: bottom }));
+  }
+  for (const fret of FRET_INLAYS.filter((f) => f <= frets)) {
+    const double = fret % OCTAVE === 0;
+    const middle = (top + bottom) / 2;
+    for (const y of double ? [middle - STRING_GAP, middle + STRING_GAP] : [middle]) {
+      parts.push(svg('circle', { class: 'fret-inlay', cx: fretX(fret), cy: y, r: FRET_INLAY_R }));
+    }
+    parts.push(svg('text', { class: 'fret-num', x: fretX(fret), y: bottom + FRET_NUM_DY }, String(fret)));
+  }
+  strings.forEach((_, string) => {
+    const y = stringY(string, strings.length);
+    parts.push(svg('line', { class: 'fret-string', x1: FRET_NUT, y1: y, x2: end, y2: y, 'stroke-width': FRET_STRING_W + (strings.length - 1 - string) * FRET_STRING_GROW }));
+  });
+  return parts;
+}
+
+function fretHits(model, { strings, frets }) {
+  return strings.flatMap((open, string) => Array.from({ length: frets + 1 }, (_, fret) => {
+    const midi = open + fret;
+    const pc = midi % OCTAVE;
+    const x = fret ? FRET_NUT + (fret - 1) * FRET_W : 0;
+    return svg('rect', {
+      class: classes('fret-hit', isBlocked(model, pc) && cls.blocked),
+      x,
+      y: stringY(string, strings.length) - STRING_GAP / 2,
+      width: fret ? FRET_W : FRET_NUT,
+      height: STRING_GAP,
+      role: 'button',
+      tabindex: -1,
+      'aria-label': `${displayName(model.names[pc])}, string ${strings.length - string} fret ${fret}`,
+      'data-notes': notesAttr([midi]),
+    });
+  }));
+}
+
+export function renderFretboard(model, instrument = GUITAR) {
+  const { strings, frets } = instrument;
+  const width = FRET_NUT + frets * FRET_W + FRET_END;
+  const height = stringY(0, strings.length) + FRET_BOTTOM;
+  const art = svg('svg', { class: 'fret-art', viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': 'Fretboard' });
+  const { dots, muted } = fretLayout(model, instrument);
+  art.append(...fretGrid(instrument), ...fretHits(model, instrument));
+  for (const string of muted) art.append(svg('text', { class: 'fret-muted', x: fretX(0), y: stringY(string, strings.length) }, '×'));
+  for (const dot of dots) {
+    const pc = dot.midi % OCTAVE;
+    const root = pc === model.rootPc;
+    art.append(svg('circle', {
+      class: classes('fret-dot', root && cls.root, !root && isOutside(model, pc) && cls.outside),
+      cx: fretX(dot.fret),
+      cy: stringY(dot.string, strings.length),
+      r: FRET_DOT_R,
+      role: 'button',
+      tabindex: 0,
+      'aria-label': `${displayName(model.names[pc])}, string ${strings.length - dot.string} fret ${dot.fret}`,
+      'data-notes': notesAttr([dot.midi]),
+      'data-step': dot.steps.join(' '),
+    }));
+  }
+  return art;
 }
