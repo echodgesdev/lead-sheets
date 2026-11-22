@@ -1,45 +1,16 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
-import { renderClock, renderChain, renderKeys, hubText, alignId, modeId } from './theory-views.js';
-import {
-  WEDGES,
-  ringId,
-  keyOf,
-  keyTonic,
-  wedgeNames,
-  keyWedges,
-  keyChords,
-  chordNotes,
-  wedgeNotes,
-  displayName,
-  pitchNames,
-  noteMidi,
-  shapeId,
-  chordShape,
-  shapeChoices,
-  stepPitches,
-  voiceNotes,
-  scaleId,
-  SCALES,
-  scalePitches,
-  scaleRun,
-  scaleRoot,
-  wedgeOf,
-} from '../sheet/circle.js';
-import { startNotes, playRun } from '../audio/tone.js';
+import { renderClock, renderChain, renderKeys, alignId } from './theory-views.js';
+import { createFifths } from './fifths.js';
+import { attachPlayer, notesOf } from './theory-player.js';
+import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
+import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
+import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
-import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, iconButton, plainButton, labeledButton, cls } from '../core/dom.js';
-import { evt, keys } from '../core/events.js';
+import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
-const STEP = 360 / WEDGES;
-const RINGS = { [ringId.outer]: [66, 97], [ringId.inner]: [44, 66], [ringId.dim]: [29, 44] };
-const LABEL_RADIUS = { [ringId.outer]: 81.5, [ringId.inner]: 55, [ringId.dim]: 36.5 };
-const HUB_RADIUS = 29;
-const GRADIENT_ID = 'circle-accent';
-const MAIN_DY = '-0.4em';
-const ALT_DY = '1.15em';
 const PLAYABLE = '[data-slot], [data-notes], [data-scale]';
 
 const viewId = Object.freeze({
@@ -83,100 +54,8 @@ const RENDERERS = {
   [viewId.keys]: renderKeys,
 };
 
-function nameParts(name) {
-  const [, root, quality] = /^([A-G][#b]?)(m|dim)?$/.exec(name);
-  if (!quality) return [displayName(root), ''];
-  return [displayName(root).toLowerCase(), quality === 'dim' ? '°' : 'm'];
-}
-
-function appendName(node, name, bare) {
-  const [root, suffix] = nameParts(name);
-  node.append(root);
-  if (suffix && !bare) node.append(svg('tspan', { class: 'suffix' }, suffix));
-}
-
-function labelText(x, y, names, bare) {
-  const text = svg('text', { x, y });
-  if (names.length === 1) {
-    appendName(text, names[0], bare);
-    return text;
-  }
-  const [main, alt] = names.map((name, i) => {
-    const line = svg('tspan', { x, dy: i ? ALT_DY : MAIN_DY, class: i ? 'alt' : '' });
-    appendName(line, name, bare);
-    return line;
-  });
-  text.append(main, alt);
-  return text;
-}
-
-function keyRoot(index, minor) {
-  const key = keyOf(index, minor);
-  return displayName(minor ? key.slice(0, -1) : key);
-}
-
-function keyTitle(index, minor) {
-  return `${keyRoot(index, minor)} ${minor ? 'minor' : 'major'}`;
-}
-
-function wedgeAngle(index) {
-  return index * STEP - 90;
-}
-
-function wedgeText(index, minor, keyIndex, bare) {
-  const ring = minor ? ringId.inner : ringId.outer;
-  const [x, y] = polar(LABEL_RADIUS[ring], wedgeAngle(index));
-  return labelText(x, y, wedgeNames(index, minor, keyIndex), bare);
-}
-
-function slotOf(index, ring) {
-  return `${ring}${index}`;
-}
-
-function wedge(index, minor) {
-  const ring = minor ? ringId.inner : ringId.outer;
-  const g = svg('g', {
-    class: `wedge ${ring}`,
-    role: 'button',
-    tabindex: 0,
-    'aria-label': keyTitle(index, minor),
-    'data-index': index,
-    'data-ring': ring,
-    'data-slot': slotOf(index, ring),
-  });
-  g.append(svg('path', { d: annularSector(RINGS[ring], wedgeAngle(index), STEP) }));
-  return g;
-}
-
-function dimWedge(item, bare) {
-  const g = svg('g', {
-    class: `wedge ${ringId.dim}`,
-    role: 'button',
-    tabindex: 0,
-    'aria-label': `${displayName(item.chord.replace(/dim$/, ''))} diminished`,
-    'data-index': item.index,
-    'data-ring': ringId.dim,
-    'data-slot': item.slot,
-  });
-  const [x, y] = polar(LABEL_RADIUS[ringId.dim], wedgeAngle(item.index));
-  g.append(svg('path', { d: annularSector(RINGS[ringId.dim], wedgeAngle(item.index), STEP) }), labelText(x, y, [item.chord], bare));
-  return g;
-}
-
-function gradient() {
-  const defs = svg('defs');
-  const grad = svg('linearGradient', { id: GRADIENT_ID, x1: 0, y1: 0, x2: 1, y2: 1 });
-  grad.append(svg('stop', { offset: 0, class: 'accent-from' }), svg('stop', { offset: 1, class: 'accent-to' }));
-  defs.append(grad);
-  return defs;
-}
-
-function chordRoot(chord) {
-  return chord.replace(/(m|dim)$/, '');
-}
-
-function scaleChip(scale, top) {
-  const chip = plainButton(span('circle-degree', top), 'circle-chord');
+function scaleChip(scale) {
+  const chip = plainButton(span('circle-degree', scale.top), 'circle-chord');
   chip.append(span(null, scale.short));
   chip.dataset.scale = scale.id;
   chip.title = scale.name;
@@ -211,25 +90,10 @@ export function createCircleControl() {
   let chordIndex = 0;
 
   function open() {
-    const wedges = [];
     let items = [];
     let chipItems = new Map();
-    let dimEl = null;
     let stageDirty = false;
-
-    const art = svg('svg', { class: 'circle-art', viewBox: '-100 -100 200 200', role: 'group', 'aria-label': 'Circle of fifths' });
-    art.append(gradient());
-    for (const minor of [false, true]) {
-      for (let index = 0; index < WEDGES; index++) {
-        const el = wedge(index, minor);
-        wedges.push({ el, index, minor, label: null });
-        art.append(el);
-      }
-    }
-    const hub = svg('circle', { class: 'hub', r: HUB_RADIUS });
-    let hubName = hubText('', '');
-    art.append(hub, hubName);
-
+    const fifths = createFifths();
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
 
@@ -245,10 +109,6 @@ export function createCircleControl() {
       return mode !== modeId.chord;
     }
 
-    function currentScaleRoot(id = scaleChoice) {
-      return scaleRoot(selected.index, selected.minor, id, rooting === rootingId.inKey);
-    }
-
     function keyPcs() {
       return items.map((each) => each.pc);
     }
@@ -258,56 +118,22 @@ export function createCircleControl() {
     }
 
     function shapeOf(item) {
-      return chordShape(item, keyPcs(), shapeIdOf(items.indexOf(item)));
-    }
-
-    function scaleList(names) {
-      return SCALES.map((scale) => {
-        const root = currentScaleRoot(scale.id);
-        const top = rooting === rootingId.inKey ? displayName(names[root]) : scale.tag;
-        return { ...scale, root, top, pcs: scalePitches(root, scale.id), run: scaleRun(root, scale.id) };
-      });
+      return itemShape(item, items, chordShapes);
     }
 
     function model() {
-      const t = tonic();
-      const chord = items[chordIndex];
-      const keyPcs = items.map((item) => item.pc);
-      const names = pitchNames(selected.index, keyPcs);
-      const shaped = shapeOf(chord);
-      const voiced = voiceNotes(chord.pc, shaped.steps, t, inversion);
-      const note = { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) };
-      const scales = scaleList(names);
-      const scale = scales.find((each) => each.id === scaleChoice);
-      const display = mode === modeId.scale ? scale.root : t;
-      const chordPcs = stepPitches(chord.pc, shaped.steps);
-      const byMode = {
-        [modeId.chord]: { shown: voiced, shownPcs: chordPcs, rootPc: chord.pc, allowed: chordPcs },
-        [modeId.note]: { shown: [note.midi], shownPcs: [note.pc], rootPc: note.pc, allowed: keyPcs },
-        [modeId.scale]: { shown: scale.run, shownPcs: scale.pcs, rootPc: scale.root, allowed: scale.pcs },
-      };
-      return {
-        ...byMode[mode],
+      return theoryModel({
+        index: selected.index,
+        minor: selected.minor,
         mode,
-        items,
         chordIndex,
-        chord,
-        voiced,
-        note,
-        scale,
-        scales,
-        shape: shapeIdOf(chordIndex),
-        shapeOf,
+        inversion,
+        shapes: chordShapes,
+        scaleChoice,
+        inKey: rooting === rootingId.inKey,
         locked,
-        tonic: display,
-        tonicMidi: noteMidi(display, display),
-        keyTonicPc: t,
-        keyTonicMidi: noteMidi(t, t),
-        names,
-        scalePcs: keyPcs,
-        noteMidiOf: (pc) => noteMidi(pc, display),
         minOctaves: getKeyOctaves(),
-      };
+      });
     }
 
     const header = div('tool-header');
@@ -377,8 +203,12 @@ export function createCircleControl() {
     }
 
     function renderStage() {
-      if (view !== viewId.fifths) stage.replaceChildren(RENDERERS[view](model()));
-      else if (art.parentNode !== stage) stage.replaceChildren(art);
+      if (view !== viewId.fifths) {
+        stage.replaceChildren(RENDERERS[view](model()));
+        return;
+      }
+      fifths.tagSteps(model().run);
+      if (fifths.el.parentNode !== stage) stage.replaceChildren(fifths.el);
     }
 
     function syncChips() {
@@ -389,30 +219,16 @@ export function createCircleControl() {
     }
 
     function renderChips() {
-      const names = pitchNames(selected.index, items.map((item) => item.pc));
-      if (mode === modeId.scale) chords.replaceChildren(...scaleList(names).map((scale) => scaleChip(scale, scale.top)));
+      if (mode === modeId.scale) chords.replaceChildren(...model().scales.map(scaleChip));
       else if (noteMode()) chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, true, shapeOf(item))));
       else chords.replaceChildren(...items.map(chordCell));
       syncChips();
     }
 
     function renderKey() {
-      const { outer, inner } = keyWedges(selected.index);
-      for (const w of wedges) {
-        w.el.classList.toggle(cls.inKey, (w.minor ? inner : outer).includes(w.index));
-        w.el.classList.toggle(cls.active, w.index === selected.index && w.minor === selected.minor);
-        w.label?.remove();
-        w.label = wedgeText(w.index, w.minor, selected.index, bareLabels());
-        w.el.append(w.label);
-      }
-      const label = hubText(keyRoot(selected.index, selected.minor), selected.minor ? 'minor' : 'Major');
-      hubName.replaceWith(label);
-      hubName = label;
-      items = keyChords(selected.index, selected.minor).map((item) => ({ ...item, slot: slotOf(item.index, item.ring) }));
+      items = keyItems(selected.index, selected.minor);
       chipItems = new Map(items.map((item) => [item.slot, item]));
-      dimEl?.remove();
-      dimEl = dimWedge(items.find((item) => item.ring === ringId.dim), bareLabels());
-      art.insertBefore(dimEl, hub);
+      fifths.render({ index: selected.index, minor: selected.minor, items, bare: bareLabels() });
       renderChips();
       syncVoicing();
       renderStage();
@@ -437,14 +253,14 @@ export function createCircleControl() {
     const modeToggle = choiceToggle(MODES, mode, (id) => {
       if (id === mode) return;
       mode = id;
-      stopRun();
+      player.stopRun();
       syncMode();
       renderKey();
     });
     const rootingField = labeledField('Modes', choiceToggle(ROOTINGS, rooting, (id) => {
       if (id === rooting) return;
       rooting = id;
-      stopRun();
+      player.stopRun();
       renderChips();
       renderStage();
     }));
@@ -453,30 +269,18 @@ export function createCircleControl() {
     const controls = modalRow(null, labeledField('Play', modeToggle), voicingField, rootingField);
     controls.classList.add('circle-controls');
 
-    let voice = null;
-    let pressed = [];
-
-    function noteWedges(pc) {
-      return [slotOf(wedgeOf(pc), ringId.outer), slotOf(wedgeOf(pc, true), ringId.inner)]
-        .map((slot) => stage.querySelector(`[data-slot="${slot}"]`))
-        .filter(Boolean);
-    }
-
     function notePcOf(el) {
       const { ring, index, slot } = el.dataset;
       if (ring && ring !== ringId.dim) return keyTonic(Number(index), ring === ringId.inner);
       return chipItems.get(slot)?.pc ?? null;
     }
 
-    function press(el) {
-      for (const p of pressed) p.classList.remove(cls.pressed);
-      const slot = el?.dataset.slot;
-      const notePc = el && noteMode() && view === viewId.fifths ? notePcOf(el) : null;
-      if (!el) pressed = [];
-      else if (notePc !== null) pressed = [...noteWedges(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
-      else if (slot) pressed = [stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]);
-      else pressed = [el];
-      for (const p of pressed) p.classList.add(cls.pressed);
+    function pressedFor(el) {
+      const { slot } = el.dataset;
+      const notePc = noteMode() && view === viewId.fifths ? notePcOf(el) : null;
+      if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
+      if (slot) return [stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]);
+      return [el];
     }
 
     function wedgeVoice(el) {
@@ -503,65 +307,28 @@ export function createCircleControl() {
       return startNotes(mode === modeId.chord ? voiceNotes(item.pc, shapeOf(item).steps, tonic(), inversion) : chordNotes(item.pc, item.quality, false, tonic()));
     }
 
-    let run = null;
-    let lit = [];
-
-    function light(midi) {
-      for (const el of lit) el.classList.remove(cls.pressed);
-      lit = [];
-      if (midi === null) return;
-      lit = view === viewId.fifths ? noteWedges(midi % WEDGES) : [...stage.querySelectorAll(`[data-run~="${midi}"]`)];
-      for (const el of lit) el.classList.add(cls.pressed);
-    }
-
-    function stopRun() {
-      run?.();
-      run = null;
-    }
-
     function pickScale(id) {
-      stopRun();
       scaleChoice = id;
       syncChips();
       renderStage();
-      run = playRun(scaleRun(currentScaleRoot(id), id), light);
+      player.playSteps(model().run);
     }
 
-    function begin(target) {
-      const el = target.closest(PLAYABLE);
-      if (!el || el.classList.contains(cls.blocked)) return;
-      end();
-      const { ring, slot, notes, scale } = el.dataset;
-      if (scale) pickScale(scale);
-      else if (ring && ring !== ringId.dim) voice = wedgeVoice(el);
-      else if (slot) voice = chipVoice(slot);
-      else voice = startNotes(notes.split(',').map(Number));
-      press(el.isConnected ? el : null);
+    function voiceFor(el) {
+      const { ring, slot, scale } = el.dataset;
+      if (scale) return pickScale(scale);
+      if (ring && ring !== ringId.dim) return wedgeVoice(el);
+      if (slot) return chipVoice(slot);
+      return startNotes(notesOf(el));
     }
 
-    function end() {
-      voice?.();
-      voice = null;
-      press(null);
+    const onRelease = () => {
       if (!stageDirty) return;
       stageDirty = false;
       renderStage();
-    }
+    };
 
-    for (const area of [stage, chords]) {
-      area.addEventListener(evt.pointerdown, (e) => {
-        if (e.button === 0) begin(e.target);
-      });
-      for (const name of [evt.pointerup, evt.pointercancel, evt.pointerleave, evt.keyup]) {
-        area.addEventListener(name, end);
-      }
-      area.addEventListener(evt.contextmenu, (e) => e.preventDefault());
-      area.addEventListener(evt.keydown, (e) => {
-        if ((e.key !== keys.enter && e.key !== keys.space) || !e.target.closest(PLAYABLE)) return;
-        e.preventDefault();
-        if (!e.repeat) begin(e.target);
-      });
-    }
+    const player = attachPlayer({ areas: [stage, chords], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
 
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
@@ -575,8 +342,8 @@ export function createCircleControl() {
       header,
       rows: [stage, controls, chords],
       onClose: () => {
-        end();
-        stopRun();
+        player.end();
+        player.stopRun();
       },
     };
   }

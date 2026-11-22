@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v100';
+const CACHE = 'tabs-v102';
 
 const ASSETS = [
   './',
@@ -36,7 +36,9 @@ const ASSETS = [
   './js/sheet/infer.js',
   './js/sheet/insert.js',
   './js/sheet/parse.js',
+  './js/sheet/theory-model.js',
   './js/sheet/transpose.js',
+  './js/sheet/vis-spec.js',
   './js/audio/click.js',
   './js/audio/context.js',
   './js/audio/listen.js',
@@ -45,6 +47,7 @@ const ASSETS = [
   './js/components/circle.js',
   './js/components/controls.js',
   './js/components/details.js',
+  './js/components/fifths.js',
   './js/components/keybar.js',
   './js/components/tools.js',
   './js/components/menu.js',
@@ -56,6 +59,8 @@ const ASSETS = [
   './js/components/share.js',
   './js/components/sheet.js',
   './js/components/toast.js',
+  './js/components/theory-embed.js',
+  './js/components/theory-player.js',
   './js/components/theory-views.js',
   './js/components/tuner.js',
   './js/views/edit.js',

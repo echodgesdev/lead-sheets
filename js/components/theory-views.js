@@ -1,6 +1,7 @@
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
 import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
+import { modeId, chordRoot } from '../sheet/theory-model.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -15,12 +16,7 @@ const ROOT_DOT = 6;
 const INTERVALS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
 const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
 const BLACK_PCS = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
-
-export const modeId = Object.freeze({
-  note: 'note',
-  chord: 'chord',
-  scale: 'scale',
-});
+const PATTERN_ROWS = { [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
 
 export const alignId = Object.freeze({
   root: 'root',
@@ -56,7 +52,7 @@ function points(list) {
 }
 
 function rootLetter(chord) {
-  return displayName(chord.replace(/(m|dim)$/, ''));
+  return displayName(chordRoot(chord));
 }
 
 function isBlocked({ locked, allowed }, pc) {
@@ -67,7 +63,14 @@ function isOutside({ scalePcs }, pc) {
   return !scalePcs.includes(pc);
 }
 
-function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape, shapeOf }) {
+export function stepsOf(run, midi, drawn) {
+  return run
+    .flatMap((step, i) => (step.some((m) => m === midi || (!drawn.includes(m) && m % OCTAVE === midi % OCTAVE)) ? [i] : []))
+    .join(' ');
+}
+
+function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape, shapeOf, key }) {
+  if (mode === modeId.sequence) return hubText(key.root, key.quality, 'clock-center');
   if (mode === modeId.note) return hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center');
   if (mode === modeId.scale) return hubText(displayName(names[tonic]), scale.name, 'clock-center');
   const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
@@ -114,7 +117,7 @@ export function renderClock(model) {
       tabindex: 0,
       'aria-label': displayName(names[midi % OCTAVE]),
       'data-notes': notesAttr([midi]),
-      'data-run': shown.filter((each) => each % OCTAVE === midi % OCTAVE).join(' '),
+      'data-step': stepsOf(model.run, midi, dotted),
     }));
   });
   art.append(centerLabel(model));
@@ -200,38 +203,74 @@ function noteRows(model) {
   }, model));
 }
 
-function scaleRow(scale, picked, model) {
+function patternRow({ top, label, title, play, pcs, rootPc, midiOf, stepsAt, picked }, model) {
   const { names, keyTonicPc, keyTonicMidi, scalePcs } = model;
   const row = div(classes('chain-row', picked && cls.active));
-  const name = rowName(scale.top, 'circle-degree', scale.short);
-  name.dataset.scale = scale.id;
-  name.setAttribute('aria-label', scale.name);
+  const name = rowName(top, 'circle-degree', label);
+  Object.assign(name.dataset, play);
+  name.setAttribute('aria-label', title);
   row.append(name);
   for (let c = 0; c < NOTES; c++) {
     const pc = (keyTonicPc + c) % NOTES;
-    const run = scale.run.filter((midi) => midi % OCTAVE === pc);
-    const on = run.length > 0;
+    const on = pcs.includes(pc);
     const cell = plainButton('', classes(
       'chain-cell',
       scalePcs.includes(pc) && cls.inKey,
       on && cls.voiced,
-      on && pc === scale.root && cls.root,
-      on && pc !== scale.root && isOutside(model, pc) && cls.outside,
+      on && pc === rootPc && cls.root,
+      on && pc !== rootPc && isOutside(model, pc) && cls.outside,
       isBlocked(model, pc) && cls.blocked,
     ));
-    cell.dataset.notes = notesAttr([on ? run[0] : keyTonicMidi + c]);
-    if (picked && on) cell.dataset.run = run.join(' ');
-    cell.setAttribute('aria-label', `${scale.name}, ${displayName(names[pc])}`);
+    cell.dataset.notes = notesAttr([on ? midiOf(pc) : keyTonicMidi + c]);
+    const steps = on ? stepsAt(pc) : '';
+    if (steps) cell.dataset.step = steps;
+    cell.setAttribute('aria-label', `${title}, ${displayName(names[pc])}`);
     row.append(cell);
   }
   return row;
 }
 
+function midiWithPc(midis, pc) {
+  return midis.find((midi) => midi % OCTAVE === pc);
+}
+
+function scaleRows(model) {
+  return model.scales.map((scale) => {
+    const picked = scale.id === model.scale.id;
+    return patternRow({
+      top: scale.top,
+      label: scale.short,
+      title: scale.name,
+      play: { scale: scale.id },
+      pcs: scale.pcs,
+      rootPc: scale.root,
+      midiOf: (pc) => midiWithPc(scale.run, pc),
+      stepsAt: (pc) => (picked ? stepsOf(model.run, pc, []) : ''),
+      picked,
+    }, model);
+  });
+}
+
+function sequenceRows(model) {
+  return model.steps.map((step, i) => patternRow({
+    top: step.top,
+    label: step.label,
+    title: step.label,
+    play: { notes: notesAttr(step.midis) },
+    pcs: step.midis.map((midi) => midi % OCTAVE),
+    rootPc: step.rootPc,
+    midiOf: (pc) => midiWithPc(step.midis, pc),
+    stepsAt: () => String(i),
+    picked: false,
+  }, model));
+}
+
 export function renderChain(model) {
-  const chain = div(classes('chain', model.mode === modeId.scale && 'chain-scales'));
+  const patterns = PATTERN_ROWS[model.mode];
+  const chain = div(classes('chain', patterns && 'chain-patterns'));
   chain.append(chainHead(model.align, model.names, model.keyTonicPc));
   if (model.mode === modeId.note) chain.append(...noteRows(model));
-  else if (model.mode === modeId.scale) chain.append(...model.scales.map((scale) => scaleRow(scale, scale.id === model.scale.id, model)));
+  else if (patterns) chain.append(...patterns(model));
   else model.items.forEach((item, i) => chain.append(chordRow(item, i === model.chordIndex, model)));
   return chain;
 }
@@ -248,7 +287,8 @@ function pianoKey(midi, pc, index, shade, model) {
   ));
   key.style.setProperty('--i', index);
   key.dataset.notes = notesAttr([midi]);
-  if (lit) key.dataset.run = midi;
+  const steps = stepsOf(model.run, midi, model.shown);
+  if (steps) key.dataset.step = steps;
   key.setAttribute('aria-label', `${displayName(model.names[pc])}${Math.floor(midi / OCTAVE) - 1}`);
   return key;
 }

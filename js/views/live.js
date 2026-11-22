@@ -87,6 +87,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   let fret = base.capo;
   let shift = base.shift;
   let disposed = false;
+  let disposeSheet = null;
   let tap = null;
   const listening = new AbortController();
 
@@ -137,7 +138,8 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   function renderContent() {
     const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
-    renderSheet(viewChords(parsed, view), sheet);
+    disposeSheet?.();
+    disposeSheet = renderSheet(viewChords(parsed, view), sheet);
     sheet.classList.toggle(cls.roman, view.numbers === numberStyleId.roman);
     fillTags(tags, shownRec());
     capoBtn.replaceChildren(...keyFace('Capo', fret));
@@ -312,6 +314,7 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   return () => {
     disposed = true;
+    disposeSheet?.();
     tuner.dispose();
     metronome.dispose();
     listening.abort();

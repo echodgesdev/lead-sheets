@@ -1,3 +1,4 @@
+import { createTheoryEmbed } from './theory-embed.js';
 import { b, div, pre, span } from '../core/dom.js';
 
 const NO_CHORD = '\u200B';
@@ -17,7 +18,7 @@ function renderSegment(segment) {
   return rest ? [seg, rest] : [seg];
 }
 
-function renderBlock(block) {
+function renderBlock(block, disposers) {
   switch (block.type) {
     case 'section':
       return div('sec', block.name);
@@ -38,12 +39,19 @@ function renderBlock(block) {
       return pre('tab', block.lines.join('\n'));
     case 'blank':
       return div('gap');
+    case 'vis': {
+      const embed = createTheoryEmbed(block.spec);
+      disposers.push(embed.dispose);
+      return embed.el;
+    }
     default:
       return null;
   }
 }
 
 export function renderSheet(parsed, el) {
-  const nodes = parsed.blocks.map(renderBlock).filter(Boolean);
+  const disposers = [];
+  const nodes = parsed.blocks.map((block) => renderBlock(block, disposers)).filter(Boolean);
   el.replaceChildren(...nodes);
+  return () => disposers.forEach((dispose) => dispose());
 }

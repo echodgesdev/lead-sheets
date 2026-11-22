@@ -309,3 +309,10 @@ test('Key change: in the body is a key block', () => {
   eq(meta.key, 'G');
   eq(blocks.slice(1), [{ type: 'key', key: 'A' }, { type: 'lyric', text: 'Hi' }]);
 });
+
+test('a vis directive is a vis block and never pairs as a lyric', () => {
+  const blocks = body('G   C\n{vis: clock, key: G, seq: G C}\nHello');
+  eq(types(blocks), ['chords', 'vis', 'lyric']);
+  eq(blocks[1].spec.vis, 'clock');
+  eq(blocks[1].spec.seq.map((s) => s.chord), ['G', 'C']);
+});

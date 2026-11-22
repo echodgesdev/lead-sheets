@@ -44,34 +44,37 @@ export function startNotes(midis) {
   };
 }
 
-export function playRun(midis, onStep) {
+export function playRun(steps, onStep) {
   const ctx = audioContext();
   const start = ctx.currentTime;
-  const voices = midis.map((midi, i) => {
+  const voices = steps.map((midis, i) => {
     const at = start + i * RUN_STEP_S;
     const gain = ctx.createGain();
     gain.gain.setValueAtTime(SILENT, at);
-    gain.gain.exponentialRampToValueAtTime(LEVEL, at + ATTACK_S);
+    gain.gain.exponentialRampToValueAtTime(LEVEL / Math.sqrt(midis.length), at + ATTACK_S);
     gain.gain.exponentialRampToValueAtTime(SILENT, at + RUN_NOTE_S);
     gain.connect(ctx.destination);
-    const osc = ctx.createOscillator();
-    osc.type = 'triangle';
-    osc.frequency.value = hz(midi);
-    osc.connect(gain);
-    osc.start(at);
-    osc.stop(at + RUN_NOTE_S);
-    return { gain, osc };
+    const oscs = midis.map((midi) => {
+      const osc = ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.value = hz(midi);
+      osc.connect(gain);
+      osc.start(at);
+      osc.stop(at + RUN_NOTE_S);
+      return osc;
+    });
+    return { gain, oscs };
   });
-  const timers = midis.map((midi, i) => setTimeout(() => onStep?.(midi), i * RUN_STEP_S * 1000));
-  timers.push(setTimeout(() => onStep?.(null), midis.length * RUN_STEP_S * 1000));
+  const timers = steps.map((_, i) => setTimeout(() => onStep?.(i), i * RUN_STEP_S * 1000));
+  timers.push(setTimeout(() => onStep?.(null), steps.length * RUN_STEP_S * 1000));
 
   return function stop() {
     timers.forEach(clearTimeout);
     const t = ctx.currentTime;
-    for (const { gain, osc } of voices) {
+    for (const { gain, oscs } of voices) {
       gain.gain.cancelScheduledValues(t);
       gain.gain.setValueAtTime(SILENT, t);
-      osc.stop(t);
+      for (const osc of oscs) osc.stop(t);
     }
     onStep?.(null);
   };

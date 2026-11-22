@@ -1697,6 +1697,7 @@ button.row:active {
 }
 
 .clock-hit.blocked,
+.wedge.blocked,
 .chain-cell.blocked,
 .key.blocked {
   cursor: not-allowed;
@@ -1735,11 +1736,11 @@ button.row:active {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
-.chain-scales .chain-row {
+.chain-patterns .chain-row {
   grid-template-columns: 84px repeat(12, minmax(0, 1fr));
 }
 
-.chain-scales .chain-name {
+.chain-patterns .chain-name {
   font-size: 12px;
   white-space: nowrap;
 }

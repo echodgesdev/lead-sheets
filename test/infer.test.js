@@ -158,9 +158,9 @@ test('step 5: section headers', () => {
 test('step 6: inline chords become chords-over-lyrics', () => {
   same('S\n\n[G]Hello [C]world', 'S\n\nG' + sp(5) + 'C\nHello world');
   same('S\n\nHello [G]world', 'S\n\n' + sp(6) + 'G\nHello world');
-  same('S\n\n[Am7]a[G]b', 'S\n\nAm7 G\na' + sp(3) + 'b');
+  same('S\n\n[Am7]x[G]y', 'S\n\nAm7 G\nx' + sp(3) + 'y');
   same('S\n\n[G] [C] [D]', 'S\n\nG C D');
-  same('S\n\n[am]hello', 'S\n\nA\nhello');
+  same('S\n\n[am]hello', 'S\n\nAm\nhello');
   same('S\n\nGo [x2] now', 'S\n\nGo [x2] now');
 });
 
@@ -205,4 +205,9 @@ test('step 8: blank lines and section spacing', () => {
   same('S\nVerse 1:\nhi', 'S\n\nVerse 1:\nhi');
   same('Only title', 'Only title');
   same('', '');
+});
+
+test('infer leaves vis directives untouched', () => {
+  same('S\n\n{vis: piano, seq: 1 b3 5, controls: play}\nhi', 'S\n\n{vis: piano, seq: 1 b3 5, controls: play}\nhi');
+  same('S\n\n{vis: clock, key: G, seq: [C] g}', 'S\n\n{vis: clock, key: G, seq: [C] g}');
 });

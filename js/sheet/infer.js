@@ -1,5 +1,6 @@
 import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
 import { META_FIELDS, LIST_FIELDS, sectionName, normalizeLines, fieldName, splitTags } from './parse.js';
+import { parseVisSpec } from './vis-spec.js';
 
 const WINDOW = 15;
 const MAX_PASSES = 4;
@@ -46,7 +47,7 @@ function readChordPro(lines) {
   const cp = { title: '', subtitle: '', fields: [] };
   for (const line of lines) {
     const m = DIRECTIVE_RE.exec(line.trim());
-    if (!m) {
+    if (!m || parseVisSpec(line)) {
       out.push(line);
       continue;
     }
@@ -175,7 +176,7 @@ function inlineToPair(line) {
 function convertBody(lines) {
   const items = [];
   for (const line of lines) {
-    if (isTabLine(line)) {
+    if (isTabLine(line) || parseVisSpec(line)) {
       items.push({ t: line });
       continue;
     }

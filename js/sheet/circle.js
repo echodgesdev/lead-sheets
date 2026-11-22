@@ -1,4 +1,4 @@
-import { diatonic } from './chords.js';
+import { diatonic, SHARPS } from './chords.js';
 import { roman } from './transpose.js';
 
 export const WEDGES = 12;
@@ -6,7 +6,6 @@ export const WEDGES = 12;
 const FIFTHS = [0, 7, 2, 9, 4, 11, 6, 1, 8, 3, 10, 5];
 const MAJOR = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
 const MINOR = ['Am', 'Em', 'Bm', 'F#m', 'C#m', 'G#m', 'D#m', 'Bbm', 'Fm', 'Cm', 'Gm', 'Dm'];
-const SHARP_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const FLAT_NAMES = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
 const ENHARMONIC = { 6: { major: 'Gb', minor: 'Ebm' } };
 const RELATIVE_MINOR = 9;
@@ -152,7 +151,7 @@ export function displayName(name) {
 }
 
 export function pitchNames(keyIndex, keyPcs = []) {
-  const names = keyIndex > SHARP_SIDE ? FLAT_NAMES : SHARP_NAMES;
+  const names = keyIndex > SHARP_SIDE ? FLAT_NAMES : SHARPS;
   return names.map((name, pc) => (keyPcs.includes(pc) ? name : FLAT_NAMES[pc]));
 }
 
@@ -218,6 +217,19 @@ export function voicing(pc, quality, inversion, tonic) {
   return voiceNotes(pc, TRIADS[quality], tonic, inversion);
 }
 
+export function degreeMidi(index, minor, degree, shift = 0) {
+  const pcs = keyChords(index, minor).map((item) => item.pc);
+  const at = degree - 1;
+  return noteMidi(pcs[0], pcs[0]) + wrap(pcs[at % pcs.length] - pcs[0]) + WEDGES * Math.floor(at / pcs.length) + shift;
+}
+
+export function spelledNotes({ pc, steps, bass }, tonic) {
+  const notes = voiceNotes(pc, steps, tonic);
+  if (bass === null || bass === pc) return notes;
+  const low = noteMidi(bass, tonic);
+  return [low >= notes[0] ? low - WEDGES : low, ...notes];
+}
+
 export const scaleId = Object.freeze({
   ionian: 'ionian',
   dorian: 'dorian',
@@ -231,15 +243,15 @@ export const scaleId = Object.freeze({
 });
 
 export const SCALES = [
-  { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', tag: '1', offset: 0, steps: [0, 2, 4, 5, 7, 9, 11] },
-  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', tag: '2', offset: 2, steps: [0, 2, 3, 5, 7, 9, 10] },
-  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', tag: '3', offset: 4, steps: [0, 1, 3, 5, 7, 8, 10] },
-  { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', tag: '4', offset: 5, steps: [0, 2, 4, 6, 7, 9, 11] },
-  { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', tag: '5', offset: 7, steps: [0, 2, 4, 5, 7, 9, 10] },
-  { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', tag: '6', offset: 9, steps: [0, 2, 3, 5, 7, 8, 10] },
-  { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', tag: '7', offset: 11, steps: [0, 1, 3, 5, 6, 8, 10] },
-  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Maj pent', tag: 'maj', offset: 0, steps: [0, 2, 4, 7, 9] },
-  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Min pent', tag: 'min', offset: 9, steps: [0, 3, 5, 7, 10] },
+  { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', offset: 0, steps: [0, 2, 4, 5, 7, 9, 11] },
+  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', offset: 2, steps: [0, 2, 3, 5, 7, 9, 10] },
+  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', offset: 4, steps: [0, 1, 3, 5, 7, 8, 10] },
+  { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', offset: 5, steps: [0, 2, 4, 6, 7, 9, 11] },
+  { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', offset: 7, steps: [0, 2, 4, 5, 7, 9, 10] },
+  { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', offset: 9, steps: [0, 2, 3, 5, 7, 8, 10] },
+  { id: scaleId.locrian, name: 'Locrian', short: 'Locrian', offset: 11, steps: [0, 1, 3, 5, 6, 8, 10] },
+  { id: scaleId.majorPentatonic, name: 'Major pentatonic', short: 'Maj pent', offset: 0, steps: [0, 2, 4, 7, 9] },
+  { id: scaleId.minorPentatonic, name: 'Minor pentatonic', short: 'Min pent', offset: 9, steps: [0, 3, 5, 7, 10] },
 ];
 
 export function scaleOf(id) {

@@ -1,21 +1,59 @@
 # Lead Sheets
 
-An offline lead sheet and tab viewer that installs to your phone's home screen. Live mode shows only chords and lyrics, with auto-scroll and PREV/NEXT. Edit mode has an Infer Format button that tidies pasted text. Tools mode holds the tuner, metronome and Theory.
+An offline lead sheet and tab viewer that installs to your phone's home screen. Songs are stored on the device (IndexedDB); this repository contains none.
 
-- **Songs stay on the device.** They are stored in the browser's IndexedDB. This repository contains no songs.
-- **Search:** the search box matches title, artist, album, genre and the `Meta:` line, which takes comma-separated values (`Meta: opener, slow, drop D`). Use `artist:`, `genre:` or `meta:` to narrow a search to one field.
-- **Setlists:** pick By Setlist in the list. In Edit mode, tap + New setlist at the bottom, or the pen on a setlist, to name it, add songs, drag them into order and set each song's capo and tempo for that set (past fret 0 or 7 the shapes change instead). In Live mode, tapping a song plays the set in order with those settings. A song can be on any number of setlists. Setlists are included in Export and Import.
-- **Tags:** header lines such as `Key:`, `Capo:`, `Tuning:` and `Notes:`. A `Notes:` line can also sit anywhere in the song and shows there as a note. A `*` after a chord (`A*`) is kept as a marker. A `Key change: A` line in the song marks a modulation; numbers restart from the new key. Settings → Live settings → Live tags picks the tags shown above the sheet, and the ⓘ button in Live lists them all.
-- **Key and capo:** `Key:` is the sounding key and the chords are the shapes you play, so `Key: D` with `Capo: 2` and C shapes shows C as 1.
-- **Live controls:** Capo (−/+) moves the capo and keeps the shapes, so the key changes but the chords you play don't. Transpose (−/+, shown as a semitone shift) changes the key and the chord shapes. Tap either value to reset. Chord numbers (needs a `Key:`; Nashville or Roman, picked in Settings → Live settings → Numbers) replace chords with numbers and follow the shapes. All of these change only what is shown, never the saved song. Settings (⋮ in the list) → Live settings → Top bar shows or hides these, the ⓘ song details button, the tuner and the metronome; Numbers (Nashville or Roman) appears when the Numbers control is on; Bottom bar shows or hides the auto-scroll and Prev / Next buttons (the bar disappears when both are off). Text size sets the sheet size. The ⋮ menu in Live has the same Live settings plus Edit song and Share song; Preview in the editor returns to the song in Live.
-- **Tuner and metronome:** the Live header has a guitar button (chromatic tuner, uses the mic) and a metronome button. The metronome starts at the song's `Tempo:` or the setlist's tempo, and Tap sets it; tapping the Tempo or Beats number lets you type a value. Beats sets the bar length (1–16), and tapping a beat's square cycles it through primary click (filled), secondary click (inset square) and silent (empty); the pattern is remembered across songs. Closing its dialog keeps it clicking. Settings → Live settings → Top bar shows or hides both. Tools mode in the list shows the tuner, metronome and Theory as sections that expand in place, and several can be open at once. The tuner only listens to the mic while its section is open. Tools remembers which of the metronome and Theory were open; the tuner always starts closed. The metronome keeps clicking when its section is collapsed (its icon pulses on each beat) and stops when you leave Tools. When the tuner or Theory is open, its title gives way to the tuner's status line or to the view switcher and lock. Theory opens on the circle of fifths: tap a wedge to hear its note (or chord, with Play → Chord) and select its key, which highlights the key's chords on the circle and lists them with Roman numerals; the inner ring holds the relative minors (in lowercase, as am, em…). The F♯/G♭ and d♯m/e♭m wedges show both names stacked, with the spelling the selected key uses on top. The lock button keeps the selected key while you tap other wedges to hear them. Wedges and chords sound while held and fade on release. Tapping a chord under the circle plays it, and the chord and its wedge press down together. The key's diminished chord appears as a single wedge in the innermost ring. Notes sound in the octave that starts at the selected key's tonic, so the chords from I to vii° rise in pitch. The view switcher, which takes the place of the card's title when it is open (the selected view shows its name, the others just their icons), shows the same key and chord as Fifths, Clock (the 12 notes around a clock, the key as a faint shape and the chord as a triangle named in the centre, with the voicing moving notes between octave rings), Intervals (one row per chord across 12 half steps, lined up on each chord's root), Notes (the same rows lined up on the key) or Keys (a three-octave keyboard). Every note, dot, cell and key plays while held, and tapping a chord selects it for all views. Chord mode is the default. In Note mode the buttons become scale degrees (1–7 with plain note letters), the circle drops the m and ° from its labels, and Clock, Intervals, Notes and Keys show the selected single note instead of a chord. Play → Scale swaps the buttons for scales (the seven modes plus major and minor pentatonic) and the circle shows plain note names. Modes → In key builds each scale from the notes of the key (D Dorian, E Phrygian … in C; each button shows its root); On tonic starts every scale on the tonic (C Dorian …). Tapping a scale plays it up an octave, cancelling any run still playing, and the note being played lights up in the current view. In Scale mode, Intervals and Notes list every scale on its own row against columns that start on the key's tonic, so the scales can be compared at a glance; the circles are unlabelled, and tapping a row's name plays that scale. The root of the scale is drawn in lime. In Chord mode, the ⋯ under each chord button swaps that chord for another shape. The choices are listed by name (C, Cmaj7, Cmaj9, Csus2 …) and split into In key and Outside the key by checking that chord's own notes, so Csus2 is in key in C but Bsus2 is not. Each chord keeps its own shape; Voicing picks root position or any inversion, growing with the number of notes in the shape. Notes outside the key (like the B♭ in C7, or a mode's altered notes) are drawn in orange on Clock, Intervals, Notes and Keys. The lock sits in the card header. It keeps the key on the Fifths view; on the other views only the notes of the selected chord (Chord), key (Note) or scale (Scale) respond to taps; nothing is greyed out, and on Keys the playable notes get a blue ring on their circle under the keyboard. The root of the chord, note or scale is drawn in lime on Clock, Intervals, Notes and Keys. On Keys the piano keeps its normal colours and spans the octaves the notes need, at least two by default (Settings → Tools → Piano octaves sets two or three); each note being shown is coloured on the key itself (blue, lime for the root, orange when outside the key; black keys take a darker shade so neighbours stay distinct). A row of small circles under the keyboard, one under each key, marks the notes of the key: filled when the note is in the key, an empty outline when it is not.
-- **Page turner:** Bluetooth pedals and keyboards work in Live. Page Down, ↓ and → go forward; Page Up, ↑ and ← go back. Settings → Live settings → Page turner picks Page (scroll a screen, then turn to the next song at the end) or Song (always change song). Space plays or pauses auto-scroll.
-- **Editor:** Preview saves and shows the song in Live with an Edit button. Settings → Editor → Fix Format On Preview runs Infer Format each time you tap Preview, and Hide Format Button removes the wand from the editor. The editor header has a back button to the song list, Delete and the wand.
-- **Sharing:** long-press a song in the list (or tap its ⋮ when Settings → Song list → Song Menus is on, or ⋮ → Share song in Live) and tap Share song to send a link to Messages or any other app; the song is compressed into the link itself. Opening the link adds the song, or finds an identical copy already in the library. Opening it shows the song in Live.
-- **Backup:** in the list, tap ⋮ → App → Share library to save or send all songs and setlists as one compressed `.json.gz` file. Import restores that file or an older `.json` backup, or adds a single `.md`/`.txt` song.
-- **Install:** host the folder on GitHub Pages, open the URL on your phone, then Share → Add to Home Screen.
-- **Run locally:** serve the folder with any static server and open the printed localhost URL. Do not open `index.html` as a `file://` URL, because the service worker and modules need http(s).
-  - Python: `py -m http.server 8000` on Windows, `python3 -m http.server 8000` elsewhere → `http://localhost:8000/`
-  - Node: `npx serve .` → `http://localhost:3000/`
-  - Tests: open `/test/` on the same server.
-- Icons: [Font Awesome Free](https://fontawesome.com) 6.7.2, CC BY 4.0, bundled in `js/core/icons.js` so the app works offline.
+- **Live** shows chords and lyrics with auto-scroll and Prev / Next.
+- **Edit** is a plain-text editor with a wand (Infer Format) that tidies pasted text.
+- **Tools** holds the tuner, metronome and Theory.
+
+## Writing songs
+
+- **Header tags:** `Key:`, `Capo:`, `Tempo:`, `Tuning:`, `Notes:` and `Meta:` (comma-separated, searchable: `Meta: opener, slow, drop D`).
+- **Key and capo:** `Key:` is the sounding key; chords are the shapes you play. `Key: D` with `Capo: 2` and C shapes shows C as 1.
+- **In the body:** `Notes:` shows a note in place, `Key change: A` marks a modulation (numbers restart from the new key), and `A*` keeps a marker on a chord.
+- **Theory views:** a line like `{vis: piano, seq: 1 2 3 5 8 1, controls: play}` shows a small locked Theory view in Live.
+  - `vis`: `piano` (or `keys`), `clock`, `intervals`, `notes`, `fifths`.
+  - `seq`: degrees of the key (`8` is the octave, `b3` / `#4` shift a semitone) and chord names (`G Em7 C/E`).
+  - `key: G` sets the key; otherwise the song's key is used, in the same shapes as the chords.
+  - `controls: play` adds a Play button that steps through the sequence.
+  - Only notes in the sequence respond to taps, chords follow Transpose, and anything unreadable is listed under the view.
+
+## Live
+
+- **Capo** (−/+) changes the key but keeps the shapes. **Transpose** (−/+) changes both. Tap either value to reset.
+- **Numbers** replace chords with Nashville or Roman numerals (needs `Key:`).
+- None of these change the saved song.
+- **Settings → Live settings** picks the top bar controls, bottom bar, text size, number style, tags shown above the sheet and page turner mode. The ⋮ menu in Live has the same settings plus Edit song and Share song.
+- **Page turner:** Bluetooth pedals and keyboards work. Page Down / ↓ / → go forward, Page Up / ↑ / ← go back, Space plays or pauses. Page mode scrolls a screen at a time; Song mode always changes song.
+
+## Tools
+
+The tuner and metronome are also in the Live header. In Tools mode each tool expands in place; the metronome and Theory reopen as you left them, and the tuner always starts closed.
+
+- **Tuner:** chromatic, uses the mic only while open.
+- **Metronome:** starts at the song's or setlist's tempo. Tap sets it; tap the Tempo or Beats number to type a value. Tap a beat's square to cycle primary, secondary and silent. Keeps clicking when closed or collapsed (its icon pulses) and stops when you leave Tools.
+- **Theory:** pick a key on the circle of fifths and explore its chords and scales. Everything plays while held.
+  - **Views:** Fifths, Clock, Intervals (rows lined up on each chord's root), Notes (rows lined up on the key) and Keys (piano; Settings → Tools → Piano octaves sets two or three).
+  - **Play:** Note (scale degrees), Chord (the default) or Scale (seven modes plus major and minor pentatonic).
+  - **Chords:** the ⋯ under a chord swaps its shape (Cmaj7, Csus2 …), grouped into In key and Outside the key. Voicing picks root position or an inversion.
+  - **Scales:** In key builds modes from the key's notes (D Dorian in C); On tonic starts each on the tonic (C Dorian). In Intervals and Notes each scale gets its own row for comparison. Tapping a scale plays it and lights each note.
+  - **Colours:** the root is lime, notes outside the key are orange.
+  - **Lock:** on Fifths it keeps the key while you tap other wedges; elsewhere only the shown notes respond.
+
+## Library
+
+- **Search** matches title, artist, album, genre and `Meta:`. Narrow with `artist:`, `genre:` or `meta:`.
+- **Setlists:** pick By Setlist in the list. In Edit mode, + New setlist (or the pen on one) names it, adds and orders songs, and sets each song's capo and tempo. Tapping a song in Live plays the set in order.
+- **Sharing:** long-press a song (or ⋮ → Share song in Live) to send a link. The song is compressed into the link; opening it adds the song, or finds an identical copy.
+- **Backup:** ⋮ → App → Share library saves all songs and setlists as one `.json.gz`. Import restores it (or an older `.json`), or adds a single `.md` / `.txt` song.
+- **Editor settings:** Settings → Editor can run Infer Format on every Preview and hide the wand.
+
+## Run
+
+- **Install:** host the folder (e.g. GitHub Pages), open it on your phone, then Share → Add to Home Screen.
+- **Locally:** serve the folder over http (not `file://`; the service worker and modules need it):
+  - `py -m http.server 8000` (Windows) or `python3 -m http.server 8000` → `http://localhost:8000/`
+  - `npx serve .` → `http://localhost:3000/`
+- **Tests:** open `/test/` on the same server.
+
+Icons: [Font Awesome Free](https://fontawesome.com) 6.7.2 (CC BY 4.0) and [Phosphor Icons](https://phosphoricons.com) 2.1.1 (MIT), bundled in `js/core/icons.js`.

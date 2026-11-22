@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, chordShape, shapeChoices, stepPitches, voiceNotes, scaleRoot, wedgeOf } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, noteMidi, voicing, scalePitches, scaleRun, chordShape, shapeChoices, stepPitches, voiceNotes, scaleRoot, wedgeOf, degreeMidi, spelledNotes } from '../js/sheet/circle.js';
 
 const C = 0;
 const G = 7;
@@ -121,4 +121,15 @@ test('circle shape choices are split by the notes of each chord', () => {
   eq(split(items[0]), [['C', 'Cmaj7', 'Cmaj9', 'Cmaj11', 'Csus2', 'Csus4', 'Cadd9'], ['C7']]);
   eq(split(items[4]), [['G', 'G7', 'G9', 'G11', 'Gsus2', 'Gsus4', 'Gadd9'], ['Gmaj7']]);
   eq(split(items[6])[1], ['Bsus2', 'Bsus4', 'B°add9', 'B°M7']);
+});
+
+test('circle degrees climb the key and wrap to the octave', () => {
+  eq([1, 3, 8].map((d) => degreeMidi(0, false, d)), [60, 64, 72]);
+  eq(degreeMidi(0, false, 3, -1), 63);
+  eq(degreeMidi(1, false, 2), 57);
+});
+
+test('circle spelled notes put a slash bass underneath', () => {
+  eq(spelledNotes({ pc: C, steps: [0, 4, 7], bass: null }, C), [60, 64, 67]);
+  eq(spelledNotes({ pc: C, steps: [0, 4, 7], bass: 4 }, C), [52, 60, 64, 67]);
 });

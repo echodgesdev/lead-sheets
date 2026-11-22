@@ -1,4 +1,5 @@
 import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
+import { parseVisSpec } from './vis-spec.js';
 
 export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'notes'];
 export const LIST_FIELDS = ['meta'];
@@ -110,6 +111,7 @@ function isLyricLine(line) {
   return (
     s !== '' &&
     !isTabLine(line) &&
+    parseVisSpec(line) === null &&
     !sectionName(line) &&
     asChordLine(line) === null &&
     !NOTE_RE.test(s) &&
@@ -169,6 +171,12 @@ function parseBody(lines) {
     const line = lines[i];
     if (!line.trim()) {
       blocks.push({ type: 'blank' });
+      i++;
+      continue;
+    }
+    const spec = parseVisSpec(line);
+    if (spec) {
+      blocks.push({ type: 'vis', spec });
       i++;
       continue;
     }

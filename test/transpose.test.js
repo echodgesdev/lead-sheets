@@ -110,3 +110,20 @@ test('viewChords key change restarts numbers and transposes the marker', () => {
   eq(viewChords(parsed, { key: 'G', shift: 2 }).blocks.find((b) => b.type === 'key'), { type: 'key', key: 'B' });
   eq(viewChords(parsed, { key: 'G', capoShift: 1, shift: 1 }).blocks.find((b) => b.type === 'key'), { type: 'key', key: 'B' });
 });
+
+test('viewChords transposes vis chord steps and key but not degrees or into numbers', () => {
+  const parsed = parse('T\nKey: G\n\n{vis: clock, key: G, seq: G Em 1 b3}');
+  const steps = (p) => p.blocks[0].spec.seq.map((s) => s.chord ?? `${s.shift}:${s.degree}`);
+  const up = viewChords(parsed, { key: 'G', shift: 2 });
+  eq(steps(up), ['A', 'F#m', '0:1', '-1:3']);
+  eq(up.blocks[0].spec.key, 'A');
+  eq(steps(viewChords(parsed, { key: 'G', capo: 2, shift: 1, numbers: 'nashville' })), ['G#', 'Fm', '0:1', '-1:3']);
+  eq(viewChords(parsed, { key: 'G', capoShift: 2 }), parsed);
+});
+
+test('viewChords gives a keyless vis block the key of the chord shapes', () => {
+  const parsed = parse('T\nKey: G\n\n{vis: piano, seq: 1}');
+  eq(viewChords(parsed, { key: 'G' }).blocks[0].spec.key, 'G');
+  eq(viewChords(parsed, { key: 'G', capo: 2 }).blocks[0].spec.key, 'F');
+  eq(viewChords(parsed, { key: 'G', capo: 2, shift: 2 }).blocks[0].spec.key, 'G');
+});
