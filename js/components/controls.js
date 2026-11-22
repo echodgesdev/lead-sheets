@@ -1,5 +1,21 @@
-import { iconId } from '../core/icons.js';
-import { div, input, small, span, classes, iconButton } from '../core/dom.js';
+import { icon, iconId } from '../core/icons.js';
+import { div, input, option, select, small, span, classes, iconButton } from '../core/dom.js';
+import { evt } from '../core/events.js';
+
+export function selectPill(name, title, options, value) {
+  const pill = span('select-pill');
+  const text = span('select-pill-text');
+  const field = select({ 'aria-label': title, title });
+  for (const o of options) field.append(option({ value: o.id }, o.label));
+  field.value = value;
+  const onChange = () => {
+    text.textContent = field.selectedOptions[0]?.textContent ?? '';
+  };
+  field.addEventListener(evt.change, onChange);
+  onChange();
+  pill.append(icon(name), text, field);
+  return { pill, select: field };
+}
 
 export function segToggle(...nodes) {
   const toggle = div('seg-toggle');

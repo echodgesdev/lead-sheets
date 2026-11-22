@@ -548,8 +548,62 @@ input:focus-visible {
   min-width: 0;
 }
 
-.input-icon.compact {
+.search-pill {
+  align-items: center;
+  gap: 6px;
+  padding-right: 6px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--surface-2);
+  box-shadow: var(--elev-1);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.search-pill:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--badge-bg);
+}
+
+.search-pill > .field,
+.search-pill > .field:focus {
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.select-pill {
+  position: relative;
+  display: inline-flex;
   flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.select-pill > .fa {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.select-pill > select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.select-pill:focus-within {
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 .input-icon > .fa {
@@ -571,14 +625,6 @@ input:focus-visible {
 .input-icon > .field {
   flex: 1;
   padding-left: 38px;
-}
-
-select.field {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 32px;
-  font-weight: 600;
-  cursor: pointer;
 }
 
 .field:focus {

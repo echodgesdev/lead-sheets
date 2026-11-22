@@ -17,11 +17,11 @@ import {
   listOptionId,
   hasListOption,
 } from '../data/prefs.js';
-import { a, div, h1, header, label, option, p, select, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
+import { a, div, h1, header, p, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
-import { segToggle } from '../components/controls.js';
+import { segToggle, selectPill } from '../components/controls.js';
 import { createToolsPanel } from '../components/tools.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
@@ -74,15 +74,11 @@ export function mount(el) {
   const introTimer = intro ? setTimeout(() => headerEl.classList.remove(cls.intro), INTRO_MS) : 0;
 
   const searchBar = div('toolbar');
-  const { box: searchField, input: search } = searchBox();
+  const groupOptions = GROUPS.map((g) => ({ id: g.id, label: `By ${g.label}` }));
+  const { pill: groupPill, select: groupSelect } = selectPill(iconId.layerGroup, 'Group by', groupOptions, groupBy);
+  const { box: searchField, input: search } = searchBox(groupPill);
   search.value = getListQuery();
-
-  const groupBox = label('input-icon compact');
-  const groupSelect = select({ class: 'field', 'aria-label': 'Group by' });
-  for (const g of GROUPS) groupSelect.append(option({ value: g.id }, `By ${g.label}`));
-  groupSelect.value = groupBy;
-  groupBox.append(icon(iconId.layerGroup), groupSelect, icon(iconId.chevronDown));
-  searchBar.append(searchField, groupBox);
+  searchBar.append(searchField);
 
 
   const groupsEl = div('groups');

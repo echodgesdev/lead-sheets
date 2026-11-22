@@ -4,8 +4,8 @@ import { textField } from './controls.js';
 import { routes } from '../routes.js';
 import { strings } from '../strings.js';
 
-export function searchBox() {
-  const box = label('input-icon');
+export function searchBox(trailing = null) {
+  const box = label('input-icon search-pill');
   const field = textField(strings.searchSongs, null, {
     type: 'search',
     autocapitalize: 'off',
@@ -13,6 +13,7 @@ export function searchBox() {
     spellcheck: 'false',
   });
   box.append(icon(iconId.magnifyingGlass), field);
+  if (trailing) box.append(trailing);
   return { box, input: field };
 }
 
