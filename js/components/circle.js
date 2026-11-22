@@ -21,7 +21,6 @@ import {
   voiceNotes,
   scaleId,
   SCALES,
-  scaleOf,
   scalePitches,
   scaleRun,
   scaleRoot,
@@ -262,21 +261,30 @@ export function createCircleControl() {
       return chordShape(item, keyPcs(), shapeIdOf(items.indexOf(item)));
     }
 
+    function scaleList(names) {
+      return SCALES.map((scale) => {
+        const root = currentScaleRoot(scale.id);
+        const top = rooting === rootingId.inKey ? displayName(names[root]) : scale.tag;
+        return { ...scale, root, top, pcs: scalePitches(root, scale.id), run: scaleRun(root, scale.id) };
+      });
+    }
+
     function model() {
       const t = tonic();
       const chord = items[chordIndex];
       const keyPcs = items.map((item) => item.pc);
+      const names = pitchNames(selected.index, keyPcs);
       const shaped = shapeOf(chord);
       const voiced = voiceNotes(chord.pc, shaped.steps, t, inversion);
       const note = { pc: chord.pc, midi: noteMidi(chord.pc, t), degree: chordIndex + 1, name: chordRoot(chord.chord) };
-      const root = currentScaleRoot();
-      const scale = { name: scaleOf(scaleChoice).name, pcs: scalePitches(root, scaleChoice), run: scaleRun(root, scaleChoice) };
-      const display = mode === modeId.scale ? root : t;
+      const scales = scaleList(names);
+      const scale = scales.find((each) => each.id === scaleChoice);
+      const display = mode === modeId.scale ? scale.root : t;
       const chordPcs = stepPitches(chord.pc, shaped.steps);
       const byMode = {
         [modeId.chord]: { shown: voiced, shownPcs: chordPcs, rootPc: chord.pc, allowed: chordPcs },
         [modeId.note]: { shown: [note.midi], shownPcs: [note.pc], rootPc: note.pc, allowed: keyPcs },
-        [modeId.scale]: { shown: scale.run, shownPcs: scale.pcs, rootPc: root, allowed: scale.pcs },
+        [modeId.scale]: { shown: scale.run, shownPcs: scale.pcs, rootPc: scale.root, allowed: scale.pcs },
       };
       return {
         ...byMode[mode],
@@ -287,12 +295,15 @@ export function createCircleControl() {
         voiced,
         note,
         scale,
+        scales,
         shape: shapeIdOf(chordIndex),
         shapeOf,
         locked,
         tonic: display,
         tonicMidi: noteMidi(display, display),
-        names: pitchNames(selected.index, keyPcs),
+        keyTonicPc: t,
+        keyTonicMidi: noteMidi(t, t),
+        names,
         scalePcs: keyPcs,
         noteMidiOf: (pc) => noteMidi(pc, display),
         minOctaves: getKeyOctaves(),
@@ -379,8 +390,7 @@ export function createCircleControl() {
 
     function renderChips() {
       const names = pitchNames(selected.index, items.map((item) => item.pc));
-      const top = (scale) => (rooting === rootingId.inKey ? displayName(names[currentScaleRoot(scale.id)]) : scale.tag);
-      if (mode === modeId.scale) chords.replaceChildren(...SCALES.map((scale) => scaleChip(scale, top(scale))));
+      if (mode === modeId.scale) chords.replaceChildren(...scaleList(names).map((scale) => scaleChip(scale, scale.top)));
       else if (noteMode()) chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, true, shapeOf(item))));
       else chords.replaceChildren(...items.map(chordCell));
       syncChips();
@@ -500,7 +510,7 @@ export function createCircleControl() {
       for (const el of lit) el.classList.remove(cls.pressed);
       lit = [];
       if (midi === null) return;
-      lit = view === viewId.fifths ? noteWedges(midi % WEDGES) : [...stage.querySelectorAll(`[data-notes="${midi}"]`)];
+      lit = view === viewId.fifths ? noteWedges(midi % WEDGES) : [...stage.querySelectorAll(`[data-run~="${midi}"]`)];
       for (const el of lit) el.classList.add(cls.pressed);
     }
 

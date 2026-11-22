@@ -114,6 +114,7 @@ export function renderClock(model) {
       tabindex: 0,
       'aria-label': displayName(names[midi % OCTAVE]),
       'data-notes': notesAttr([midi]),
+      'data-run': shown.filter((each) => each % OCTAVE === midi % OCTAVE).join(' '),
     }));
   });
   art.append(centerLabel(model));
@@ -199,22 +200,38 @@ function noteRows(model) {
   }, model));
 }
 
-function scaleRows(model) {
-  return model.scale.pcs.map((pc, i) => singleRow({
-    top: String(i + 1),
-    topClass: 'circle-degree',
-    letter: displayName(model.names[pc]),
-    pc,
-    picked: false,
-    root: i === 0,
-  }, model));
+function scaleRow(scale, picked, model) {
+  const { names, keyTonicPc, keyTonicMidi, scalePcs } = model;
+  const row = div(classes('chain-row', picked && cls.active));
+  const name = rowName(scale.top, 'circle-degree', scale.short);
+  name.dataset.scale = scale.id;
+  name.setAttribute('aria-label', scale.name);
+  row.append(name);
+  for (let c = 0; c < NOTES; c++) {
+    const pc = (keyTonicPc + c) % NOTES;
+    const run = scale.run.filter((midi) => midi % OCTAVE === pc);
+    const on = run.length > 0;
+    const cell = plainButton('', classes(
+      'chain-cell',
+      scalePcs.includes(pc) && cls.inKey,
+      on && cls.voiced,
+      on && pc === scale.root && cls.root,
+      on && pc !== scale.root && isOutside(model, pc) && cls.outside,
+      isBlocked(model, pc) && cls.blocked,
+    ));
+    cell.dataset.notes = notesAttr([on ? run[0] : keyTonicMidi + c]);
+    if (picked && on) cell.dataset.run = run.join(' ');
+    cell.setAttribute('aria-label', `${scale.name}, ${displayName(names[pc])}`);
+    row.append(cell);
+  }
+  return row;
 }
 
 export function renderChain(model) {
-  const chain = div('chain');
-  chain.append(chainHead(model.align, model.names, model.tonic));
+  const chain = div(classes('chain', model.mode === modeId.scale && 'chain-scales'));
+  chain.append(chainHead(model.align, model.names, model.keyTonicPc));
   if (model.mode === modeId.note) chain.append(...noteRows(model));
-  else if (model.mode === modeId.scale) chain.append(...scaleRows(model));
+  else if (model.mode === modeId.scale) chain.append(...model.scales.map((scale) => scaleRow(scale, scale.id === model.scale.id, model)));
   else model.items.forEach((item, i) => chain.append(chordRow(item, i === model.chordIndex, model)));
   return chain;
 }
@@ -231,6 +248,7 @@ function pianoKey(midi, pc, index, shade, model) {
   ));
   key.style.setProperty('--i', index);
   key.dataset.notes = notesAttr([midi]);
+  if (lit) key.dataset.run = midi;
   key.setAttribute('aria-label', `${displayName(model.names[pc])}${Math.floor(midi / OCTAVE) - 1}`);
   return key;
 }

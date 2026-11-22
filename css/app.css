@@ -1735,6 +1735,15 @@ button.row:active {
   background: color-mix(in srgb, var(--accent) 14%, transparent);
 }
 
+.chain-scales .chain-row {
+  grid-template-columns: 84px repeat(12, minmax(0, 1fr));
+}
+
+.chain-scales .chain-name {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .chain-head span {
   color: var(--muted);
   font-size: 10px;
