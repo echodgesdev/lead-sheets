@@ -328,7 +328,6 @@ export function renderKeys(model) {
   const { start, octaves } = keyRange(model);
   const whites = octaves * WHITE_PCS.length;
   const board = div('keys');
-  board.style.setProperty('--whites', whites);
   const dots = div('key-dots');
   const blacks = [];
   for (let o = 0; o < octaves; o++) {
@@ -345,6 +344,7 @@ export function renderKeys(model) {
   }
   board.append(...blacks);
   const view = div('keys-view');
+  view.style.setProperty('--whites', whites);
   view.append(board, dots);
   return view;
 }
