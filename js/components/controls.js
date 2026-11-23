@@ -3,7 +3,7 @@ import { div, input, option, select, small, span, classes, iconButton } from '..
 import { evt } from '../core/events.js';
 
 export function selectPill(name, title, options, value) {
-  const pill = span('select-pill');
+  const pill = span('pill select-pill');
   const text = span('select-pill-text');
   const field = select({ 'aria-label': title, title });
   for (const o of options) field.append(option({ value: o.id }, o.label));
@@ -15,6 +15,15 @@ export function selectPill(name, title, options, value) {
   onChange();
   pill.append(...(name ? [icon(name)] : []), text, field);
   return { pill, select: field };
+}
+
+export function stepPill(downTitle, upTitle) {
+  const pill = span('pill step-pill');
+  const text = span('step-pill-text');
+  const down = iconButton(iconId.chevronLeft, downTitle);
+  const up = iconButton(iconId.chevronRight, upTitle);
+  pill.append(down, text, up);
+  return { pill, text, down, up };
 }
 
 export function segToggle(...nodes) {
