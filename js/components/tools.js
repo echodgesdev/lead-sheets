@@ -1,56 +1,38 @@
 import { createTunerControl } from './tuner.js';
 import { createMetronomeControl } from './metronome.js';
 import { createCircleControl } from './circle.js';
-import { attachAccordion } from './rows.js';
-import { rowMain } from './parts.js';
-import { toolId, getOpenTools, setOpenTools } from '../data/prefs.js';
-import { details, div, summary } from '../core/dom.js';
-import { evt } from '../core/events.js';
-import { icon, iconId } from '../core/icons.js';
+import { UTILITIES, utilityId } from '../data/prefs.js';
+import { div } from '../core/dom.js';
 
-const TOOLS = [
-  { id: toolId.tuner, title: 'Tuner', icon: iconId.tuningFork, create: createTunerControl },
-  { id: toolId.metronome, title: 'Metronome', icon: iconId.metronome, create: createMetronomeControl },
-];
+const CREATE_UTILITY = {
+  [utilityId.tuner]: () => createTunerControl(),
+  [utilityId.metronome]: (tempo) => createMetronomeControl(tempo),
+};
 
-function toolNode(tool, open) {
-  const mark = icon(tool.icon);
-  const head = summary('row tool-row');
-  head.append(mark, rowMain(tool), icon(iconId.chevronDown));
-  const node = details('tool');
-  node.open = open;
-  node.append(head);
-  return { node, mark };
+export function createUtilities(tempo) {
+  const controls = UTILITIES.map((u) => ({ id: u.id, control: CREATE_UTILITY[u.id](tempo) }));
+  return {
+    buttons: controls.map(({ control }) => control.button),
+    show(ids) {
+      const shown = new Set(ids);
+      for (const { id, control } of controls) control.button.hidden = !shown.has(id);
+    },
+    dispose() {
+      for (const { control } of controls) control.dispose();
+    },
+  };
 }
 
 export function createToolsPanel() {
-  const openIds = new Set(getOpenTools());
-  const list = div('list');
-  const parts = TOOLS.map((tool) => {
-    const control = tool.create();
-    const { node, mark } = toolNode(tool, openIds.has(tool.id));
-    control.attachIndicator?.(mark);
-    const close = attachAccordion(node, control.open);
-    node.addEventListener(evt.toggle, () => {
-      if (node.open) openIds.add(tool.id);
-      else openIds.delete(tool.id);
-      setOpenTools([...openIds]);
-    });
-    list.append(node);
-    return { control, close };
-  });
   const theory = createCircleControl();
   const body = theory.open();
   const panel = div('tool theory-panel');
   panel.append(body.header, ...body.rows);
+  const list = div('list');
   list.append(panel);
   return {
     el: list,
     dispose() {
-      for (const { control, close } of parts) {
-        close();
-        control.dispose();
-      }
       body.onClose();
       theory.dispose();
     },

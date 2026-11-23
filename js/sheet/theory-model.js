@@ -1,5 +1,4 @@
 import {
-  WEDGES,
   keyOf,
   keyTonic,
   keyChords,
@@ -20,6 +19,7 @@ import {
 } from './circle.js';
 import { SHARPS, chordSpelling, parseKey } from './chords.js';
 import { roman } from './transpose.js';
+import { mod12 } from '../core/math.js';
 import { stepKind } from './vis-spec.js';
 
 const SHIFT_MARKS = { [-1]: '♭', 0: '', 1: '♯' };
@@ -71,14 +71,14 @@ function keyFrame({ index, minor, locked, minOctaves }) {
       key: keyLabel(index, minor),
       keyTonicPc: tonic,
       keyTonicMidi: noteMidi(tonic, tonic),
-      names: pitchNames(index, keyPcs),
+      names: pitchNames(index, minor),
       scalePcs: keyPcs,
     },
   };
 }
 
 function uniquePcs(midis) {
-  return [...new Set(midis.map((midi) => midi % WEDGES))];
+  return [...new Set(midis.map(mod12))];
 }
 
 export function theoryModel(state) {
@@ -122,7 +122,7 @@ export function theoryModel(state) {
 
 function degreeStep({ degree, shift }, { index, minor }, names) {
   const midi = degreeMidi(index, minor, degree, shift);
-  const pc = midi % WEDGES;
+  const pc = mod12(midi);
   const name = shift > 0 ? SHARPS[pc] : names[pc];
   return { top: `${SHIFT_MARKS[shift]}${degree}`, label: displayName(name), midis: [midi], rootPc: pc };
 }

@@ -49,6 +49,11 @@ export function attachPlayer({ areas, stage, selector, voiceFor = (el) => startN
     run = playRun(steps, light);
   }
 
+  function dispose() {
+    end();
+    stopRun();
+  }
+
   for (const area of areas) {
     area.addEventListener(evt.pointerdown, (e) => {
       if (e.button === 0) begin(e.target);
@@ -64,5 +69,5 @@ export function attachPlayer({ areas, stage, selector, voiceFor = (el) => startN
     });
   }
 
-  return { playSteps, stopRun, end };
+  return { playSteps, stopRun, dispose };
 }

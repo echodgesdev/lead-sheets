@@ -1,6 +1,7 @@
 import { isChord, isKeyName, chordSpelling } from './chords.js';
 
-export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', notes: 'notes', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', clef: 'clef' });
+export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', clef: 'clef' });
+export const alignId = Object.freeze({ root: 'root', key: 'key' });
 export const visControlId = Object.freeze({ play: 'play' });
 export const stepKind = Object.freeze({ degree: 'degree', chord: 'chord' });
 export const fingeringId = Object.freeze({ caged: 'caged', threePerString: '3nps', oneString: 'string' });
@@ -13,7 +14,13 @@ const DEGREE_RE = /^([b#♭♯]?)(\d+)$/;
 const TOKEN_RE = /\[[^\]]*\]?|[^\s[]+/g;
 const SHIFTS = { '': 0, b: -1, '♭': -1, '#': 1, '♯': 1 };
 const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls', position: 'position', fingering: 'fingering' });
-const VIS_NAMES = new Map([...Object.values(visId).map((v) => [v, v]), ['keys', visId.piano], ['guitar', visId.fretboard], ['staff', visId.clef]]);
+const VIS_NAMES = new Map([
+  ...Object.values(visId).map((vis) => [vis, { vis }]),
+  ['keys', { vis: visId.piano }],
+  ['guitar', { vis: visId.fretboard }],
+  ['staff', { vis: visId.clef }],
+  ['notes', { vis: visId.intervals, align: alignId.key }],
+]);
 const CONTROLS = new Set(Object.values(visControlId));
 const FINGERINGS = new Set(Object.values(fingeringId));
 const READERS = new Map([
@@ -46,9 +53,10 @@ function stepOf(token) {
 }
 
 function readVis(value, spec) {
-  const vis = VIS_NAMES.get(value.toLowerCase());
-  spec.vis = vis ?? visId.piano;
-  if (!vis) spec.errors.push(`Unknown vis "${value}", showing ${visId.piano}`);
+  const found = VIS_NAMES.get(value.toLowerCase());
+  spec.vis = found?.vis ?? visId.piano;
+  spec.align = found?.align ?? alignId.root;
+  if (!found) spec.errors.push(`Unknown vis "${value}", showing ${visId.piano}`);
 }
 
 function readKey(value, spec) {
@@ -92,7 +100,7 @@ export function parseVisSpec(line) {
   if (!m) return null;
   const fields = fieldsOf(m[1]);
   if (fields[0]?.name !== FIELD.vis) return null;
-  const spec = { vis: visId.piano, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] };
+  const spec = { vis: visId.piano, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] };
   for (const f of fields) {
     const read = READERS.get(f.name);
     if (read) read(f.value, spec);

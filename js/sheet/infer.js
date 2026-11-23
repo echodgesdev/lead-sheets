@@ -1,4 +1,4 @@
-import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
+import { isChordLine, chordTokens, inlineChords, isTabLine } from './chords.js';
 import { META_FIELDS, LIST_FIELDS, sectionName, normalizeLines, fieldName, splitTags } from './parse.js';
 import { parseVisSpec } from './vis-spec.js';
 
@@ -158,16 +158,16 @@ function fixChordLine(line) {
 }
 
 function inlineToPair(line) {
-  const matches = [...line.matchAll(/\[([^\]]+)\]/g)].filter((m) => isChord(m[1].trim()));
-  if (!matches.length) return null;
+  const found = inlineChords(line);
+  if (!found.length) return null;
   let lyric = '';
   let chords = '';
   let last = 0;
-  for (const m of matches) {
-    lyric += line.slice(last, m.index);
-    last = m.index + m[0].length;
+  for (const { chord, index, end } of found) {
+    lyric += line.slice(last, index);
+    last = end;
     if (chords && lyric.length < chords.length + 1) lyric = lyric.padEnd(chords.length + 1);
-    chords = chords.padEnd(lyric.length) + fixRoot(m[1].trim());
+    chords = chords.padEnd(lyric.length) + fixRoot(chord);
   }
   lyric += line.slice(last);
   return { chords, lyric: lyric.trimEnd() };

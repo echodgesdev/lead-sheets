@@ -1,4 +1,4 @@
-import { isChord, isChordLine, chordTokens, isTabLine } from './chords.js';
+import { isChord, isChordLine, chordTokens, inlineChords, isTabLine } from './chords.js';
 import { parseVisSpec } from './vis-spec.js';
 
 export const META_FIELDS = ['artist', 'album', 'genre', 'key', 'capo', 'tempo', 'tuning', 'meta', 'notes'];
@@ -91,19 +91,27 @@ function buildMeta(title, fields) {
   return meta;
 }
 
-function isInlineChordOnly(line) {
-  const s = line.trim();
-  if (!/^(?:\[[^\]]+\]\s*)+$/.test(s)) return false;
-  return [...s.matchAll(/\[([^\]]+)\]/g)].every((m) => isChord(m[1].trim()));
-}
-
-function asChordLine(line) {
-  if (isInlineChordOnly(line)) return line.replace(/\[([^\]]+)\]/g, '$1');
-  return isChordLine(line) ? line : null;
+function spliceInlineChords(line, fn) {
+  let out = '';
+  let last = 0;
+  for (const { chord, index, end } of inlineChords(line)) {
+    out += line.slice(last, index) + fn(chord);
+    last = end;
+  }
+  return out + line.slice(last);
 }
 
 function hasInlineChords(line) {
-  return [...line.matchAll(/\[([^\]]+)\]/g)].some((m) => isChord(m[1].trim()));
+  return inlineChords(line).length > 0;
+}
+
+function isInlineChordOnly(line) {
+  return hasInlineChords(line) && !spliceInlineChords(line, () => '').trim();
+}
+
+function asChordLine(line) {
+  if (isInlineChordOnly(line)) return spliceInlineChords(line, (chord) => chord);
+  return isChordLine(line) ? line : null;
 }
 
 function isLyricLine(line) {
@@ -135,20 +143,17 @@ function pairFromChordLine(chordLine, lyric) {
 }
 
 function inlineSegments(line) {
+  const found = inlineChords(line);
+  if (!found.length) return null;
   const segments = [];
   let cur = { chord: null, text: '' };
   let last = 0;
-  let found = false;
-  for (const m of line.matchAll(/\[([^\]]+)\]/g)) {
-    const chord = m[1].trim();
-    if (!isChord(chord)) continue;
-    found = true;
-    cur.text += line.slice(last, m.index);
+  for (const { chord, index, end } of found) {
+    cur.text += line.slice(last, index);
     if (cur.chord !== null || cur.text) segments.push(cur);
     cur = { chord, text: '' };
-    last = m.index + m[0].length;
+    last = end;
   }
-  if (!found) return null;
   cur.text += line.slice(last);
   segments.push(cur);
   return segments;

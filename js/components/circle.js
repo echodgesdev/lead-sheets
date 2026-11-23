@@ -1,33 +1,21 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
-import { selectPill, stepPill } from './controls.js';
-import { renderClock, renderChain, renderKeys, renderFretboard, renderTab, renderStaff, alignId, labelId } from './theory-views.js';
+import { selectPill, stepper } from './controls.js';
+import { THEORY_VIEWS, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
 import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
-import { fingeringId } from '../sheet/vis-spec.js';
+import { visId, alignId, fingeringId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
-import { div, span, iconButton, plainButton, labeledButton, cls } from '../core/dom.js';
+import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
 const PLAYABLE = '[data-slot], [data-notes], [data-scale]';
-
-const viewId = Object.freeze({
-  fifths: 'fifths',
-  clock: 'clock',
-  intervals: 'intervals',
-  notes: 'notes',
-  keys: 'keys',
-  fretboard: 'fretboard',
-  tab: 'tab',
-  clef: 'clef',
-});
-
-const NECK_VIEWS = new Set([viewId.fretboard, viewId.tab]);
+const VOICED = `.note-dot:not(.${cls.faint})`;
 
 const MODES = [
   { id: modeId.note, icon: iconId.musicNote, label: 'Note', title: 'Single notes' },
@@ -67,40 +55,33 @@ const LABELS = [
   { id: labelId.degree, label: 'Degrees', title: 'Degrees from the root' },
 ];
 
-const INVERSION_TITLES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion', '4th inversion', '5th inversion'];
-
-const VIEWS = [
-  { id: viewId.fifths, icon: iconId.chartPie, label: 'Fifths', title: 'Circle of fifths' },
-  { id: viewId.clock, icon: iconId.clock, label: 'Clock', title: 'Clock' },
-  { id: viewId.intervals, icon: iconId.rulerHorizontal, label: 'Intervals', title: 'Intervals' },
-  { id: viewId.notes, icon: iconId.music, label: 'Notes', title: 'Notes' },
-  { id: viewId.keys, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
-  { id: viewId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
-  { id: viewId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
-  { id: viewId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
+const ALIGNS = [
+  { id: alignId.root, label: 'Root', title: 'Rows lined up on each chord’s root' },
+  { id: alignId.key, label: 'Key', title: 'Rows lined up on the key' },
 ];
 
-const RENDERERS = {
-  [viewId.clock]: renderClock,
-  [viewId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
-  [viewId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
-  [viewId.keys]: renderKeys,
-  [viewId.fretboard]: (model, { layout, labels }) => renderFretboard(model, layout, labels),
-  [viewId.tab]: (model, { layout }) => renderTab(model, layout),
-  [viewId.clef]: renderStaff,
-};
+const INVERSIONS = ['Root', '1st', '2nd', '3rd'];
+
+const VIEWS = [
+  { id: visId.fifths, icon: iconId.chartPie, label: 'Fifths', title: 'Circle of fifths' },
+  { id: visId.clock, icon: iconId.clock, label: 'Clock', title: 'Clock' },
+  { id: visId.intervals, icon: iconId.rulerHorizontal, label: 'Intervals', title: 'Intervals' },
+  { id: visId.piano, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
+  { id: visId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
+  { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
+  { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
+];
 
 function scaleChip(scale) {
   const chip = plainButton(span('circle-degree', scale.top), 'circle-chord');
   chip.append(span(null, scale.short));
   chip.dataset.scale = scale.id;
-  chip.title = scale.name;
-  chip.setAttribute('aria-label', scale.name);
+  setTitle(chip, scale.name);
   return chip;
 }
 
 function inversionOptions(count) {
-  return Array.from({ length: count }).map((_, i) => ({ id: i, label: i ? String(i) : 'R', title: INVERSION_TITLES[i] }));
+  return INVERSIONS.slice(0, count).map((label, i) => ({ id: i, label, title: i ? `${label} inversion` : 'Root position' }));
 }
 
 function chordChip(item, degree, bare, shaped) {
@@ -117,7 +98,8 @@ export function createCircleControl() {
   const button = iconButton(iconId.bookOpen, 'Theory');
   let mode = modeId.chord;
   let locked = false;
-  let view = viewId.fifths;
+  let view = visId.fifths;
+  let align = alignId.root;
   let inversion = 0;
   let scaleChoice = scaleId.ionian;
   const chordShapes = [];
@@ -193,7 +175,7 @@ export function createCircleControl() {
     const voicingField = labeledField('Voicing', voicingToggle(3));
 
     function syncVoicing() {
-      const count = shapeOf(items[chordIndex]).steps.length;
+      const count = Math.min(shapeOf(items[chordIndex]).steps.length, INVERSIONS.length);
       if (count === voicingCount) return;
       voicingCount = count;
       inversion = Math.min(inversion, count - 1);
@@ -213,9 +195,7 @@ export function createCircleControl() {
       };
       const chip = (choice) => {
         const b = labeledButton(null, displayName(choice.name), 'chip');
-        const on = choice.id === shapeIdOf(index);
-        b.classList.toggle(cls.active, on);
-        b.setAttribute('aria-pressed', String(on));
+        setPressed(b, choice.id === shapeIdOf(index));
         b.addEventListener(evt.click, () => pick(choice.id));
         return b;
       };
@@ -243,20 +223,16 @@ export function createCircleControl() {
     let neck = null;
 
     function renderStage() {
-      neckRow.hidden = !NECK_VIEWS.has(view);
-      showField.hidden = view !== viewId.fretboard;
-      labelField.hidden = view !== viewId.fretboard;
-      neck = NECK_VIEWS.has(view) ? fretLayout(model(), GUITAR, neckOptions) : null;
+      const { neck: neckView, render } = THEORY_VIEWS[view];
+      syncOptions(neckView);
+      const current = model();
+      neck = neckView ? fretLayout(current, GUITAR, neckOptions) : null;
       if (neck) {
         neckOptions.position = neck.position;
         neckCount.textContent = neck.count ? `${neck.position + 1} / ${neck.count}` : '–';
       }
-      if (view !== viewId.fifths) {
-        stage.replaceChildren(RENDERERS[view](model(), { layout: neck, labels }));
-        return;
-      }
-      fifths.tagSteps(model().run);
-      if (fifths.el.parentNode !== stage) stage.replaceChildren(fifths.el);
+      const art = render(current, { fifths, layout: neck, labels, align });
+      if (art.parentNode !== stage) stage.replaceChildren(art);
     }
 
     function syncChips() {
@@ -286,10 +262,8 @@ export function createCircleControl() {
 
     function renderLock() {
       lockBtn.replaceChildren(icon(locked ? iconId.lock : iconId.lockOpen));
-      lockBtn.classList.toggle(cls.active, locked);
-      lockBtn.setAttribute('aria-pressed', String(locked));
-      lockBtn.title = locked ? 'Unlock' : 'Lock to the key or selection';
-      lockBtn.setAttribute('aria-label', lockBtn.title);
+      setPressed(lockBtn, locked);
+      setTitle(lockBtn, locked ? 'Unlock' : 'Lock to the key or selection');
     }
 
     lockBtn.addEventListener(evt.click, () => {
@@ -333,9 +307,8 @@ export function createCircleControl() {
       renderStage();
     }
 
-    const { pill: stepper, text: neckCount, down: prevPosition, up: nextPosition } = stepPill('Previous position', 'Next position');
-    prevPosition.addEventListener(evt.click, () => stepPosition(-1));
-    nextPosition.addEventListener(evt.click, () => stepPosition(1));
+    const neckCount = span('step-pill-text');
+    const positionStepper = stepper({ pill: true, center: neckCount, downTitle: 'Previous position', upTitle: 'Next position', onStep: stepPosition });
     const fingeringField = neckPill('Fingering', FINGERINGS, 'fingering');
     const matchField = neckPill('Match', MATCHES, 'match');
     const { pill: labelPill, select: labelSelect } = selectPill(null, 'Labels', LABELS, labels);
@@ -345,21 +318,44 @@ export function createCircleControl() {
     });
     const labelField = labeledField('Labels', labelPill);
     const showField = neckPill('Show', SHOWS, 'show');
-    const neckRow = modalRow(null, labeledField('Position', stepper), showField, fingeringField, matchField, labelField);
-    neckRow.classList.add('fret-controls');
+    const positionField = labeledField('Position', positionStepper.el);
+    const alignField = labeledField('Align', choiceToggle(ALIGNS, align, (id) => {
+      if (id === align) return;
+      align = id;
+      renderStage();
+    }));
+    const viewFields = [positionField, showField, fingeringField, matchField, labelField, alignField];
+    const viewRow = modalRow(null, ...viewFields);
+    viewRow.classList.add('view-controls');
+
+    function syncOptions(neckView) {
+      positionField.hidden = !neckView;
+      showField.hidden = view !== visId.fretboard;
+      labelField.hidden = view !== visId.fretboard;
+      fingeringField.hidden = !neckView || mode !== modeId.scale;
+      matchField.hidden = !neckView || mode !== modeId.note;
+      alignField.hidden = view !== visId.intervals;
+      viewRow.hidden = viewFields.every((field) => field.hidden);
+    }
 
     function notePcOf(el) {
-      const { ring, index, slot } = el.dataset;
-      if (ring && ring !== ringId.dim) return keyTonic(Number(index), ring === ringId.inner);
-      return chipItems.get(slot)?.pc ?? null;
+      return el.dataset.ring ? fifths.pcOf(el) : (chipItems.get(el.dataset.slot)?.pc ?? null);
     }
 
     function pressedFor(el) {
       const { slot } = el.dataset;
-      const notePc = noteMode() && view === viewId.fifths ? notePcOf(el) : null;
+      const notePc = noteMode() && view === visId.fifths ? notePcOf(el) : null;
       if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
-      if (slot) return [stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]);
+      if (slot) return [...[stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]), ...voicedDots()];
       return [el];
+    }
+
+    function voicedDots() {
+      return neck?.voicing.length ? [...stage.querySelectorAll(VOICED)] : [];
+    }
+
+    function chordVoice(item) {
+      return neck?.voicing.length ? neck.voicing : voiceNotes(item.pc, shapeOf(item).steps, tonic(), inversion);
     }
 
     function wedgeVoice(el) {
@@ -381,9 +377,10 @@ export function createCircleControl() {
         chordIndex = index;
         syncChips();
         syncVoicing();
-        stageDirty = view !== viewId.fifths;
+        if (neck) renderStage();
+        else stageDirty = view !== visId.fifths;
       }
-      return startNotes(mode === modeId.chord ? voiceNotes(item.pc, shapeOf(item).steps, tonic(), inversion) : chordNotes(item.pc, item.quality, false, tonic()));
+      return startNotes(mode === modeId.chord ? chordVoice(item) : chordNotes(item.pc, item.quality, false, tonic()));
     }
 
     function pickScale(id) {
@@ -412,8 +409,6 @@ export function createCircleControl() {
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
       rootingField.hidden = mode !== modeId.scale;
-      fingeringField.hidden = mode !== modeId.scale;
-      matchField.hidden = mode !== modeId.note;
     }
 
     syncMode();
@@ -421,11 +416,8 @@ export function createCircleControl() {
     renderLock();
     return {
       header,
-      rows: [stage, neckRow, controls, chords],
-      onClose: () => {
-        player.end();
-        player.stopRun();
-      },
+      rows: [stage, viewRow, controls, chords],
+      onClose: player.dispose,
     };
   }
 

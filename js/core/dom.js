@@ -58,6 +58,16 @@ export function classes(...names) {
   return names.filter(Boolean).join(' ');
 }
 
+export function setPressed(node, on) {
+  node.classList.toggle(cls.active, on);
+  node.setAttribute('aria-pressed', String(on));
+}
+
+export function setTitle(node, title) {
+  node.title = title;
+  node.setAttribute('aria-label', title);
+}
+
 export function plainButton(content, className) {
   const node = create('button', { class: className, type: 'button' });
   node.append(content);

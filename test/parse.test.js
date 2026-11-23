@@ -1,5 +1,5 @@
 import { test, eq, fixture } from './harness.js';
-import { isChord, isChordLine, chordTokens, isTabLine, diatonic, chordsIn } from '../js/sheet/chords.js';
+import { isChord, isChordLine, chordTokens, inlineChords, isTabLine, diatonic, chordsIn } from '../js/sheet/chords.js';
 import { parse, sectionName, splitTags, META_FIELDS } from '../js/sheet/parse.js';
 
 const body = (s) => parse('T\n\n' + s).blocks;
@@ -11,7 +11,7 @@ test('isChord positives', () => {
     'A', 'Am', 'E', 'Em7', 'Am7', 'F#m7b5', 'G/B', 'Bbmaj7', 'Dsus4', 'C#dim', 'E7#9', 'N.C.',
     'Cadd9', 'C(add9)', 'Dm/F', 'Gsus2', 'Aaug', 'C+', 'Bø', 'B°', 'A7sus4', 'Cmaj9', 'D6',
     'G13', 'Eb', 'Cm9', 'F#', 'Gmin7', 'CM7', 'E5', 'C7b9', 'D7#11', 'Dm7b5', 'Bb', 'a', 'em7',
-    'Bm7-5', 'C#m7-5', 'A7-9', 'C7+5',
+    'Bm7-5', 'C#m7-5', 'A7-9', 'C7+5', 'C6/9', 'Dm6', 'Fmaj7#11', 'Bø11b9',
   ];
   good.forEach((t) => eq(isChord(t), true, t));
 });
@@ -64,6 +64,11 @@ test('isTabLine', () => {
   eq(isTabLine('E: strum -- down'), false);
   eq(isTabLine('Tonight we walk the harbor road'), false);
   eq(isTabLine('Am  G'), false);
+});
+
+test('inlineChords', () => {
+  eq(inlineChords('[G]Hello [Verse] [ C ]x'), [{ chord: 'G', index: 0, end: 3 }, { chord: 'C', index: 17, end: 22 }]);
+  eq(inlineChords('no chords'), []);
 });
 
 test('chordsIn', () => {

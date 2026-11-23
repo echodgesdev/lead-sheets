@@ -1,11 +1,7 @@
-import { SHARPS, chordTokens, CHORD_PARTS_RE, CHORD_QUALITIES, pitchOf, parseKey } from './chords.js';
+import { SHARPS, FLATS, chordTokens, chordParts, chordQuality, mapChord, parseKey, keyName, fifthsIndex, flatSide } from './chords.js';
 import { stepKind } from './vis-spec.js';
 import { clamp, mod12 } from '../core/math.js';
 
-const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
-const MAJOR_KEYS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'];
-const MINOR_KEYS = ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B'];
-const FLAT_KEYS = new Set(['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm']);
 const DEGREES = ['1', 'b2', '2', 'b3', '3', '4', 'b5', '5', 'b6', '6', 'b7', '7'];
 const ROMAN = ['I', '♭II', 'II', '♭III', 'III', 'IV', '♭V', 'V', '♭VI', 'VI', '♭VII', 'VII'];
 const SUPERSCRIPT = ['⁰', '¹', '²', '³', '⁴', '⁵', '⁶', '⁷', '⁸', '⁹'];
@@ -20,53 +16,31 @@ export function signed(n) {
   return n > 0 ? `+${n}` : String(n);
 }
 
-function keyName({ pc, minor }) {
-  return minor ? `${MINOR_KEYS[pc]}m` : MAJOR_KEYS[pc];
-}
-
 export function transposeChord(chord, shift, flats) {
-  const m = CHORD_PARTS_RE.exec(chord);
-  if (!m) return chord;
-  const [, root, acc, rest, bass, bassAcc, marks] = m;
   const names = flats ? FLATS : SHARPS;
-  const name = (l, a) => names[mod12(pitchOf(l, a) + shift)];
-  return name(root, acc) + rest + (bass ? `/${name(bass, bassAcc)}` : '') + marks;
+  return mapChord(chord, (pc) => names[mod12(pc + shift)]);
 }
 
 export function nashville(chord, key) {
-  const m = CHORD_PARTS_RE.exec(chord);
-  if (!m) return chord;
-  const [, root, acc, rest, bass, bassAcc, marks] = m;
-  const degree = (l, a) => DEGREES[mod12(pitchOf(l, a) - key.pc)];
-  return degree(root, acc) + superscript(rest) + (bass ? `/${degree(bass, bassAcc)}` : '') + marks;
+  return mapChord(chord, (pc) => DEGREES[mod12(pc - key.pc)], superscript);
 }
 
 function superscript(text) {
   return text.replace(/\d/g, (d) => SUPERSCRIPT[d]);
 }
 
-function quality(rest) {
-  for (const q of CHORD_QUALITIES) {
-    const m = q.re.exec(rest);
-    if (m) return { ...q, rest: rest.slice(m[0].length) };
-  }
-  return { lower: false, mark: '', rest };
-}
-
 export function roman(chord, key) {
-  const m = CHORD_PARTS_RE.exec(chord);
-  if (!m) return chord;
-  const [, root, acc, rest, bass, bassAcc, marks] = m;
-  const rootPc = pitchOf(root, acc);
-  const q = quality(rest);
-  const numeral = ROMAN[mod12(rootPc - key.pc)];
+  const parts = chordParts(chord);
+  if (!parts) return chord;
+  const { root, suffix, bass, marks } = parts;
+  const q = chordQuality(suffix) ?? { lower: false, mark: '', rest: suffix };
+  const numeral = ROMAN[mod12(root - key.pc)];
   const seventh = q.seventh || /7|9|11|13/.test(q.rest);
   let figure = '';
   let over = '';
-  if (bass) {
-    const bassPc = pitchOf(bass, bassAcc);
-    figure = INVERSIONS[seventh ? 'seventh' : 'triad'][mod12(bassPc - rootPc)] ?? '';
-    if (!figure) over = `/${DEGREES[mod12(bassPc - key.pc)]}`;
+  if (bass !== null) {
+    figure = INVERSIONS[seventh ? 'seventh' : 'triad'][mod12(bass - root)] ?? '';
+    if (!figure) over = `/${DEGREES[mod12(bass - key.pc)]}`;
   }
   const extension = figure ? q.rest.replace('7', '') : q.rest;
   const mark = q.seventh && !figure ? `${q.mark}⁷` : q.mark;
@@ -78,7 +52,7 @@ const NUMERALS = { nashville, roman };
 export function transposeKey(key, shift) {
   const base = parseKey(key);
   if (!shift || !base) return key;
-  return keyName({ ...base, pc: mod12(base.pc + shift) });
+  return keyName(mod12(base.pc + shift), base.minor);
 }
 
 export function hasKey(key) {
@@ -121,7 +95,7 @@ function mapBlock(b, fn) {
 function visKey(spec, key, capo, shift) {
   if (spec.key) return transposeKey(spec.key, shift);
   const shapes = shapesOf(key, capo);
-  return shapes ? keyName({ ...shapes, pc: mod12(shapes.pc + shift) }) : null;
+  return shapes ? keyName(mod12(shapes.pc + shift), shapes.minor) : null;
 }
 
 function mapVis(b, fn, key, capo, shift) {
@@ -137,7 +111,7 @@ function shapesOf(key, capo) {
 function pitchView(key, capo, shift) {
   if (!shift) return null;
   const shapes = shapesOf(key, capo);
-  const flats = shapes ? FLAT_KEYS.has(keyName({ ...shapes, pc: mod12(shapes.pc + shift) })) : shift < 0;
+  const flats = shapes ? flatSide(fifthsIndex(mod12(shapes.pc + shift), shapes.minor)) : shift < 0;
   return (c) => transposeChord(c, shift, flats);
 }
 

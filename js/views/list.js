@@ -16,30 +16,31 @@ import {
   setSongOrder,
   listOptionId,
   hasListOption,
+  getToolUtilities,
 } from '../data/prefs.js';
-import { a, div, h1, header, p, span, iconButton, labeledButton, iconLink, classes, cls } from '../core/dom.js';
+import { a, div, h1, header, p, span, iconButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
-import { segToggle, selectPill } from '../components/controls.js';
-import { createToolsPanel } from '../components/tools.js';
+import { selectPill } from '../components/controls.js';
+import { choiceToggle } from '../components/rows.js';
+import { createToolsPanel, createUtilities } from '../components/tools.js';
 
 const EMPTY_HINT = 'Tap Edit, then +, or import a backup from Settings';
 const NO_SETS_HINT = 'No setlists yet. Tap Edit to make one';
 const APP_NAME = 'Lead Sheets';
 const INTRO_MS = 1200;
 
+const MODES = [
+  { id: modeId.live, icon: iconId.play, label: 'Live', title: 'Live' },
+  { id: modeId.edit, icon: iconId.penToSquare, label: 'Edit', title: 'Edit' },
+  { id: modeId.tools, icon: iconId.wrench, label: 'Tools', title: 'Tools' },
+];
+
 let introPlayed = false;
 
 function subtitleOf(rec, by) {
   return [by !== 'artist' && rec.artist, by !== 'album' && rec.album].filter(Boolean).join(' · ');
-}
-
-function modeButton(name, text) {
-  const btn = labeledButton(name, span('mode-label', text));
-  btn.title = text;
-  btn.setAttribute('aria-label', text);
-  return btn;
 }
 
 export function mount(el) {
@@ -58,12 +59,10 @@ export function mount(el) {
     span({ class: 'brand-logo', role: 'img', 'aria-label': APP_NAME }),
     span({ class: 'brand-name', 'aria-hidden': 'true' }, APP_NAME),
   );
-  const modeBtns = {
-    [modeId.live]: modeButton(iconId.play, 'Live'),
-    [modeId.edit]: modeButton(iconId.penToSquare, 'Edit'),
-    [modeId.tools]: modeButton(iconId.wrench, 'Tools'),
-  };
-  const modeToggle = segToggle(...Object.values(modeBtns));
+  const modeToggle = choiceToggle(MODES, mode, (id) => {
+    if (id === mode) return;
+    setMode(id);
+  });
   modeToggle.setAttribute('role', 'group');
   modeToggle.setAttribute('aria-label', 'Mode');
   const menuBtn = iconButton(iconId.ellipsisVertical, 'Settings');
@@ -85,6 +84,7 @@ export function mount(el) {
   const empty = p({ class: 'status', hidden: '' });
   const toolsEl = div();
   let toolsPanel = null;
+  let utilities = null;
 
   top.append(headerEl, searchBar);
   screen.append(top, groupsEl, empty, toolsEl);
@@ -162,10 +162,6 @@ export function mount(el) {
   }
 
   function applyMode() {
-    for (const [id, btn] of Object.entries(modeBtns)) {
-      btn.classList.toggle(cls.active, id === mode);
-      btn.setAttribute('aria-pressed', String(id === mode));
-    }
     const edit = mode === modeId.edit;
     const tools = mode === modeId.tools;
     newLink.hidden = !edit;
@@ -175,6 +171,11 @@ export function mount(el) {
       empty.hidden = true;
       toolsPanel ??= createToolsPanel();
       toolsEl.replaceChildren(toolsPanel.el);
+      if (!utilities) {
+        utilities = createUtilities();
+        menuBtn.before(...utilities.buttons);
+      }
+      utilities.show(getToolUtilities());
       return;
     }
     disposeTools();
@@ -185,6 +186,10 @@ export function mount(el) {
     toolsPanel?.dispose();
     toolsPanel = null;
     toolsEl.replaceChildren();
+    if (!utilities) return;
+    utilities.dispose();
+    for (const b of utilities.buttons) b.remove();
+    utilities = null;
   }
 
   function setMode(next) {
@@ -208,7 +213,6 @@ export function mount(el) {
     e.preventDefault();
     openActions(rec);
   });
-  for (const [id, btn] of Object.entries(modeBtns)) btn.addEventListener(evt.click, () => setMode(id));
   menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
 
   applyMode();

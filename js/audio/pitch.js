@@ -1,5 +1,5 @@
 import { SHARPS } from '../sheet/chords.js';
-import { mod12 } from '../core/math.js';
+import { mod12, OCTAVE } from '../core/math.js';
 
 const MIN_FREQ = 60;
 const MAX_FREQ = 1100;
@@ -8,6 +8,14 @@ const PEAK_RATIO = 0.9;
 const MIN_CLARITY = 0.9;
 const A4_FREQ = 440;
 const A4_MIDI = 69;
+
+export function midiToHz(midi) {
+  return A4_FREQ * 2 ** ((midi - A4_MIDI) / OCTAVE);
+}
+
+export function hzToMidi(freq) {
+  return A4_MIDI + OCTAVE * Math.log2(freq / A4_FREQ);
+}
 
 function centered(buf) {
   let mean = 0;
@@ -74,11 +82,11 @@ export function detectPitch(buf, sampleRate) {
 }
 
 export function noteOf(freq) {
-  const exact = A4_MIDI + 12 * Math.log2(freq / A4_FREQ);
+  const exact = hzToMidi(freq);
   const midi = Math.round(exact);
   return {
     name: SHARPS[mod12(midi)],
-    octave: Math.floor(midi / 12) - 1,
+    octave: Math.floor(midi / OCTAVE) - 1,
     cents: Math.round((exact - midi) * 100),
     midi,
   };

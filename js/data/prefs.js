@@ -14,7 +14,7 @@ const PEDAL_KEY = 'tabs.pedal';
 const TEXT_SIZE_KEY = 'tabs.textSize';
 const EDITOR_KEY = 'tabs.editor';
 const LIST_OPTIONS_KEY = 'tabs.listOptions';
-const OPEN_TOOLS_KEY = 'tabs.openTools';
+const TOOL_UTILITIES_KEY = 'tabs.toolUtilities';
 const KEY_OCTAVES_KEY = 'tabs.keyOctaves';
 const METRONOME_KEY = 'tabs.metronome';
 
@@ -35,7 +35,7 @@ export const listOptionId = Object.freeze({
   rowMenus: 'rowMenus',
 });
 
-export const toolId = Object.freeze({
+export const utilityId = Object.freeze({
   tuner: 'tuner',
   metronome: 'metronome',
 });
@@ -68,8 +68,6 @@ export const controlId = Object.freeze({
   transpose: 'transpose',
   numbers: 'numbers',
   details: 'details',
-  tuner: 'tuner',
-  metronome: 'metronome',
   songNav: 'songNav',
 });
 
@@ -86,8 +84,6 @@ export const PEDAL_MODES = [
 export const LIST_OPTIONS = [
   { id: listOptionId.rowMenus, label: 'Song Menus' },
 ];
-
-const REMEMBERED_TOOLS = [{ id: toolId.metronome }];
 
 export const EDITOR_OPTIONS = [
   { id: editorId.autofix, label: 'Fix Format On Preview' },
@@ -116,11 +112,16 @@ export const CONTROLS = [
   { id: controlId.transpose, label: 'Transpose', bar: barId.top },
   { id: controlId.numbers, label: 'Numbers', bar: barId.top },
   { id: controlId.details, label: 'Details', bar: barId.top },
-  { id: controlId.tuner, label: 'Tuner', bar: barId.top },
-  { id: controlId.metronome, label: 'Metronome', bar: barId.top },
   { id: controlId.autoscroll, label: 'Auto-scroll', bar: barId.bottom },
   { id: controlId.songNav, label: 'Prev / Next', bar: barId.bottom },
 ];
+
+export const UTILITIES = [
+  { id: utilityId.tuner, label: 'Tuner' },
+  { id: utilityId.metronome, label: 'Metronome' },
+];
+
+const LIVE_ITEMS = [...CONTROLS, ...UTILITIES];
 
 
 function read(key) {
@@ -160,6 +161,21 @@ function shownIds(key, items, fallback) {
   return Array.isArray(ids) ? ids.filter((id) => items.some((t) => t.id === id)) : fallback;
 }
 
+function knownIds(key, items) {
+  const saved = read(key);
+  const ids = items.map((c) => c.id);
+  if (!Array.isArray(saved?.shown) || !Array.isArray(saved?.known)) return ids;
+  return ids.filter((id) => saved.shown.includes(id) || !saved.known.includes(id));
+}
+
+function writeKnown(key, items, ids) {
+  write(key, { shown: ids, known: items.map((c) => c.id) });
+}
+
+function pick(list, id, fallback) {
+  return list.some((o) => o.id === id) ? id : fallback;
+}
+
 export function getListMode() {
   const mode = readRaw(localStorage, MODE_KEY);
   return Object.values(modeId).includes(mode) ? mode : modeId.live;
@@ -170,8 +186,7 @@ export function setListMode(mode) {
 }
 
 export function getListGroup() {
-  const id = readRaw(localStorage, GROUP_KEY);
-  return GROUPS.some((g) => g.id === id) ? id : groupId.title;
+  return pick(GROUPS, readRaw(localStorage, GROUP_KEY), groupId.title);
 }
 
 export function setListGroup(id) {
@@ -208,14 +223,19 @@ export function setShownTags(ids) {
 }
 
 export function getShownControls() {
-  const saved = read(CONTROLS_KEY);
-  const ids = CONTROLS.map((c) => c.id);
-  if (!Array.isArray(saved?.shown) || !Array.isArray(saved?.known)) return ids;
-  return ids.filter((id) => saved.shown.includes(id) || !saved.known.includes(id));
+  return knownIds(CONTROLS_KEY, LIVE_ITEMS);
 }
 
 export function setShownControls(ids) {
-  write(CONTROLS_KEY, { shown: ids, known: CONTROLS.map((c) => c.id) });
+  writeKnown(CONTROLS_KEY, LIVE_ITEMS, ids);
+}
+
+export function getToolUtilities() {
+  return knownIds(TOOL_UTILITIES_KEY, UTILITIES);
+}
+
+export function setToolUtilities(ids) {
+  writeKnown(TOOL_UTILITIES_KEY, UTILITIES, ids);
 }
 
 export function getNumbers() {
@@ -227,8 +247,7 @@ export function setNumbers(on) {
 }
 
 export function getNumberStyle() {
-  const id = read(NUMBER_STYLE_KEY);
-  return NUMBER_STYLES.some((s) => s.id === id) ? id : numberStyleId.nashville;
+  return pick(NUMBER_STYLES, read(NUMBER_STYLE_KEY), numberStyleId.nashville);
 }
 
 export function setNumberStyle(id) {
@@ -236,8 +255,7 @@ export function setNumberStyle(id) {
 }
 
 export function getPedalMode() {
-  const id = read(PEDAL_KEY);
-  return PEDAL_MODES.some((m) => m.id === id) ? id : pedalId.page;
+  return pick(PEDAL_MODES, read(PEDAL_KEY), pedalId.page);
 }
 
 export function setPedalMode(id) {
@@ -271,20 +289,11 @@ export const KEY_OCTAVE_OPTIONS = [
 ];
 
 export function getKeyOctaves() {
-  const saved = read(KEY_OCTAVES_KEY);
-  return KEY_OCTAVE_OPTIONS.some((o) => o.id === saved) ? saved : KEY_OCTAVE_OPTIONS[0].id;
+  return pick(KEY_OCTAVE_OPTIONS, read(KEY_OCTAVES_KEY), KEY_OCTAVE_OPTIONS[0].id);
 }
 
 export function setKeyOctaves(n) {
   write(KEY_OCTAVES_KEY, n);
-}
-
-export function getOpenTools() {
-  return shownIds(OPEN_TOOLS_KEY, REMEMBERED_TOOLS, []);
-}
-
-export function setOpenTools(ids) {
-  write(OPEN_TOOLS_KEY, ids);
 }
 
 export function getEditorOptions() {

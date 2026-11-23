@@ -1,8 +1,14 @@
 import { modeId } from './theory-model.js';
 import { fingeringId } from './vis-spec.js';
+import { OCTAVE, mod12 } from '../core/math.js';
 
-const OCTAVE = 12;
 const MAX_SPAN = 4;
+const MAX_FINGERS = 4;
+const MIN_VOICED = 3;
+const TRIAD_SIZE = 3;
+const FIFTH = 7;
+const REACH_BELOW = 2;
+const REACH_ABOVE = 3;
 const LOW_BIAS = 0.05;
 const JUMP_COST = 3;
 const OCTAVE_REACH = 4;
@@ -12,7 +18,29 @@ const PENTATONIC_SIZE = 5;
 const TRITONE = 6;
 const SHIFTS = [0, -OCTAVE, OCTAVE, -2 * OCTAVE, 2 * OCTAVE];
 
-export const GUITAR = Object.freeze({ strings: Object.freeze([40, 45, 50, 55, 59, 64]), frets: 15 });
+const CAGED_FORMS = Object.freeze([
+  { root: 1, offsets: [null, 0, -1, -3, -2, -3] },
+  { root: 1, offsets: [null, 0, 2, 2, 2, 0] },
+  { root: 0, offsets: [0, -1, -3, -3, -3, 0] },
+  { root: 0, offsets: [0, 2, 2, 1, 0, 0] },
+  { root: 2, offsets: [null, null, 0, 2, 3, 2] },
+]);
+
+const FORM_QUALITIES = Object.freeze({
+  major: [0, 4, 7],
+  minor: [0, 3, 7],
+  sus2: [0, 2, 7],
+  sus4: [0, 5, 7],
+  sixth: [0, 4, 7, 9],
+  minorSixth: [0, 3, 7, 9],
+  seventh: [0, 4, 7, 10],
+  minorSeventh: [0, 3, 7, 10],
+  majorSeventh: [0, 4, 7, 11],
+});
+
+const FORM_KEYS = new Set(Object.values(FORM_QUALITIES).map(String));
+
+export const GUITAR = Object.freeze({ strings: Object.freeze([40, 45, 50, 55, 59, 64]), frets: 15, forms: CAGED_FORMS });
 
 export const showId = Object.freeze({ position: 'position', neck: 'neck' });
 export const matchId = Object.freeze({ unison: 'unison', octaves: 'octaves' });
@@ -95,8 +123,7 @@ function adjacentShape(notes, first, octave, { strings, frets }) {
   return shape.every(({ fret }) => fret >= 0 && fret <= frets) && fits(shape) ? shape : null;
 }
 
-export function chordVoicings(midis, instrument) {
-  const notes = [...midis].sort((a, b) => a - b);
+function adjacentVoicings(notes, instrument) {
   const shapes = [];
   for (let first = 0; first + notes.length <= instrument.strings.length; first += 1) {
     for (let octave = -OCTAVE_REACH; octave <= OCTAVE_REACH; octave += 1) {
@@ -104,8 +131,101 @@ export function chordVoicings(midis, instrument) {
       if (shape) shapes.push(shape);
     }
   }
-  if (!shapes.length) return [chordPositions(notes, instrument)];
   return shapes.sort((a, b) => anchorOf(a) - anchorOf(b) || a[0].string - b[0].string);
+}
+
+function toneOf(midi, rootPc) {
+  return mod12(midi - rootPc);
+}
+
+function covers(shape, rootPc, tones) {
+  return tones.every((tone) => shape.some((p) => toneOf(p.midi, rootPc) === tone));
+}
+
+function playable(shape) {
+  if (!fits(shape)) return false;
+  const fretted = shape.filter((p) => p.fret > 0);
+  if (fretted.length <= MAX_FINGERS) return true;
+  const { low } = frettedSpan(shape);
+  const barre = shape.find((p) => p.fret === low).string;
+  return fretted.filter((p) => p.fret > low).length < MAX_FINGERS && !shape.some((p) => p.fret === 0 && p.string > barre);
+}
+
+function formTemplate({ root, offsets }, rootPc, { strings, frets }) {
+  let fret = mod12(rootPc - strings[root]);
+  while (fret + Math.min(...offsets.filter((o) => o !== null)) < 0) fret += OCTAVE;
+  const template = offsets.map((o) => (o === null ? null : fret + o));
+  return Math.max(...template.filter((f) => f !== null)) <= frets ? template : null;
+}
+
+function nearTones(template, rootPc, tones, { strings }) {
+  return template.flatMap((at, string) => {
+    if (at === null) return [];
+    const near = [];
+    for (let fret = Math.max(0, at - REACH_BELOW); fret <= at + REACH_ABOVE; fret += 1) {
+      const midi = strings[string] + fret;
+      if (tones.includes(toneOf(midi, rootPc))) near.push({ string, fret, midi, cost: Math.abs(fret - at) });
+    }
+    return [near];
+  });
+}
+
+function fitForm(template, rootPc, tones, required, instrument) {
+  const options = nearTones(template, rootPc, tones, instrument);
+  let best = null;
+  const chosen = [];
+  const search = (i, cost) => {
+    if (best && cost >= best.cost) return;
+    if (i === options.length) {
+      if (toneOf(chosen[0].midi, rootPc) === 0 && covers(chosen, rootPc, required) && playable(chosen)) {
+        best = { cost, shape: chosen.map(({ string, fret, midi }) => ({ string, fret, midi })) };
+      }
+      return;
+    }
+    for (const option of options[i]) {
+      chosen.push(option);
+      search(i + 1, cost + option.cost);
+      chosen.pop();
+    }
+  };
+  search(0, 0);
+  return best?.shape ?? null;
+}
+
+function onBass(shape, rootPc, bassPc, required) {
+  const start = shape.findIndex((p) => mod12(p.midi) === bassPc);
+  const rest = start < 0 ? [] : shape.slice(start);
+  return rest.length >= MIN_VOICED && covers(rest, rootPc, required) ? rest : null;
+}
+
+function lowestFret(shape) {
+  return Math.min(...shape.map((p) => p.fret));
+}
+
+function formVoicings(rootPc, notes, instrument) {
+  const tones = [...new Set(notes.map((midi) => toneOf(midi, rootPc)))].sort((a, b) => a - b);
+  if (!instrument.forms || !FORM_KEYS.has(String(tones))) return [];
+  const required = tones.length > TRIAD_SIZE ? tones.filter((tone) => tone !== FIFTH) : tones;
+  return instrument.forms
+    .map((form) => formTemplate(form, rootPc, instrument))
+    .map((template) => template && fitForm(template, rootPc, tones, required, instrument))
+    .map((shape) => shape && onBass(shape, rootPc, mod12(notes[0]), required))
+    .filter(Boolean)
+    .sort((a, b) => lowestFret(a) - lowestFret(b) || anchorOf(a) - anchorOf(b));
+}
+
+function distinct(shapes) {
+  const seen = new Set();
+  return shapes.filter((shape) => {
+    const id = shape.map((p) => `${p.string}:${p.fret}`).join();
+    return !seen.has(id) && seen.add(id);
+  });
+}
+
+export function chordVoicings(rootPc, midis, instrument) {
+  const notes = [...midis].sort((a, b) => a - b);
+  const shapes = distinct([...formVoicings(rootPc, notes, instrument), ...adjacentVoicings(notes, instrument)]);
+  return shapes.length ? shapes : [chordPositions(notes, instrument)];
 }
 
 function pentatonicOf(pcs) {
@@ -220,7 +340,7 @@ export function runPositions(steps, instrument, region = null) {
 
 const SHAPES = {
   [modeId.scale]: (model, instrument, { fingering }) => scalePatterns(model.shownPcs, instrument, fingering),
-  [modeId.chord]: (model, instrument) => chordVoicings(model.shown, instrument),
+  [modeId.chord]: (model, instrument) => chordVoicings(model.rootPc, model.shown, instrument),
   [modeId.note]: (model, instrument, { match }) => notePlaces(model, instrument, match),
 };
 
@@ -249,7 +369,7 @@ function sequenceLayout(model, instrument, { position, fingering }) {
     dot.steps.push(step);
   }));
   const columns = path.map((positions, step) => ({ step, positions }));
-  return { instrument, dots: board.list(), muted: [], run: model.run, columns, count: 1, position: 0 };
+  return { instrument, dots: board.list(), muted: [], run: model.run, voicing: [], columns, count: 1, position: 0 };
 }
 
 export function fretLayout(model, instrument = GUITAR, options = {}) {
@@ -269,6 +389,7 @@ export function fretLayout(model, instrument = GUITAR, options = {}) {
   });
   const sounding = new Set(shape.map((p) => p.string));
   const muted = model.mode === modeId.chord ? instrument.strings.map((_, string) => string).filter((string) => !sounding.has(string)) : [];
+  const voicing = model.mode === modeId.chord ? shape.map((p) => p.midi).sort((a, b) => a - b) : [];
   const columns = run.length ? shape.map((p, step) => ({ step, positions: [p] })) : [{ step: null, positions: shape }];
-  return { instrument, dots: board.list(), muted, run, columns, count, position: current };
+  return { instrument, dots: board.list(), muted, run, voicing, columns, count, position: current };
 }

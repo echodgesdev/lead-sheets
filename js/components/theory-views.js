@@ -1,12 +1,15 @@
 import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
-import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
+import { mod12, OCTAVE } from '../core/math.js';
+import { qualityId, shapeId, displayName, stepPitches, intervalNames } from '../sheet/circle.js';
+import { IONIAN } from '../sheet/chords.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
 import { staffLayout, signatureSteps, STAVES, clefId } from '../sheet/staff.js';
+import { visId, alignId } from '../sheet/vis-spec.js';
 
-const NOTES = 12;
-const STEP = 360 / NOTES;
-const OCTAVE = 12;
+const STEP = 360 / OCTAVE;
+const COLUMNS = Array.from({ length: OCTAVE }, (_, c) => c);
+export const CIRCLE_BOX = '-100 -100 200 200';
 const CLOCK_RINGS = [42, 63, 84];
 const CLOCK_HIT = [16, 100];
 const CLOCK_LABEL = 93;
@@ -15,7 +18,7 @@ const HUB_SUB_DY = '1.6em';
 const DOT = 4.5;
 const ROOT_DOT = 6;
 const INTERVALS = ['R', '♭2', '2', '♭3', '3', '4', '♭5', '5', '♭6', '6', '♭7', '7'];
-const WHITE_PCS = [0, 2, 4, 5, 7, 9, 11];
+const WHITE_PCS = IONIAN;
 const BLACK_PCS = { 1: 1, 3: 2, 6: 4, 8: 5, 10: 6 };
 const FRET_NUT = 20;
 const FRET_W = 22;
@@ -61,17 +64,23 @@ const STAFF_ACC_DX = 10;
 const STAFF_ACC_STAGGER = 7;
 const STAFF_CLEFS = { [clefId.treble]: { glyph: '𝄞', line: 32 }, [clefId.bass]: { glyph: '𝄢', line: 24 } };
 const STAFF_ACCIDENTALS = { [-2]: '♭♭', [-1]: '♭', 0: '♮', 1: '♯', 2: '×' };
-const PATTERN_ROWS = { [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
-
-export const alignId = Object.freeze({
-  root: 'root',
-  key: 'key',
-});
+const CHAIN_ROWS = { [modeId.note]: noteRows, [modeId.chord]: chordRows, [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
+const PATTERN_MODES = new Set([modeId.scale, modeId.sequence]);
 
 export const labelId = Object.freeze({
   none: 'none',
   name: 'name',
   degree: 'degree',
+});
+
+export const THEORY_VIEWS = Object.freeze({
+  [visId.fifths]: { render: fifthsArt },
+  [visId.clock]: { render: renderClock },
+  [visId.intervals]: { render: (model, { align }) => renderChain(model, align) },
+  [visId.piano]: { render: renderKeys },
+  [visId.fretboard]: { neck: true, render: (model, { layout, labels }) => renderFretboard(model, layout, labels) },
+  [visId.tab]: { neck: true, render: (model, { layout }) => renderTab(model, layout) },
+  [visId.clef]: { render: renderStaff },
 });
 
 const QUALITY_LABELS = {
@@ -86,8 +95,48 @@ export function hubText(main, sub, className = '') {
   return text;
 }
 
-function notesAttr(midis) {
-  return midis.join(',');
+export function theoryArt(className, viewBox, label, attrs = {}) {
+  return svg('svg', { class: `theory-art ${className}`, viewBox, role: 'group', 'aria-label': label, ...attrs });
+}
+
+export function tapAttrs(label, focusable = true) {
+  return { role: 'button', tabindex: focusable ? 0 : -1, 'aria-label': label };
+}
+
+function isBlocked({ locked, allowed }, pc) {
+  return locked && !allowed.includes(pc);
+}
+
+function isOutside({ scalePcs }, pc) {
+  return !scalePcs.includes(pc);
+}
+
+function toneClass(model, pc, rootPc) {
+  if (pc === rootPc) return cls.root;
+  return isOutside(model, pc) ? cls.outside : null;
+}
+
+function noteAttrs(model, pc, { className, midis, label, steps = '', on = true, rootPc = model.rootPc, focusable = true }) {
+  return {
+    class: classes(className, on && toneClass(model, pc, rootPc), isBlocked(model, pc) && cls.blocked),
+    ...tapAttrs(label, focusable),
+    'data-notes': midis.join(','),
+    ...(steps ? { 'data-step': steps } : {}),
+  };
+}
+
+function noteButton(text, { class: className, ...attrs }) {
+  const node = plainButton(text, className);
+  for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
+  return node;
+}
+
+function pcName(model, pc) {
+  return displayName(model.names[pc]);
+}
+
+function pitchName(model, midi) {
+  return `${pcName(model, mod12(midi))}${Math.floor(midi / OCTAVE) - 1}`;
 }
 
 function angle(pc) {
@@ -106,80 +155,69 @@ function rootLetter(chord) {
   return displayName(chordRoot(chord));
 }
 
-function isBlocked({ locked, allowed }, pc) {
-  return locked && !allowed.includes(pc);
-}
-
-function isOutside({ scalePcs }, pc) {
-  return !scalePcs.includes(pc);
-}
-
 export function stepsOf(run, midi, drawn) {
   return run
-    .flatMap((step, i) => (step.some((m) => m === midi || (!drawn.includes(m) && m % OCTAVE === midi % OCTAVE)) ? [i] : []))
+    .flatMap((step, i) => (step.some((m) => m === midi || (!drawn.includes(m) && mod12(m) === mod12(midi))) ? [i] : []))
     .join(' ');
+}
+
+function fifthsArt(model, { fifths }) {
+  fifths.tagSteps(model.run);
+  return fifths.el;
 }
 
 function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape, shapeOf, key }) {
   if (mode === modeId.sequence) return hubText(key.root, key.quality, 'clock-center');
   if (mode === modeId.note) return hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center');
   if (mode === modeId.scale) return hubText(displayName(names[tonic]), scale.name, 'clock-center');
-  const bass = voiced[0] % OCTAVE === chord.pc ? '' : `/${displayName(names[voiced[0] % OCTAVE])}`;
+  const bassPc = mod12(voiced[0]);
+  const bass = bassPc === chord.pc ? '' : `/${displayName(intervalNames(chord.chord)[bassPc])}`;
   const root = rootLetter(chord.chord);
   const sub = shape === shapeId.triad ? QUALITY_LABELS[chord.quality] : displayName(shapeOf(chord).name).slice(root.length);
   return hubText(`${root}${bass}`, sub, 'clock-center');
 }
 
 export function renderClock(model) {
-  const { names, scalePcs, shown, shownPcs, rootPc, tonicMidi, noteMidiOf, mode } = model;
+  const { scalePcs, shown, shownPcs, tonicMidi, noteMidiOf, mode } = model;
   const dotted = mode === modeId.scale ? shown.slice(0, -1) : shown;
-  const art = svg('svg', { class: 'clock-art', viewBox: '-100 -100 200 200', role: 'group', 'aria-label': 'Chromatic clock' });
-  for (let pc = 0; pc < NOTES; pc++) {
+  const art = theoryArt('clock-art', CIRCLE_BOX, 'Chromatic clock');
+  for (const pc of COLUMNS) {
     art.append(svg('path', {
-      class: classes('clock-hit', isBlocked(model, pc) && cls.blocked),
+      ...noteAttrs(model, pc, { className: 'clock-hit', midis: [noteMidiOf(pc)], label: pcName(model, pc), on: false }),
       d: annularSector(CLOCK_HIT, angle(pc), STEP),
-      role: 'button',
-      tabindex: 0,
-      'aria-label': displayName(names[pc]),
-      'data-notes': notesAttr([noteMidiOf(pc)]),
     }));
   }
   for (const r of CLOCK_RINGS) art.append(svg('circle', { class: 'clock-ring', r }));
-  for (let pc = 0; pc < NOTES; pc++) {
+  for (const pc of COLUMNS) {
     const [x, y] = polar(CLOCK_RINGS.at(-1), angle(pc));
     const [lx, ly] = polar(CLOCK_LABEL, angle(pc));
     const shownHere = shownPcs.includes(pc);
     const label = classes('clock-label', scalePcs.includes(pc) && cls.inKey, shownHere && cls.voiced, shownHere && isOutside(model, pc) && cls.outside, isBlocked(model, pc) && cls.blocked);
-    art.append(svg('line', { class: 'clock-spoke', x1: 0, y1: 0, x2: x, y2: y }), svg('text', { class: label, x: lx, y: ly }, displayName(names[pc])));
+    art.append(svg('line', { class: 'clock-spoke', x1: 0, y1: 0, x2: x, y2: y }), svg('text', { class: label, x: lx, y: ly }, pcName(model, pc)));
   }
   const keyShape = [...scalePcs].sort((a, b) => a - b).map((pc) => polar(CLOCK_RINGS.at(-1), angle(pc)));
-  const dots = dotted.map((midi) => polar(ringOf(midi, tonicMidi), angle(midi % OCTAVE)));
+  const dots = dotted.map((midi) => polar(ringOf(midi, tonicMidi), angle(mod12(midi))));
   art.append(svg('polygon', { class: 'clock-scale', points: points(keyShape) }));
   if (mode !== modeId.note) art.append(svg('polygon', { class: 'clock-chord', points: points(dots) }));
   dotted.forEach((midi, i) => {
     const [cx, cy] = dots[i];
-    const root = midi % OCTAVE === rootPc;
+    const pc = mod12(midi);
     art.append(svg('circle', {
-      class: classes('clock-dot', root && cls.root, !root && isOutside(model, midi % OCTAVE) && cls.outside),
+      ...noteAttrs(model, pc, { className: 'note-dot clock-dot', midis: [midi], label: pcName(model, pc), steps: stepsOf(model.run, midi, dotted) }),
       cx,
       cy,
-      r: root ? ROOT_DOT : DOT,
-      role: 'button',
-      tabindex: 0,
-      'aria-label': displayName(names[midi % OCTAVE]),
-      'data-notes': notesAttr([midi]),
-      'data-step': stepsOf(model.run, midi, dotted),
+      r: pc === model.rootPc ? ROOT_DOT : DOT,
     }));
   });
   art.append(centerLabel(model));
   return art;
 }
 
-function chainHead(align, names, tonic) {
+function chainHead(align, model) {
   const head = div('chain-row chain-head');
   head.append(span());
-  for (let c = 0; c < NOTES; c++) {
-    head.append(span(null, align === alignId.root ? INTERVALS[c] : displayName(names[(tonic + c) % NOTES])));
+  for (const c of COLUMNS) {
+    head.append(span(null, align === alignId.root ? INTERVALS[c] : pcName(model, mod12(model.keyTonicPc + c))));
   }
   return head;
 }
@@ -191,104 +229,92 @@ function rowName(top, topClass, letter, slot) {
   return name;
 }
 
-function chordRow(item, picked, model) {
-  const { align, names, tonic, tonicMidi, scalePcs, noteMidiOf } = model;
+function chainCell(model, { pc, on, text = '', shade = false, ...note }) {
+  return noteButton(on ? text : '', noteAttrs(model, pc, {
+    ...note,
+    on,
+    className: classes('chain-cell', shade && model.scalePcs.includes(pc) && cls.inKey, on && cls.voiced),
+  }));
+}
+
+function chainRow(model, name, picked, cells) {
   const row = div(classes('chain-row', picked && cls.active));
-  const shaped = model.shapeOf(item);
-  row.append(rowName(item.numeral, 'circle-numeral', displayName(shaped.name), item.slot));
-  const steps = shaped.steps.map((step) => step % NOTES);
-  const pcs = stepPitches(item.pc, shaped.steps);
-  const rootMidi = noteMidiOf(item.pc);
+  row.append(name, ...cells.map((cell) => chainCell(model, cell)));
+  return row;
+}
+
+function chordRows(model, align) {
   const byRoot = align === alignId.root;
-  for (let c = 0; c < NOTES; c++) {
-    const pc = (tonic + c) % NOTES;
-    const notePc = byRoot ? (item.pc + c) % NOTES : pc;
-    const on = byRoot ? steps.includes(c) : pcs.includes(pc);
-    const notes = byRoot ? (c ? [rootMidi, rootMidi + c] : [rootMidi]) : [tonicMidi + c];
-    const cell = plainButton(on ? displayName(names[notePc]) : '', classes(
-      'chain-cell',
-      on && cls.voiced,
-      on && notePc === item.pc && cls.root,
-      on && notePc !== item.pc && isOutside(model, notePc) && cls.outside,
-      !byRoot && scalePcs.includes(pc) && cls.inKey,
-      isBlocked(model, notePc) && cls.blocked,
-    ));
-    cell.dataset.notes = notesAttr(notes);
-    cell.setAttribute('aria-label', byRoot ? `${displayName(item.chord)} ${INTERVALS[c]}, ${displayName(names[notePc])}` : displayName(names[pc]));
-    row.append(cell);
-  }
-  return row;
+  return model.items.map((item, i) => {
+    const shaped = model.shapeOf(item);
+    const pcs = stepPitches(item.pc, shaped.steps);
+    const rootMidi = model.noteMidiOf(item.pc);
+    const spelled = intervalNames(item.chord).map(displayName);
+    const cells = COLUMNS.map((c) => {
+      const pc = mod12((byRoot ? item.pc : model.keyTonicPc) + c);
+      const on = pcs.includes(pc);
+      const name = byRoot || on ? spelled[pc] : pcName(model, pc);
+      return {
+        pc,
+        on,
+        rootPc: item.pc,
+        text: name,
+        shade: !byRoot,
+        midis: byRoot ? (c ? [rootMidi, rootMidi + c] : [rootMidi]) : [model.keyTonicMidi + c],
+        label: byRoot ? `${displayName(item.chord)} ${INTERVALS[c]}, ${name}` : name,
+      };
+    });
+    return chainRow(model, rowName(item.numeral, 'circle-numeral', displayName(shaped.name), item.slot), i === model.chordIndex, cells);
+  });
 }
 
-function singleRow({ top, topClass, letter, slot, pc, picked, root }, model) {
-  const { align, tonic, tonicMidi } = model;
-  const row = div(classes('chain-row', picked && cls.active));
-  row.append(rowName(top, topClass, letter, slot));
-  const step = (pc - tonic + NOTES) % NOTES;
-  for (let c = 0; c < NOTES; c++) {
-    const on = c === step;
-    const cellPc = (tonic + c) % NOTES;
-    const cell = plainButton(on ? (align === alignId.root ? INTERVALS[c] : letter) : '', classes(
-      'chain-cell',
-      on && cls.voiced,
-      on && root && cls.root,
-      on && !root && isOutside(model, cellPc) && cls.outside,
-      isBlocked(model, cellPc) && cls.blocked,
-    ));
-    cell.dataset.notes = notesAttr([tonicMidi + c]);
-    cell.setAttribute('aria-label', on ? `${letter}, ${top}` : INTERVALS[c]);
-    row.append(cell);
-  }
-  return row;
+function noteRows(model, align) {
+  return model.items.map((item, i) => {
+    const top = String(i + 1);
+    const letter = rootLetter(item.chord);
+    const cells = COLUMNS.map((c) => {
+      const pc = mod12(model.keyTonicPc + c);
+      const on = pc === item.pc;
+      return {
+        pc,
+        on,
+        text: align === alignId.root ? INTERVALS[c] : letter,
+        midis: [model.keyTonicMidi + c],
+        label: on ? `${letter}, ${top}` : INTERVALS[c],
+      };
+    });
+    return chainRow(model, rowName(top, 'circle-degree', letter, item.slot), i === model.chordIndex, cells);
+  });
 }
 
-function noteRows(model) {
-  return model.items.map((item, i) => singleRow({
-    top: String(i + 1),
-    topClass: 'circle-degree',
-    letter: rootLetter(item.chord),
-    slot: item.slot,
-    pc: item.pc,
-    picked: i === model.chordIndex,
-    root: item.pc === model.rootPc,
-  }, model));
-}
-
-function patternRow({ top, label, title, play, pcs, rootPc, midiOf, stepsAt, picked }, model) {
-  const { names, keyTonicPc, keyTonicMidi, scalePcs } = model;
-  const row = div(classes('chain-row', picked && cls.active));
+function patternRow(model, { top, label, title, play, pcs, rootPc, midiOf, stepsAt, picked }) {
   const name = rowName(top, 'circle-degree', label);
   Object.assign(name.dataset, play);
   name.setAttribute('aria-label', title);
-  row.append(name);
-  for (let c = 0; c < NOTES; c++) {
-    const pc = (keyTonicPc + c) % NOTES;
+  const cells = COLUMNS.map((c) => {
+    const pc = mod12(model.keyTonicPc + c);
     const on = pcs.includes(pc);
-    const cell = plainButton('', classes(
-      'chain-cell',
-      scalePcs.includes(pc) && cls.inKey,
-      on && cls.voiced,
-      on && pc === rootPc && cls.root,
-      on && pc !== rootPc && isOutside(model, pc) && cls.outside,
-      isBlocked(model, pc) && cls.blocked,
-    ));
-    cell.dataset.notes = notesAttr([on ? midiOf(pc) : keyTonicMidi + c]);
-    const steps = on ? stepsAt(pc) : '';
-    if (steps) cell.dataset.step = steps;
-    cell.setAttribute('aria-label', `${title}, ${displayName(names[pc])}`);
-    row.append(cell);
-  }
-  return row;
+    return {
+      pc,
+      on,
+      rootPc,
+      shade: true,
+      midis: [on ? midiOf(pc) : model.keyTonicMidi + c],
+      steps: on ? stepsAt(pc) : '',
+      label: `${title}, ${pcName(model, pc)}`,
+    };
+  });
+  return chainRow(model, name, picked, cells);
 }
 
 function midiWithPc(midis, pc) {
-  return midis.find((midi) => midi % OCTAVE === pc);
+  return midis.find((midi) => mod12(midi) === pc);
 }
 
 function scaleRows(model) {
   return model.scales.map((scale) => {
     const picked = scale.id === model.scale.id;
-    return patternRow({
+    return patternRow(model, {
       top: scale.top,
       label: scale.short,
       title: scale.name,
@@ -298,49 +324,40 @@ function scaleRows(model) {
       midiOf: (pc) => midiWithPc(scale.run, pc),
       stepsAt: (pc) => (picked ? stepsOf(model.run, pc, []) : ''),
       picked,
-    }, model);
+    });
   });
 }
 
 function sequenceRows(model) {
-  return model.steps.map((step, i) => patternRow({
+  return model.steps.map((step, i) => patternRow(model, {
     top: step.top,
     label: step.label,
     title: step.label,
-    play: { notes: notesAttr(step.midis) },
-    pcs: step.midis.map((midi) => midi % OCTAVE),
+    play: { notes: step.midis.join(',') },
+    pcs: step.midis.map(mod12),
     rootPc: step.rootPc,
     midiOf: (pc) => midiWithPc(step.midis, pc),
     stepsAt: () => String(i),
     picked: false,
-  }, model));
+  }));
 }
 
-export function renderChain(model) {
-  const patterns = PATTERN_ROWS[model.mode];
-  const chain = div(classes('chain', patterns && 'chain-patterns'));
-  chain.append(chainHead(model.align, model.names, model.keyTonicPc));
-  if (model.mode === modeId.note) chain.append(...noteRows(model));
-  else if (patterns) chain.append(...patterns(model));
-  else model.items.forEach((item, i) => chain.append(chordRow(item, i === model.chordIndex, model)));
+export function renderChain(model, align = alignId.root) {
+  const chain = div(classes('chain', PATTERN_MODES.has(model.mode) && 'chain-patterns'));
+  chain.append(chainHead(align, model), ...CHAIN_ROWS[model.mode](model, align));
   return chain;
 }
 
-function pianoKey(midi, pc, index, shade, model) {
+function pianoKey(midi, index, shade, model) {
   const lit = model.shown.includes(midi);
-  const key = plainButton('', classes(
-    'key',
-    shade,
-    lit && cls.voiced,
-    lit && pc === model.rootPc && cls.root,
-    lit && pc !== model.rootPc && isOutside(model, pc) && cls.outside,
-    isBlocked(model, pc) && cls.blocked,
-  ));
+  const key = noteButton('', noteAttrs(model, mod12(midi), {
+    className: classes('key', shade, lit && cls.voiced),
+    on: lit,
+    midis: [midi],
+    steps: stepsOf(model.run, midi, model.shown),
+    label: pitchName(model, midi),
+  }));
   key.style.setProperty('--i', index);
-  key.dataset.notes = notesAttr([midi]);
-  const steps = stepsOf(model.run, midi, model.shown);
-  if (steps) key.dataset.step = steps;
-  key.setAttribute('aria-label', `${displayName(model.names[pc])}${Math.floor(midi / OCTAVE) - 1}`);
   return key;
 }
 
@@ -352,7 +369,7 @@ function keyDot(pc, center, whites, model) {
 
 function keyRange({ shown, tonicMidi, minOctaves }) {
   const low = Math.min(tonicMidi, ...shown);
-  const start = low - (low % OCTAVE);
+  const start = low - mod12(low);
   const octaves = Math.max(minOctaves, Math.ceil((Math.max(...shown) + 1 - start) / OCTAVE));
   return { start, octaves };
 }
@@ -366,12 +383,12 @@ export function renderKeys(model) {
   for (let o = 0; o < octaves; o++) {
     WHITE_PCS.forEach((pc, i) => {
       const index = o * WHITE_PCS.length + i;
-      board.append(pianoKey(start + o * OCTAVE + pc, pc, index, 'white', model));
+      board.append(pianoKey(start + o * OCTAVE + pc, index, 'white', model));
       dots.append(keyDot(pc, index + 0.5, whites, model));
     });
     for (const [pc, i] of Object.entries(BLACK_PCS)) {
       const index = o * WHITE_PCS.length + i;
-      blacks.push(pianoKey(start + o * OCTAVE + Number(pc), Number(pc), index, 'black', model));
+      blacks.push(pianoKey(start + o * OCTAVE + Number(pc), index, 'black', model));
       dots.append(keyDot(Number(pc), index, whites, model));
     }
   }
@@ -400,7 +417,7 @@ function fretGrid({ strings, frets }) {
     parts.push(svg('line', { class: 'fret-line', x1: x, y1: top, x2: x, y2: bottom }));
   }
   for (const fret of FRET_INLAYS.filter((f) => f <= frets)) {
-    const double = fret % OCTAVE === 0;
+    const double = mod12(fret) === 0;
     const middle = (top + bottom) / 2;
     for (const y of double ? [middle - STRING_GAP, middle + STRING_GAP] : [middle]) {
       parts.push(svg('circle', { class: 'fret-inlay', cx: fretX(fret), cy: y, r: FRET_INLAY_R }));
@@ -417,16 +434,16 @@ function fretGrid({ strings, frets }) {
 function fretHits(model, { strings, frets }) {
   return strings.flatMap((open, string) => Array.from({ length: frets + 1 }, (_, fret) => {
     const midi = open + fret;
-    const pc = midi % OCTAVE;
-    const name = displayName(model.names[pc]);
+    const pc = mod12(midi);
+    const name = pcName(model, pc);
     const y = stringY(string, strings.length);
-    const hit = svg('g', {
-      class: classes('fret-hit', isBlocked(model, pc) && cls.blocked),
-      role: 'button',
-      tabindex: -1,
-      'aria-label': `${name}, string ${strings.length - string} fret ${fret}`,
-      'data-notes': notesAttr([midi]),
-    });
+    const hit = svg('g', noteAttrs(model, pc, {
+      className: 'fret-hit',
+      on: false,
+      focusable: false,
+      midis: [midi],
+      label: `${name}, string ${strings.length - string} fret ${fret}`,
+    }));
     hit.append(
       svg('rect', { x: fret ? FRET_NUT + (fret - 1) * FRET_W : 0, y: y - STRING_GAP / 2, width: fret ? FRET_W : FRET_NUT, height: STRING_GAP }),
       svg('circle', { class: 'fret-ghost', cx: fretX(fret), cy: y, r: FRET_DOT_R }),
@@ -437,24 +454,22 @@ function fretHits(model, { strings, frets }) {
 }
 
 function dotLabel(model, pc, labels) {
-  if (labels === labelId.name) return displayName(model.names[pc]);
+  if (labels === labelId.name) return pcName(model, pc);
   const ref = model.mode === modeId.note ? model.keyTonicPc : model.rootPc;
-  return INTERVALS[(pc - ref + OCTAVE) % OCTAVE];
+  return INTERVALS[mod12(pc - ref)];
 }
 
 function fretDot(model, dot, count, labels) {
-  const pc = dot.midi % OCTAVE;
-  const root = pc === model.rootPc;
+  const pc = mod12(dot.midi);
   const x = fretX(dot.fret);
   const y = stringY(dot.string, count);
-  const node = svg('g', {
-    class: classes('fret-dot', root && cls.root, !root && isOutside(model, pc) && cls.outside, dot.faint && cls.faint),
-    role: 'button',
-    tabindex: dot.faint ? -1 : 0,
-    'aria-label': `${displayName(model.names[pc])}, string ${count - dot.string} fret ${dot.fret}`,
-    'data-notes': notesAttr([dot.midi]),
-    'data-step': dot.steps.join(' '),
-  });
+  const node = svg('g', noteAttrs(model, pc, {
+    className: classes('note-dot fret-dot', dot.faint && cls.faint),
+    focusable: !dot.faint,
+    midis: [dot.midi],
+    steps: dot.steps.join(' '),
+    label: `${pcName(model, pc)}, string ${count - dot.string} fret ${dot.fret}`,
+  }));
   node.append(svg('circle', { cx: x, cy: y, r: FRET_DOT_R }));
   if (labels !== labelId.none) node.append(svg('text', { class: 'fret-label', x, y }, dotLabel(model, pc, labels)));
   return node;
@@ -465,7 +480,7 @@ export function renderFretboard(model, layout, labels = labelId.none) {
   const { strings, frets } = instrument;
   const width = FRET_NUT + frets * FRET_W + FRET_END;
   const height = stringY(0, strings.length) + FRET_BOTTOM;
-  const art = svg('svg', { class: 'fret-art', viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': 'Fretboard' });
+  const art = theoryArt('fret-art', `0 0 ${width} ${height}`, 'Fretboard');
   art.append(...fretGrid(instrument), ...fretHits(model, instrument));
   for (const string of muted) art.append(svg('text', { class: 'fret-muted', x: fretX(0), y: stringY(string, strings.length) }, '×'));
   const ordered = [...dots.filter((dot) => dot.faint), ...dots.filter((dot) => !dot.faint)];
@@ -473,30 +488,16 @@ export function renderFretboard(model, layout, labels = labelId.none) {
   return art;
 }
 
-function toneClass(model, pc) {
-  if (pc === model.rootPc) return cls.root;
-  return isOutside(model, pc) ? cls.outside : null;
-}
-
 function notationArt(className, width, height, label) {
-  return svg('svg', { class: className, viewBox: `0 0 ${width} ${height}`, width: width * NOTATION_SCALE, role: 'group', 'aria-label': label });
+  return theoryArt(className, `0 0 ${width} ${height}`, label, { width: width * NOTATION_SCALE });
 }
 
-function playable(className, model, midi, step, label) {
-  const pc = midi % OCTAVE;
-  const node = svg('g', {
-    class: classes(className, toneClass(model, pc), isBlocked(model, pc) && cls.blocked),
-    role: 'button',
-    tabindex: 0,
-    'aria-label': label,
-    'data-notes': notesAttr([midi]),
-  });
-  if (step !== null) node.setAttribute('data-step', step);
-  return node;
+function notationNote(className, model, midi, step, label) {
+  return svg('g', noteAttrs(model, mod12(midi), { className: `note-dot ${className}`, midis: [midi], steps: step === null ? '' : String(step), label }));
 }
 
 function tabNote(model, { string, fret, midi }, step, x, y, count) {
-  const node = playable('tab-note', model, midi, step, `${displayName(model.names[midi % OCTAVE])}, string ${count - string} fret ${fret}`);
+  const node = notationNote('tab-note', model, midi, step, `${pcName(model, mod12(midi))}, string ${count - string} fret ${fret}`);
   node.append(svg('circle', { class: 'tab-hit', cx: x, cy: y, r: NOTATION_HIT_R }), svg('text', { x, y }, String(fret)));
   return node;
 }
@@ -543,7 +544,7 @@ function ledgers(art, band, d, x) {
 }
 
 function staffNote(model, note, step, x, y) {
-  const node = playable('staff-note', model, note.midi, step, `${displayName(model.names[note.pc])}${Math.floor(note.midi / OCTAVE) - 1}`);
+  const node = notationNote('staff-note', model, note.midi, step, pitchName(model, note.midi));
   node.append(
     svg('circle', { class: 'staff-hit', cx: x, cy: y, r: NOTATION_HIT_R }),
     svg('ellipse', { cx: x, cy: y, rx: STAFF_HEAD_RX, ry: STAFF_HEAD_RY, transform: `rotate(${STAFF_HEAD_TILT} ${x} ${y})` }),

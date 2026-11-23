@@ -5,6 +5,7 @@ import {
   LIST_OPTIONS,
   KEY_OCTAVE_OPTIONS,
   CONTROLS,
+  UTILITIES,
   NUMBER_STYLES,
   PEDAL_MODES,
   barId,
@@ -13,6 +14,8 @@ import {
   setTextSize,
   getShownControls,
   setShownControls,
+  getToolUtilities,
+  setToolUtilities,
   getNumberStyle,
   setNumberStyle,
   getPedalMode,
@@ -26,7 +29,7 @@ import {
   getEditorOptions,
   setEditorOptions,
 } from '../data/prefs.js';
-import { details, div, input, span, summary, labeledButton, cls } from '../core/dom.js';
+import { details, div, input, span, summary, labeledButton, setPressed, setTitle } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 import { segToggle } from './controls.js';
@@ -40,10 +43,7 @@ export function modalRow(label, ...controls) {
 
 function optionButton(o) {
   const b = labeledButton(o.icon, span('opt-label', o.label));
-  if (o.title) {
-    b.title = o.title;
-    b.setAttribute('aria-label', o.title);
-  }
+  if (o.title) setTitle(b, o.title);
   return b;
 }
 
@@ -52,10 +52,7 @@ export function choiceToggle(options, value, save) {
 
   function apply(id) {
     save(id);
-    for (const [bid, b] of buttons) {
-      b.classList.toggle(cls.active, bid === id);
-      b.setAttribute('aria-pressed', String(bid === id));
-    }
+    for (const [bid, b] of buttons) setPressed(b, bid === id);
   }
 
   for (const [id, b] of buttons) b.addEventListener(evt.click, () => apply(id));
@@ -79,10 +76,7 @@ function chipsRow(label, items, shownIds, save) {
 
   for (const t of items) {
     const b = labeledButton(null, t.label, 'chip');
-    const sync = () => {
-      b.classList.toggle(cls.active, shown.has(t.id));
-      b.setAttribute('aria-pressed', String(shown.has(t.id)));
-    };
+    const sync = () => setPressed(b, shown.has(t.id));
     b.addEventListener(evt.click, () => {
       if (shown.has(t.id)) shown.delete(t.id);
       else shown.add(t.id);
@@ -124,30 +118,8 @@ export function accordionRow(title, ...rows) {
   return node;
 }
 
-export function attachAccordion(node, open) {
-  let opened = null;
-
-  function sync() {
-    if (node.open && !opened) {
-      opened = open();
-      node.append(...[opened.header].filter(Boolean), ...opened.rows);
-    } else if (!node.open && opened) {
-      teardown();
-    }
-  }
-
-  function teardown() {
-    const current = opened;
-    opened = null;
-    if (!current) return;
-    current.header?.remove();
-    for (const row of current.rows) row.remove();
-    current.onClose?.();
-  }
-
-  node.addEventListener(evt.toggle, sync);
-  sync();
-  return teardown;
+function utilitiesRow(shownIds, save) {
+  return chipsRow('Utility Visibility', UTILITIES, shownIds, save);
 }
 
 export function liveSettingsRows(onSize) {
@@ -159,7 +131,10 @@ export function liveSettingsRows(onSize) {
 }
 
 export function toolsSettingsRows() {
-  return [choiceRow('Piano octaves', KEY_OCTAVE_OPTIONS, getKeyOctaves(), setKeyOctaves)];
+  return [
+    utilitiesRow(getToolUtilities(), setToolUtilities),
+    choiceRow('Piano octaves', KEY_OCTAVE_OPTIONS, getKeyOctaves(), setKeyOctaves),
+  ];
 }
 
 export function listSettingsRows() {
@@ -178,20 +153,25 @@ function liveControlRows() {
     numbersRow.hidden = !shown.has(controlId.numbers);
   }
 
-  function barRow(label, bar) {
-    const items = CONTROLS.filter((c) => c.bar === bar);
-    return chipsRow(label, items, [...shown], (ids) => {
+  function saveShown(items) {
+    return (ids) => {
       for (const c of items) shown.delete(c.id);
       for (const id of ids) shown.add(id);
-      setShownControls(CONTROLS.map((c) => c.id).filter((id) => shown.has(id)));
+      setShownControls([...shown]);
       syncNumbers();
-    });
+    };
+  }
+
+  function barRow(label, bar) {
+    const items = CONTROLS.filter((c) => c.bar === bar);
+    return chipsRow(label, items, [...shown], saveShown(items));
   }
 
   syncNumbers();
   return [
     barRow('Top bar', barId.top),
     numbersRow,
+    utilitiesRow([...shown], saveShown(UTILITIES)),
     barRow('Bottom bar', barId.bottom),
     choiceRow('Page turner', PEDAL_MODES, getPedalMode(), setPedalMode),
   ];

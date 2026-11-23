@@ -89,12 +89,19 @@ export function mount(el, { id }) {
     const face = span({ class: 'btn live-key', title: 'Capo' });
     face.append(...keyFace('Capo', placed.shift ? `${placed.capo} ${signed(placed.shift)}` : placed.capo));
     face.classList.toggle(cls.active, entry.shift !== 0);
-    const { toggle, down, up } = stepper(face, 'Transpose down', 'Transpose up');
-    down.disabled = entry.shift <= -MAX_SHIFT;
-    up.disabled = entry.shift >= MAX_SHIFT;
-    down.addEventListener(evt.click, () => { entry.shift--; change(); });
-    up.addEventListener(evt.click, () => { entry.shift++; change(); });
-    return toggle;
+    const step = stepper({
+      center: face,
+      downTitle: 'Transpose down',
+      upTitle: 'Transpose up',
+      min: -MAX_SHIFT,
+      max: MAX_SHIFT,
+      onStep: (by) => {
+        entry.shift += by;
+        change();
+      },
+    });
+    step.set(entry.shift);
+    return step.el;
   }
 
   function tempoField(entry, song) {

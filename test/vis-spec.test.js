@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { parseVisSpec, visId, visControlId, stepKind, fingeringId } from '../js/sheet/vis-spec.js';
+import { parseVisSpec, visId, alignId, visControlId, stepKind, fingeringId } from '../js/sheet/vis-spec.js';
 
 const deg = (degree, shift = 0) => ({ kind: stepKind.degree, degree, shift });
 const chord = (name) => ({ kind: stepKind.chord, chord: name });
@@ -13,6 +13,7 @@ test('parseVisSpec ignores lines that are not vis directives', () => {
 test('parseVisSpec reads a piano with degrees and controls', () => {
   eq(parseVisSpec('{vis: piano, seq: 1 2 3 5 8 1, controls: play}'), {
     vis: visId.piano,
+    align: alignId.root,
     key: null,
     seq: [deg(1), deg(2), deg(3), deg(5), deg(8), deg(1)],
     controls: [visControlId.play],
@@ -25,6 +26,7 @@ test('parseVisSpec reads a piano with degrees and controls', () => {
 test('parseVisSpec reads a clock with a key and chords', () => {
   eq(parseVisSpec('{vis: clock, key: G, seq: G Em C D}'), {
     vis: visId.clock,
+    align: alignId.root,
     key: 'G',
     seq: [chord('G'), chord('Em'), chord('C'), chord('D')],
     controls: [],
@@ -45,9 +47,17 @@ test('parseVisSpec reads every vis id', () => {
   Object.values(visId).forEach((id) => eq(parseVisSpec(`{vis: ${id}}`).vis, id, id));
 });
 
+test('parseVisSpec reads intervals on the root and notes as intervals on the key', () => {
+  const intervals = parseVisSpec('{vis: intervals, seq: G C}');
+  eq([intervals.vis, intervals.align], [visId.intervals, alignId.root]);
+  const notes = parseVisSpec('{vis: Notes, seq: G C}');
+  eq([notes.vis, notes.align, notes.errors], [visId.intervals, alignId.key, []]);
+});
+
 test('parseVisSpec is case-insensitive and forgiving of whitespace', () => {
   eq(parseVisSpec('  {  VIS : Clock ,KEY: F#m ,  Seq:  Am   C  , Controls: PLAY ,}  '), {
     vis: visId.clock,
+    align: alignId.root,
     key: 'F#m',
     seq: [chord('Am'), chord('C')],
     controls: [visControlId.play],
@@ -72,13 +82,13 @@ test('parseVisSpec skips bad steps, reserving brackets for later', () => {
 
 test('parseVisSpec reports unknown fields and controls', () => {
   const spec = parseVisSpec('{vis: notes, foo: 1, controls: play loop, bare}');
-  eq(spec.vis, visId.notes);
+  eq([spec.vis, spec.align], [visId.intervals, alignId.key]);
   eq(spec.controls, [visControlId.play]);
   eq(spec.errors, ['Unknown field "foo"', 'Unknown control "loop"', 'Expected "name: value", got "bare"']);
 });
 
 test('parseVisSpec leaves key null when omitted or empty', () => {
-  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] });
+  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] });
   eq(parseVisSpec('{vis: fifths, key: }').key, null);
 });
 

@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { chordSpelling, isKeyName } from '../js/sheet/chords.js';
+import { chordSpelling, isKeyName, keySpelling, keyName, noteName, mapChord, chordQuality } from '../js/sheet/chords.js';
 
 const steps = (name) => chordSpelling(name).steps;
 
@@ -44,6 +44,29 @@ test('chord spelling reads aug fives, bare sus numbers, dash minors and parenthe
   eq(steps('C-7'), [0, 3, 7, 10]);
   eq(steps('C7(9)'), [0, 4, 7, 10, 14]);
   eq(steps('Cmaj7(9)'), [0, 4, 7, 11, 14]);
+});
+
+test('chord spelling lets altered tensions replace natural ones', () => {
+  eq(steps('Em11b9'), [0, 3, 7, 10, 13, 17]);
+  eq(steps('C13b9'), [0, 4, 7, 10, 13, 21]);
+  eq(steps('Fmaj7#11'), [0, 4, 7, 11, 18]);
+  eq(steps('C6/9'), [0, 4, 7, 9, 14]);
+  eq(steps('Dm6'), [0, 3, 7, 9]);
+});
+
+test('chord parts map notes and read qualities', () => {
+  eq(mapChord('G/B*', (pc) => String(pc)), '7/11*');
+  eq(mapChord('N.C.', (pc) => String(pc)), 'N.C.');
+  eq(chordQuality('m7b5').mark, 'ø');
+  eq(chordQuality('maj7'), null);
+});
+
+test('key spelling names every pitch class from the tonic', () => {
+  const names = (pc, minor) => keySpelling(pc, minor).map(noteName);
+  eq(names(0, false), ['C', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B']);
+  eq(names(9, true), ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B']);
+  eq(keySpelling(7, false).filter((s) => s.inKey && s.acc).map(noteName), ['F#']);
+  eq([keyName(8, false), keyName(3, true), keyName(6, false)], ['Ab', 'D#m', 'F#']);
 });
 
 test('key names are checked whole', () => {

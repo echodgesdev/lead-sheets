@@ -1,21 +1,33 @@
+import { OCTAVE, mod12 } from '../core/math.js';
+
 const ROOT = '[A-Ga-g][#b]?';
-const PART = '(?:maj|min|dim|aug|add|sus|m|M|ø|°|\\+|[#b+\\-]?\\d{1,2}|\\([#b+\\-\\w]*\\))';
+const PART = '(?:maj|min|dim|aug|add|sus|m|M|ø|°|\\+|6\\/9|[#b+\\-]?\\d{1,2}|\\([#b+\\-\\w]*\\))';
 const CHORD_RE = new RegExp(`^${ROOT}${PART}*(?:\\/${ROOT})?\\**$`);
 const NC_RE = /^N\.?C\.?$/;
 const FILLER_RE = /^(?:\(?x\d+\)?|\d+x|[-/%:.()*~]+)$/i;
 const LONE_WORD_RE = /^[a-g][#b]?m?$/;
+const INLINE_RE = /\[([^\]]+)\]/g;
+const NOTE_RE = /^([A-Ga-g])([#b]?)/;
 
-export const NATURAL = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
-export const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-const MAJOR = { steps: [0, 2, 4, 5, 7, 9, 11], quals: ['', 'm', 'm', '', '', 'm', 'dim'] };
-const MINOR = { steps: [0, 2, 3, 5, 7, 8, 10], quals: ['m', 'dim', '', 'm', 'm', '', ''] };
+const ACCIDENTAL = { '': 0, '#': 1, b: -1 };
+export const IONIAN = [0, 2, 4, 5, 7, 9, 11];
+export const AEOLIAN = [0, 2, 3, 5, 7, 8, 10];
+export const SHARPS = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+export const FLATS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+const MAJOR_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'];
+export const FIFTHS = MAJOR_KEYS.map((name) => pitchOf(name[0], name.slice(1)));
+export const RELATIVE_MINOR = 9;
+const SHARP_SIDE = 6;
+const CHROMATIC_LETTERS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
+const INTERVAL_LETTERS = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
+const MAJOR = { steps: IONIAN, quals: ['', 'm', 'm', '', '', 'm', 'dim'] };
+const MINOR = { steps: AEOLIAN, quals: ['m', 'dim', '', 'm', 'm', '', ''] };
 
-export const CHORD_PARTS_RE = /^([A-Ga-g])([#b]?)(.*?)(?:\/([A-Ga-g])([#b]?))?(\**)$/;
+const CHORD_PARTS_RE = /^([A-Ga-g])([#b]?)(.*?)(?:\/([A-Ga-g])([#b]?))?(\**)$/;
 const KEY_RE = /^([A-G])([#b]?)\s*(m(?!aj)|-)?/i;
 const KEY_NAME_RE = /^[A-G][#b]?\s*(?:m|min|minor|maj|major|-)?$/i;
-const ACCIDENTAL = { '': 0, '#': 1, b: -1 };
-export const CHORD_QUALITIES = [
+const CHORD_QUALITIES = [
   { re: /^(?:m7[b-]5|ø7?)/, lower: true, mark: 'ø', seventh: true, steps: { third: 3, fifth: 6, seventh: 10 } },
   { re: /^(?:dim7|°7)/, lower: true, mark: '°', seventh: true, steps: { third: 3, fifth: 6, seventh: 9 } },
   { re: /^(?:dim|°)/, lower: true, mark: '°', steps: { third: 3, fifth: 6 } },
@@ -42,10 +54,10 @@ const MODIFIERS = [
   { re: /^add(?:6|13)/, add: 9 },
   { re: /^[b-]5/, fifth: 6 },
   { re: /^[#+]5/, fifth: 8 },
-  { re: /^b9/, add: 13 },
-  { re: /^#9/, add: 15 },
-  { re: /^#11/, add: 18 },
-  { re: /^b13/, add: 20 },
+  { re: /^b9/, add: 13, replaces: 14 },
+  { re: /^#9/, add: 15, replaces: 14 },
+  { re: /^#11/, add: 18, replaces: 17 },
+  { re: /^b13/, add: 20, replaces: 21 },
   { re: /^13/, add: 21 },
   { re: /^11/, add: 17 },
   { re: /^9/, add: 14 },
@@ -85,6 +97,12 @@ export function chordTokens(line) {
     .map((t) => ({ chord: t.text, col: t.col }));
 }
 
+export function inlineChords(line) {
+  return [...String(line).matchAll(INLINE_RE)]
+    .map((m) => ({ chord: m[1].trim(), index: m.index, end: m.index + m[0].length }))
+    .filter(({ chord }) => isChord(chord));
+}
+
 export function isTabLine(line) {
   const s = String(line).trimEnd();
   if (!/^\s*(?:[eBGDAEbgda]\s*[|:]|\|[-0-9])/.test(s)) return false;
@@ -94,24 +112,72 @@ export function isTabLine(line) {
   return tabby.length / rest.length >= 0.8;
 }
 
+function letterOf(name) {
+  return LETTERS.indexOf(name[0].toUpperCase());
+}
+
+export function pitchOf(letter, acc) {
+  return mod12(IONIAN[letterOf(letter)] + ACCIDENTAL[acc ?? '']);
+}
+
+function spell(pc, letter) {
+  const acc = mod12(pc - IONIAN[letter]);
+  return { letter, acc: acc > OCTAVE / 2 ? acc - OCTAVE : acc };
+}
+
+function plainSpelling(pc, sharp) {
+  const natural = IONIAN.indexOf(pc);
+  return natural >= 0 ? { letter: natural, acc: 0 } : spell(pc, IONIAN.indexOf(mod12(pc + (sharp ? -1 : 1))));
+}
+
+function spellFrom(tonic, letter, letters) {
+  return Array.from({ length: OCTAVE }, (_, pc) => spell(pc, (letter + letters[mod12(pc - tonic)]) % LETTERS.length));
+}
+
+export function noteName({ letter, acc }) {
+  return LETTERS[letter] + (acc > 0 ? '#'.repeat(acc) : 'b'.repeat(-acc));
+}
+
+export function keySpelling(pc, minor, letter = letterOf(keyName(pc, minor))) {
+  const scale = (minor ? AEOLIAN : IONIAN).map((step) => mod12(pc + step));
+  return spellFrom(pc, letter, CHROMATIC_LETTERS).map((spelled, note) => {
+    const inKey = scale.includes(note);
+    return { ...(inKey || Math.abs(spelled.acc) < 2 ? spelled : plainSpelling(note, spelled.acc > 0)), inKey };
+  });
+}
+
+export function intervalSpelling(root) {
+  const m = NOTE_RE.exec(String(root ?? '').trim());
+  return m ? spellFrom(pitchOf(m[1], m[2]), letterOf(m[1]), INTERVAL_LETTERS) : [];
+}
+
+export function keyOf(index, minor) {
+  const major = MAJOR_KEYS[index];
+  if (!minor) return major;
+  const pc = FIFTHS[index];
+  return `${noteName(keySpelling(pc, false, letterOf(major))[mod12(pc + RELATIVE_MINOR)])}m`;
+}
+
+export function fifthsIndex(pc, minor = false) {
+  return FIFTHS.indexOf(minor ? mod12(pc - RELATIVE_MINOR) : pc);
+}
+
+export function flatSide(index) {
+  return index > SHARP_SIDE;
+}
+
+export function keyName(pc, minor) {
+  return keyOf(fifthsIndex(pc, minor), minor);
+}
+
 export function diatonic(key) {
   const m = /^([A-G])([#b]?)(m|min|minor)?$/.exec(String(key || '').trim());
   if (!m) return [];
   const [, letter, acc, minor] = m;
+  const pc = pitchOf(letter, acc);
   const scale = minor ? MINOR : MAJOR;
-  const rootPc = (NATURAL[letter] + (acc === '#' ? 1 : acc === 'b' ? -1 : 0) + 12) % 12;
-  const start = LETTERS.indexOf(letter);
-  return scale.steps.map((step, i) => {
-    const l = LETTERS[(start + i) % 7];
-    let d = ((((rootPc + step) % 12) - NATURAL[l]) % 12 + 12) % 12;
-    if (d > 6) d -= 12;
-    const accidental = d > 0 ? '#'.repeat(d) : 'b'.repeat(-d);
-    return l + accidental + scale.quals[i];
-  });
-}
-
-export function pitchOf(letter, acc) {
-  return (NATURAL[letter.toUpperCase()] + ACCIDENTAL[acc ?? ''] + 12) % 12;
+  const spelling = keySpelling(pc, Boolean(minor), letterOf(letter));
+  return scale.steps.map((step, i) => noteName(spelling[mod12(pc + step)]) + scale.quals[i]);
 }
 
 export function isKeyName(text) {
@@ -131,10 +197,29 @@ function takeFirst(rules, text) {
   return null;
 }
 
+export function chordQuality(suffix) {
+  const found = takeFirst(CHORD_QUALITIES, suffix);
+  return found && { ...found.rule, rest: found.rest };
+}
+
+export function chordParts(chord) {
+  const m = CHORD_PARTS_RE.exec(chord);
+  if (!m) return null;
+  const [, letter, acc, suffix, bassLetter, bassAcc, marks] = m;
+  return { root: pitchOf(letter, acc), suffix, bass: bassLetter ? pitchOf(bassLetter, bassAcc) : null, marks };
+}
+
+export function mapChord(chord, noteFn, suffixFn = (suffix) => suffix) {
+  const parts = chordParts(chord);
+  if (!parts) return chord;
+  const { root, suffix, bass, marks } = parts;
+  return noteFn(root) + suffixFn(suffix) + (bass === null ? '' : `/${noteFn(bass)}`) + marks;
+}
+
 function suffixSteps(suffix) {
   let rest = suffix.replace(/[()\s]/g, '');
-  const quality = takeFirst(CHORD_QUALITIES, rest);
-  const chord = { third: 4, fifth: 7, seventh: null, add: [], ...quality?.rule.steps };
+  const quality = chordQuality(rest);
+  const chord = { third: 4, fifth: 7, seventh: null, add: [], ...quality?.steps };
   if (quality) rest = quality.rest;
   const major = MAJOR_SEVENTH_RE.exec(rest);
   if (major) rest = rest.slice(major[0].length);
@@ -150,24 +235,19 @@ function suffixSteps(suffix) {
   }
   for (let found = takeFirst(MODIFIERS, rest); found; found = takeFirst(MODIFIERS, rest)) {
     rest = found.rest;
-    const { third, fifth, add } = found.rule;
+    const { third, fifth, add, replaces } = found.rule;
     if (third !== undefined) chord.third = third;
     if (fifth !== undefined) chord.fifth = fifth;
-    if (add !== undefined) chord.add.push(add);
+    if (add !== undefined) chord.add = [...chord.add.filter((step) => step !== replaces), add];
   }
   const steps = [0, chord.third, chord.fifth, chord.seventh, ...chord.add].filter((step) => step !== null);
   return [...new Set(steps)].sort((a, b) => a - b);
 }
 
 export function chordSpelling(token) {
-  const m = CHORD_PARTS_RE.exec(String(token ?? '').trim());
-  if (!m || !isChord(token) || NC_RE.test(token)) return null;
-  const [, letter, acc, suffix, bassLetter, bassAcc] = m;
-  return {
-    pc: pitchOf(letter, acc),
-    steps: suffixSteps(suffix),
-    bass: bassLetter ? pitchOf(bassLetter, bassAcc) : null,
-  };
+  if (!isChord(token) || NC_RE.test(token)) return null;
+  const { root, suffix, bass } = chordParts(token.trim());
+  return { pc: root, steps: suffixSteps(suffix), bass };
 }
 
 export function chordsIn(text) {
@@ -182,10 +262,7 @@ export function chordsIn(text) {
   for (const line of String(text).split(/\r?\n/)) {
     if (isTabLine(line)) continue;
     if (isChordLine(line)) chordTokens(line).forEach((t) => add(chordName(t.chord)));
-    for (const m of line.matchAll(/\[([^\]]+)\]/g)) {
-      const c = m[1].trim();
-      if (isChord(c)) add(chordName(c));
-    }
+    for (const { chord } of inlineChords(line)) add(chordName(chord));
   }
   return out;
 }

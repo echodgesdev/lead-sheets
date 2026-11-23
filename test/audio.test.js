@@ -1,6 +1,6 @@
 import { test, eq } from './harness.js';
 import { parseBpm, createTapper, MIN_BPM, MAX_BPM, MAX_BEATS, levelId, defaultPattern, resizePattern, cycleLevel, parsePattern } from '../js/audio/click.js';
-import { detectPitch, noteOf } from '../js/audio/pitch.js';
+import { detectPitch, noteOf, midiToHz, hzToMidi } from '../js/audio/pitch.js';
 
 const SAMPLE_RATE = 48000;
 const BUFFER_SIZE = 4096;
@@ -84,6 +84,15 @@ test('detectPitch and noteOf name pure tones', () => {
 test('detectPitch avoids octave errors on a harmonic-rich low E', () => {
   const amplitudes = [1, 1 / 2, 1 / 3, 1 / 4, 1 / 5].map((a) => a * 0.3);
   expectNote(tone(82.41, amplitudes), 'E', 2, 'E2 harmonics');
+});
+
+test('midiToHz and hzToMidi convert around A4 = 440 Hz', () => {
+  eq(midiToHz(69), 440);
+  eq(midiToHz(81), 880);
+  eq(midiToHz(57), 220);
+  eq(hzToMidi(440), 69);
+  eq(hzToMidi(110), 45);
+  eq(Math.round(hzToMidi(midiToHz(40)) * 1000) / 1000, 40);
 });
 
 test('detectPitch returns null for silence', () => {

@@ -17,25 +17,26 @@ export function selectPill(name, title, options, value) {
   return { pill, select: field };
 }
 
-export function stepPill(downTitle, upTitle) {
-  const pill = span('pill step-pill');
-  const text = span('step-pill-text');
-  const down = iconButton(iconId.chevronLeft, downTitle);
-  const up = iconButton(iconId.chevronRight, upTitle);
-  pill.append(down, text, up);
-  return { pill, text, down, up };
-}
-
 export function segToggle(...nodes) {
   const toggle = div('seg-toggle');
   toggle.append(...nodes);
   return toggle;
 }
 
-export function stepper(center, downTitle, upTitle) {
-  const down = iconButton(iconId.minus, downTitle);
-  const up = iconButton(iconId.plus, upTitle);
-  return { toggle: segToggle(down, center, up), down, up };
+export function stepper({ center, downTitle, upTitle, min = -Infinity, max = Infinity, onStep, pill = false }) {
+  const down = iconButton(pill ? iconId.chevronLeft : iconId.minus, downTitle);
+  const up = iconButton(pill ? iconId.chevronRight : iconId.plus, upTitle);
+  down.addEventListener(evt.click, () => onStep(-1));
+  up.addEventListener(evt.click, () => onStep(1));
+  const el = pill ? span('pill step-pill') : segToggle();
+  el.append(down, center, up);
+  return {
+    el,
+    set(value) {
+      down.disabled = value <= min;
+      up.disabled = value >= max;
+    },
+  };
 }
 
 export function keyFace(label, value) {

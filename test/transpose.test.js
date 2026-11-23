@@ -32,6 +32,7 @@ test('transposeKey and hasKey', () => {
   eq(transposeKey('Em', 1), 'Fm');
   eq(transposeKey('G major', 2), 'A');
   eq(transposeKey('E minor', -2), 'Dm');
+  eq(transposeKey('Em', -1), 'D#m');
   eq(transposeKey('G major', 0), 'G major');
   eq(transposeKey(undefined, 2), undefined);
   eq([hasKey('F#m'), hasKey(''), hasKey(undefined), hasKey('?')], [true, false, false, false]);

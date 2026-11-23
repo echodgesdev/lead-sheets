@@ -15,19 +15,22 @@ import {
 import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
 import { attachDialog, promptNumber } from './modal.js';
 import { stepper } from './controls.js';
+import { labeledField } from './rows.js';
 import { icon, iconId } from '../core/icons.js';
-import { div, span, button, iconButton, labeledButton, plainButton, cls } from '../core/dom.js';
+import { div, button, iconButton, labeledButton, plainButton, cls, setPressed, setTitle } from '../core/dom.js';
 import { evt } from '../core/events.js';
 
-function valueStepper(downTitle, upTitle) {
+function valueStepper(downTitle, upTitle, min, max, onStep) {
   const value = plainButton('', 'metro-value');
-  return { value, ...stepper(value, downTitle, upTitle) };
-}
-
-function labeled(text, control) {
-  const field = div('metro-field');
-  field.append(span('modal-label', text), control);
-  return field;
+  const step = stepper({ center: value, downTitle, upTitle, min, max, onStep });
+  return {
+    el: step.el,
+    value,
+    set(n) {
+      value.textContent = String(n);
+      step.set(n);
+    },
+  };
 }
 
 export function createMetronomeControl(tempo) {
@@ -35,7 +38,6 @@ export function createMetronomeControl(tempo) {
   let pattern = getMetronomePattern();
   let sync = null;
   let showBeat = null;
-  let indicator = null;
   let disposed = false;
 
   const headerBtn = iconButton(iconId.metronome, 'Metronome', 'metro-btn');
@@ -44,18 +46,12 @@ export function createMetronomeControl(tempo) {
   const metronome = createMetronome(onBeat);
   metronome.setPattern(pattern);
 
-  function pulse(el, down) {
-    el.classList.remove(cls.beat, cls.down);
-    void el.getBoundingClientRect();
-    el.classList.add(cls.beat);
-    el.classList.toggle(cls.down, down);
-  }
-
   function onBeat(beat, level) {
     if (disposed) return;
-    const down = level === levelId.primary;
-    pulse(headerBtn, down);
-    if (indicator) pulse(indicator, down);
+    headerBtn.classList.remove(cls.beat, cls.down);
+    void headerBtn.getBoundingClientRect();
+    headerBtn.classList.add(cls.beat);
+    headerBtn.classList.toggle(cls.down, level === levelId.primary);
     showBeat?.(beat);
   }
 
@@ -63,12 +59,6 @@ export function createMetronomeControl(tempo) {
     headerBtn.classList.toggle(cls.active, metronome.running);
     if (metronome.running) return;
     headerBtn.classList.remove(cls.beat, cls.down);
-    indicator?.classList.remove(cls.beat, cls.down);
-  }
-
-  function attachIndicator(el) {
-    indicator?.classList.remove(cls.beat, cls.down);
-    indicator = el;
   }
 
   function setBpm(n) {
@@ -92,10 +82,10 @@ export function createMetronomeControl(tempo) {
   }
 
   function open() {
-    const tempoStep = valueStepper('Slower', 'Faster');
-    const beatsStep = valueStepper('Fewer beats', 'More beats');
+    const tempoStep = valueStepper('Slower', 'Faster', MIN_BPM, MAX_BPM, (by) => setBpm(bpm + by));
+    const beatsStep = valueStepper('Fewer beats', 'More beats', MIN_BEATS, MAX_BEATS, (by) => setPattern(resizePattern(pattern, pattern.length + by)));
     const settings = div('modal-row metro-settings');
-    settings.append(labeled('Tempo', tempoStep.toggle), labeled('Beats', beatsStep.toggle));
+    settings.append(labeledField('Tempo', tempoStep.el), labeledField('Beats', beatsStep.el));
     const pads = div('modal-row metro-pads');
 
     const tapBtn = labeledButton(null, 'Tap');
@@ -122,24 +112,14 @@ export function createMetronomeControl(tempo) {
 
     sync = () => {
       const running = metronome.running;
-      tempoStep.value.textContent = String(bpm);
-      tempoStep.down.disabled = bpm <= MIN_BPM;
-      tempoStep.up.disabled = bpm >= MAX_BPM;
-      beatsStep.value.textContent = String(pattern.length);
-      beatsStep.down.disabled = pattern.length <= MIN_BEATS;
-      beatsStep.up.disabled = pattern.length >= MAX_BEATS;
+      tempoStep.set(bpm);
+      beatsStep.set(pattern.length);
       pads.replaceChildren(...pattern.map(pad));
       startBtn.replaceChildren(icon(running ? iconId.pause : iconId.play), running ? 'Stop' : 'Start');
-      startBtn.title = running ? 'Stop' : 'Start';
-      startBtn.setAttribute('aria-label', startBtn.title);
-      startBtn.setAttribute('aria-pressed', String(running));
-      startBtn.classList.toggle(cls.active, running);
+      setTitle(startBtn, running ? 'Stop' : 'Start');
+      setPressed(startBtn, running);
     };
 
-    tempoStep.down.addEventListener(evt.click, () => setBpm(bpm - 1));
-    tempoStep.up.addEventListener(evt.click, () => setBpm(bpm + 1));
-    beatsStep.down.addEventListener(evt.click, () => setPattern(resizePattern(pattern, pattern.length - 1)));
-    beatsStep.up.addEventListener(evt.click, () => setPattern(resizePattern(pattern, pattern.length + 1)));
     tempoStep.value.addEventListener(evt.click, () => promptNumber('Tempo (BPM)', bpm, { min: MIN_BPM, max: MAX_BPM }, setBpm));
     beatsStep.value.addEventListener(evt.click, () => promptNumber('Beats', pattern.length, { min: MIN_BEATS, max: MAX_BEATS }, (n) => setPattern(resizePattern(pattern, n))));
     tapBtn.addEventListener(evt.click, onTap);
@@ -161,9 +141,8 @@ export function createMetronomeControl(tempo) {
   function dispose() {
     disposed = true;
     metronome.stop();
-    attachIndicator(null);
     closeDialog();
   }
 
-  return { button: headerBtn, open, dispose, attachIndicator };
+  return { button: headerBtn, dispose };
 }

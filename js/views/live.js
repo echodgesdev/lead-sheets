@@ -31,10 +31,9 @@ import {
 } from '../data/prefs.js';
 import { openSongMenu } from '../components/menu.js';
 import { openSongDetails } from '../components/details.js';
-import { createTunerControl } from '../components/tuner.js';
-import { createMetronomeControl } from '../components/metronome.js';
+import { createUtilities } from '../components/tools.js';
 import { icon, iconId } from '../core/icons.js';
-import { div, h1, header, p, span, button, iconButton, cls } from '../core/dom.js';
+import { div, h1, header, p, span, button, iconButton, cls, setPressed, setTitle } from '../core/dom.js';
 import { stepper, keyFace } from '../components/controls.js';
 import { evt, keys } from '../core/events.js';
 import { routes } from '../routes.js';
@@ -96,18 +95,31 @@ export function mount(root, { id, preview = false, setId = null }) {
   const editBtn = iconButton(iconId.penToSquare, 'Edit song');
   editBtn.hidden = !preview;
   const capoBtn = button('', 'Reset capo', 'live-key');
-  const { toggle: capoToggle, down: capoDownBtn, up: capoUpBtn } = stepper(capoBtn, 'Capo down', 'Capo up');
+  const capoStep = stepper({
+    center: capoBtn,
+    downTitle: 'Capo down',
+    upTitle: 'Capo up',
+    min: 0,
+    max: maxFret,
+    onStep: (by) => setFret(fret + by),
+  });
   const shiftBtn = button('', 'Reset transpose', 'live-key');
-  const { toggle: transpose, down: downBtn, up: upBtn } = stepper(shiftBtn, 'Transpose down', 'Transpose up');
+  const shiftStep = stepper({
+    center: shiftBtn,
+    downTitle: 'Transpose down',
+    upTitle: 'Transpose up',
+    min: -MAX_SHIFT,
+    max: MAX_SHIFT,
+    onStep: (by) => setShift(shift + by),
+  });
   const numbersBtn = button('', '');
   numbersBtn.disabled = !keyed;
   const detailsBtn = iconButton(iconId.circleInfo, 'Song details');
   const menuBtn = iconButton(iconId.ellipsisVertical, 'More options');
-  const tuner = createTunerControl();
-  const metronome = createMetronomeControl(rec.tempo);
+  const utilities = createUtilities(rec.tempo);
   const lead = div('live-lead');
-  lead.append(homeBtn, transpose);
-  headerEl.append(lead, capoToggle, numbersBtn, tuner.button, metronome.button, detailsBtn, menuBtn, editBtn);
+  lead.append(homeBtn, shiftStep.el);
+  headerEl.append(lead, capoStep.el, numbersBtn, ...utilities.buttons, detailsBtn, menuBtn, editBtn);
   const tags = div('live-tags');
   const title = h1('live-title', songTitle(rec));
 
@@ -144,14 +156,11 @@ export function mount(root, { id, preview = false, setId = null }) {
     fillTags(tags, shownRec());
     capoBtn.replaceChildren(...keyFace('Capo', fret));
     capoBtn.classList.toggle(cls.active, fret !== base.capo);
-    capoDownBtn.disabled = fret <= 0;
-    capoUpBtn.disabled = fret >= maxFret;
+    capoStep.set(fret);
     shiftBtn.replaceChildren(...keyFace('Transpose', signed(shift)));
     shiftBtn.classList.toggle(cls.active, shift !== base.shift);
-    downBtn.disabled = shift <= -MAX_SHIFT;
-    upBtn.disabled = shift >= MAX_SHIFT;
-    numbersBtn.classList.toggle(cls.active, numbers);
-    numbersBtn.setAttribute('aria-pressed', String(numbers));
+    shiftStep.set(shift);
+    setPressed(numbersBtn, numbers);
   }
 
   function renderControls() {
@@ -199,15 +208,13 @@ export function mount(root, { id, preview = false, setId = null }) {
     style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
     pedal = getPedalMode();
     numbers = controls.has(controlId.numbers) && keyed && getNumbers();
-    capoToggle.hidden = !controls.has(controlId.capo);
-    transpose.hidden = !controls.has(controlId.transpose);
+    capoStep.el.hidden = !controls.has(controlId.capo);
+    shiftStep.el.hidden = !controls.has(controlId.transpose);
     numbersBtn.hidden = !controls.has(controlId.numbers);
     detailsBtn.hidden = !controls.has(controlId.details);
-    tuner.button.hidden = !controls.has(controlId.tuner);
-    metronome.button.hidden = !controls.has(controlId.metronome);
+    utilities.show(controls);
     numbersBtn.textContent = style.short;
-    numbersBtn.title = keyed ? style.title : 'Add a Key to see numbers';
-    numbersBtn.setAttribute('aria-label', numbersBtn.title);
+    setTitle(numbersBtn, keyed ? style.title : 'Add a Key to see numbers');
     for (const b of [slowBtn, playBtn, fastBtn]) b.hidden = !autoscroll;
     const songNav = controls.has(controlId.songNav);
     prevBtn.hidden = !songNav;
@@ -279,19 +286,11 @@ export function mount(root, { id, preview = false, setId = null }) {
   const onSlow = () => setSpeed(scroll.speed - 1);
   const onFast = () => setSpeed(scroll.speed + 1);
 
-  const onCapoDown = () => setFret(fret - 1);
-  const onCapoUp = () => setFret(fret + 1);
   const onCapoReset = () => setFret(base.capo);
-  const onDown = () => setShift(shift - 1);
-  const onUp = () => setShift(shift + 1);
   const onReset = () => setShift(base.shift);
 
   editBtn.addEventListener(evt.click, onEdit);
-  capoDownBtn.addEventListener(evt.click, onCapoDown);
-  capoUpBtn.addEventListener(evt.click, onCapoUp);
   capoBtn.addEventListener(evt.click, onCapoReset);
-  downBtn.addEventListener(evt.click, onDown);
-  upBtn.addEventListener(evt.click, onUp);
   shiftBtn.addEventListener(evt.click, onReset);
   numbersBtn.addEventListener(evt.click, toggleNumbers);
   detailsBtn.addEventListener(evt.click, onDetails);
@@ -315,8 +314,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   return () => {
     disposed = true;
     disposeSheet?.();
-    tuner.dispose();
-    metronome.dispose();
+    utilities.dispose();
     listening.abort();
     root.classList.remove('with-bar', 'live-view');
   };

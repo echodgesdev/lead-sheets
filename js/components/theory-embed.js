@@ -1,7 +1,6 @@
-import { renderClock, renderChain, renderKeys, renderFretboard, renderTab, renderStaff, alignId } from './theory-views.js';
+import { THEORY_VIEWS } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
-import { ringId, keyTonic } from '../sheet/circle.js';
 import { sequenceModel, keyAt } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout } from '../sheet/fretboard.js';
 import { visId, visControlId } from '../sheet/vis-spec.js';
@@ -13,42 +12,26 @@ import { iconId } from '../core/icons.js';
 
 const PLAYABLE = '[data-notes], [data-ring]';
 const DEFAULT_KEY = { index: 0, minor: false };
-const NECK_VIS = new Set([visId.fretboard, visId.tab]);
-const VIEWS = {
-  [visId.piano]: renderKeys,
-  [visId.clock]: renderClock,
-  [visId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
-  [visId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
-  [visId.fifths]: fifthsView,
-  [visId.fretboard]: (model, key, layout) => renderFretboard(model, layout),
-  [visId.tab]: (model, key, layout) => renderTab(model, layout),
-  [visId.clef]: renderStaff,
-};
 
-function fifthsView(model, key) {
+function keyFifths(model, key) {
   const fifths = createFifths();
   fifths.render({ ...key, items: model.items, bare: false });
-  fifths.tagSteps(model.run);
-  fifths.block(model.allowed, model.items);
-  return fifths.el;
-}
-
-function wedgePc(el, model) {
-  const { ring, index } = el.dataset;
-  if (ring === ringId.dim) return model.items.find((item) => item.ring === ringId.dim).pc;
-  return keyTonic(Number(index), ring === ringId.inner);
+  fifths.block(model.allowed);
+  return fifths;
 }
 
 export function createTheoryEmbed(spec) {
   const key = keyAt(spec.key) ?? DEFAULT_KEY;
   const model = sequenceModel({ ...key, steps: spec.seq, locked: true, minOctaves: getKeyOctaves() });
+  const view = THEORY_VIEWS[spec.vis];
   const box = div('theory-embed');
   const stage = div('theory-embed-stage');
-  const layout = NECK_VIS.has(spec.vis) ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
-  stage.append(VIEWS[spec.vis](model, key, layout));
+  const fifths = spec.vis === visId.fifths ? keyFifths(model, key) : null;
+  const layout = view.neck ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
+  stage.append(view.render(model, { fifths, layout, align: spec.align }));
   box.append(stage);
 
-  const voiceFor = (el) => startNotes(el.dataset.notes ? notesOf(el) : [model.noteMidiOf(wedgePc(el, model))]);
+  const voiceFor = (el) => startNotes(el.dataset.notes ? notesOf(el) : [model.noteMidiOf(fifths.pcOf(el))]);
   const player = attachPlayer({ areas: [stage], stage, selector: PLAYABLE, voiceFor });
 
   if (spec.controls.includes(visControlId.play)) {
@@ -66,9 +49,5 @@ export function createTheoryEmbed(spec) {
   for (const name of [evt.pointerdown, evt.pointerup]) box.addEventListener(name, onOwnTap);
   box.addEventListener(evt.keydown, onOwnKey);
 
-  const dispose = () => {
-    player.end();
-    player.stopRun();
-  };
-  return { el: box, dispose };
+  return { el: box, dispose: player.dispose };
 }

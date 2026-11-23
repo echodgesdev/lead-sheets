@@ -5,6 +5,7 @@
   --r-sm: 8px;
   --r-md: 12px;
   --r-lg: 20px;
+  --r-pill: 999px;
   --bar-h: 64px;
   --dock-gap: 12px;
   --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -15,6 +16,7 @@
   --nav-fg: #ffffff;
   --nav-muted: #b0bec5;
   --nav-line: rgba(255, 255, 255, 0.08);
+  --nav-danger: #ff8a80;
   --lime: #c6d74c;
   --orange: #f5a524;
   --key-white: #e6edf3;
@@ -230,7 +232,7 @@ input:focus-visible {
     gap: 0;
   }
 
-  .list-hdr > .seg-toggle .btn:not(.active) .mode-label {
+  .list-hdr > .seg-toggle .btn:not(.active) .opt-label {
     display: none;
   }
 }
@@ -294,7 +296,7 @@ input:focus-visible {
 .hdr .btn {
   min-height: 36px;
   padding: 0 10px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: transparent;
   box-shadow: none;
   color: var(--nav-fg);
@@ -306,11 +308,11 @@ input:focus-visible {
 }
 
 .hdr .btn.danger {
-  color: #ff8a80;
+  color: var(--nav-danger);
 }
 
 .hdr-alert {
-  color: #ff8a80;
+  color: var(--nav-danger);
   font-size: 12px;
   font-weight: 700;
 }
@@ -318,14 +320,14 @@ input:focus-visible {
 .seg-toggle {
   display: inline-flex;
   padding: 3px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: rgba(255, 255, 255, 0.08);
 }
 
 .seg-toggle .btn {
   min-height: 32px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: transparent;
   box-shadow: none;
 }
@@ -386,7 +388,7 @@ input:focus-visible {
   min-width: 36px;
   margin-right: -6px;
   margin-left: auto;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: transparent;
   box-shadow: none;
   color: var(--muted);
@@ -516,7 +518,7 @@ input:focus-visible {
 
 .chip {
   min-height: 36px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
 }
 
 .toolbar {
@@ -553,7 +555,7 @@ input:focus-visible {
   gap: 6px;
   padding-right: 6px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--surface-2);
   box-shadow: var(--elev-1);
   transition: border-color 0.15s, box-shadow 0.15s;
@@ -567,7 +569,7 @@ input:focus-visible {
 .search-pill > .field,
 .search-pill > .field:focus {
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: transparent;
   box-shadow: none;
 }
@@ -577,7 +579,7 @@ input:focus-visible {
   flex: 0 0 auto;
   align-items: center;
   min-height: 32px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: color-mix(in srgb, var(--fg) 8%, transparent);
   color: var(--fg);
   font-size: 13px;
@@ -594,7 +596,7 @@ input:focus-visible {
 .step-pill .btn {
   min-width: 32px;
   min-height: 32px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: transparent;
   box-shadow: none;
   color: var(--muted);
@@ -731,10 +733,6 @@ button.row:active {
   transform: scale(0.985);
 }
 
-.tool-row {
-  cursor: pointer;
-}
-
 .tool {
   position: relative;
   min-width: 0;
@@ -742,59 +740,6 @@ button.row:active {
   border-radius: var(--r-md);
   background: var(--surface);
   box-shadow: var(--elev-1);
-}
-
-.tool > summary {
-  min-height: 48px;
-  padding-block: 6px;
-  list-style: none;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-.tool > summary::-webkit-details-marker {
-  display: none;
-}
-
-.tool > summary > .fa:first-child {
-  color: var(--accent);
-  font-size: 18px;
-}
-
-.tool > summary > .fa:last-child {
-  color: var(--muted);
-  transition: transform 0.2s var(--ease);
-}
-
-.tool[open] > summary > .fa:last-child {
-  transform: rotate(180deg);
-}
-
-.tool > summary + * {
-  border-top: 1px solid var(--line);
-}
-
-.tool > summary .row-main {
-  transition: opacity 0.25s var(--ease), transform 0.25s var(--ease);
-}
-
-.tool[open]:has(> .tool-header) > summary .row-main {
-  opacity: 0;
-  transform: translateX(-12px);
-}
-
-.tool > .tool-header {
-  position: absolute;
-  top: 0;
-  right: 40px;
-  left: 44px;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  height: 48px;
-  border-top: 0;
-  pointer-events: none;
-  animation: tool-header-in 0.3s var(--ease);
 }
 
 .tool > .tool-header + * {
@@ -807,16 +752,10 @@ button.row:active {
 }
 
 .theory-panel > .tool-header {
-  position: static;
-  height: auto;
+  display: flex;
+  align-items: center;
   min-height: 48px;
   padding: 6px 12px;
-  pointer-events: auto;
-  animation: none;
-}
-
-.tool-header .seg-toggle {
-  pointer-events: auto;
 }
 
 .tool .tool-header .btn {
@@ -833,21 +772,13 @@ button.row:active {
 .tool-header > .btn {
   margin-left: auto;
   min-height: 32px;
-  border-radius: 999px;
-  pointer-events: auto;
+  border-radius: var(--r-pill);
 }
 
 .modal .tool-header {
   display: flex;
   justify-content: center;
   padding: 10px 12px;
-}
-
-@keyframes tool-header-in {
-  from {
-    opacity: 0;
-    transform: translateX(12px);
-  }
 }
 
 .tool .modal-row {
@@ -915,7 +846,7 @@ button.row:active {
   flex: none;
   padding: 2px 9px;
   border: 1px solid var(--badge-line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--badge-bg);
   color: var(--badge-fg);
   font-size: 11px;
@@ -1033,7 +964,7 @@ button.row:active {
   max-width: calc(100vw - 32px);
   padding: 10px 18px;
   border: 1px solid var(--nav-line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--glass-nav);
   -webkit-backdrop-filter: var(--blur);
   backdrop-filter: var(--blur);
@@ -1369,15 +1300,8 @@ button.row:active {
   justify-content: space-around;
 }
 
-.metro-field {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.metro-settings > .field-stack {
   gap: 8px;
-}
-
-.metro-field .modal-label {
-  flex: none;
 }
 
 .metro-pads {
@@ -1434,30 +1358,6 @@ button.row:active {
   animation-name: beat-down;
 }
 
-.tool:not([open]) > summary > .fa.beat {
-  animation: metro-pulse 0.3s ease-out;
-}
-
-.tool:not([open]) > summary > .fa.beat.down {
-  animation-name: metro-pulse-down;
-}
-
-@keyframes metro-pulse {
-  from {
-    color: color-mix(in srgb, var(--lime) 60%, var(--accent));
-    transform: scale(1.12);
-    filter: drop-shadow(0 0 4px color-mix(in srgb, var(--lime) 45%, transparent));
-  }
-}
-
-@keyframes metro-pulse-down {
-  from {
-    color: var(--lime);
-    transform: scale(1.3);
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--lime) 80%, transparent));
-  }
-}
-
 @keyframes beat {
   from {
     transform: scale(1.08);
@@ -1483,15 +1383,26 @@ button.row:active {
   padding-top: 8px;
 }
 
-.circle-art,
-.clock-art {
-  width: min(100%, 360px);
+.theory-art {
+  display: block;
   height: auto;
-  aspect-ratio: 1;
+  margin-inline: auto;
   -webkit-touch-callout: none;
   -webkit-user-select: none;
   user-select: none;
   touch-action: manipulation;
+}
+
+:where(.theory-art) text {
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.circle-art,
+.clock-art {
+  width: min(100%, 360px);
+  aspect-ratio: 1;
 }
 
 .circle-art .accent-from {
@@ -1535,9 +1446,6 @@ button.row:active {
   fill: var(--muted);
   font-size: 10px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
   transform-box: fill-box;
   transform-origin: center;
   transition: fill 0.2s var(--ease), transform 0.3s var(--spring);
@@ -1607,8 +1515,6 @@ button.row:active {
   fill: var(--fg);
   font-size: 17px;
   font-weight: 800;
-  text-anchor: middle;
-  dominant-baseline: central;
 }
 
 .hub-quality {
@@ -1686,7 +1592,8 @@ button.row:active {
 .modal .chord-more {
   width: 100%;
   min-width: 0;
-  min-height: 22px;
+  min-height: 32px;
+  margin-bottom: -10px;
   background: transparent;
   box-shadow: none;
   color: var(--muted);
@@ -1722,9 +1629,6 @@ button.row:active {
   opacity: 0.6;
   font-size: 9px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
 }
 
 .clock-label.in-key {
@@ -1733,7 +1637,7 @@ button.row:active {
 }
 
 .clock-label.voiced {
-  fill: var(--accent);
+  fill: var(--tone, var(--accent));
   opacity: 1;
 }
 
@@ -1752,10 +1656,8 @@ button.row:active {
   pointer-events: none;
 }
 
-.clock-dot {
-  fill: var(--accent);
-  stroke: var(--surface);
-  stroke-width: 1.2;
+.note-dot {
+  fill: var(--tone, var(--accent));
   cursor: pointer;
   outline: none;
   transform-box: fill-box;
@@ -1763,28 +1665,14 @@ button.row:active {
   transition: transform 0.3s var(--spring);
 }
 
-.clock-dot.root {
-  fill: var(--lime);
-}
-
-.clock-dot.outside {
-  fill: var(--orange);
-}
-
-.clock-label.voiced.outside {
-  fill: var(--orange);
-}
-
-.clock-hit.blocked,
-.wedge.blocked,
-.chain-cell.blocked,
-.key.blocked {
-  cursor: not-allowed;
-}
-
-.clock-dot.pressed {
+.note-dot.pressed {
   transform: scale(1.35);
   transition-duration: 0.08s;
+}
+
+.clock-dot {
+  stroke: var(--surface);
+  stroke-width: 1.2;
 }
 
 .clock-center {
@@ -1878,16 +1766,8 @@ button.row:active {
 }
 
 .chain-cell.voiced {
-  background: var(--accent);
+  background: var(--tone, var(--accent));
   box-shadow: none;
-}
-
-.chain-cell.voiced.root {
-  background: var(--lime);
-}
-
-.chain-cell.voiced.outside {
-  background: var(--orange);
 }
 
 .chain-cell.pressed {
@@ -1897,15 +1777,8 @@ button.row:active {
 }
 
 .fret-art {
-  display: block;
   width: 100%;
   max-width: 760px;
-  height: auto;
-  margin-inline: auto;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  touch-action: manipulation;
 }
 
 .fret-nut {
@@ -1933,17 +1806,13 @@ button.row:active {
   fill: var(--muted);
   font-size: 7px;
   font-weight: 700;
-  text-anchor: middle;
-  pointer-events: none;
+  dominant-baseline: auto;
 }
 
 .fret-muted {
   fill: var(--muted);
   font-size: 10px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
 }
 
 .fret-hit {
@@ -1953,10 +1822,6 @@ button.row:active {
 
 .fret-hit rect {
   fill: transparent;
-}
-
-.fret-hit.blocked {
-  cursor: not-allowed;
 }
 
 .fret-ghost {
@@ -1988,17 +1853,9 @@ button.row:active {
   fill: var(--on-accent);
   font-size: 5px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
 }
 
 .fret-dot {
-  fill: var(--accent);
-  cursor: pointer;
-  outline: none;
-  transform-box: fill-box;
-  transform-origin: center;
   transition: transform 0.3s var(--spring), opacity 0.2s;
 }
 
@@ -2007,49 +1864,32 @@ button.row:active {
   stroke-width: 1.2;
 }
 
-.fret-dot.root {
-  fill: var(--lime);
-}
-
-.fret-dot.outside {
-  fill: var(--orange);
-}
-
 .fret-dot.faint {
   opacity: 0.3;
 }
 
 .fret-dot.pressed {
   opacity: 1;
-  transform: scale(1.35);
-  transition-duration: 0.08s;
 }
 
-.fret-controls {
+.view-controls {
   justify-content: center;
   align-items: stretch;
   flex-wrap: wrap;
   gap: 6px 12px;
 }
 
-.fret-controls .field-stack > :last-child {
+.view-controls .field-stack > :last-child {
   margin-block: auto;
 }
 
-.fret-controls .select-pill {
+.view-controls .select-pill {
   padding: 0 10px;
 }
 
 .tab-art,
 .staff-art {
-  display: block;
   max-width: 100%;
-  height: auto;
-  margin-inline: auto;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
-  touch-action: manipulation;
 }
 
 .tab-line,
@@ -2064,9 +1904,6 @@ button.row:active {
   fill: var(--muted);
   font-size: 8px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
 }
 
 .tab-muted {
@@ -2075,45 +1912,12 @@ button.row:active {
   stroke-width: 3px;
 }
 
-.tab-note,
-.staff-note {
-  fill: var(--accent);
-  cursor: pointer;
-  outline: none;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: transform 0.3s var(--spring);
-}
-
 .tab-note text {
   font-size: 9px;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: central;
   paint-order: stroke;
   stroke: var(--surface);
   stroke-width: 3px;
-}
-
-.tab-note.root,
-.staff-note.root {
-  fill: var(--lime);
-}
-
-.tab-note.outside,
-.staff-note.outside {
-  fill: var(--orange);
-}
-
-.tab-note.blocked,
-.staff-note.blocked {
-  cursor: not-allowed;
-}
-
-.tab-note.pressed,
-.staff-note.pressed {
-  transform: scale(1.35);
-  transition-duration: 0.08s;
 }
 
 .tab-hit,
@@ -2124,15 +1928,13 @@ button.row:active {
 .staff-clef {
   fill: var(--fg);
   font-family: 'Bravura', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', serif;
-  pointer-events: none;
+  text-anchor: start;
+  dominant-baseline: auto;
 }
 
 .staff-glyph {
   fill: var(--fg);
   font-size: 11px;
-  text-anchor: middle;
-  dominant-baseline: central;
-  pointer-events: none;
 }
 
 .keys {
@@ -2218,31 +2020,27 @@ button.row:active {
 }
 
 .key.white.voiced {
-  background: var(--accent);
+  background: var(--tone, var(--accent));
 }
 
 .key.black.voiced {
-  background: color-mix(in srgb, var(--accent) 70%, var(--key-black));
-}
-
-.key.white.voiced.root {
-  background: var(--lime);
-}
-
-.key.black.voiced.root {
-  background: color-mix(in srgb, var(--lime) 70%, var(--key-black));
-}
-
-.key.white.voiced.outside {
-  background: var(--orange);
-}
-
-.key.black.voiced.outside {
-  background: color-mix(in srgb, var(--orange) 70%, var(--key-black));
+  background: color-mix(in srgb, var(--tone, var(--accent)) 70%, var(--key-black));
 }
 
 .key.voiced.pressed {
   filter: brightness(1.2);
+}
+
+.root {
+  --tone: var(--lime);
+}
+
+.outside {
+  --tone: var(--orange);
+}
+
+.blocked {
+  cursor: not-allowed;
 }
 
 @media (prefers-reduced-motion: reduce) {

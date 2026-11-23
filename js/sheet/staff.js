@@ -1,8 +1,8 @@
-const OCTAVE = 12;
+import { keySpelling } from './chords.js';
+import { qualityId } from './circle.js';
+import { OCTAVE } from '../core/math.js';
+
 const LETTERS = 7;
-const NATURALS = [0, 2, 4, 5, 7, 9, 11];
-const NAME_RE = /^([A-G])([#b]*)/;
-const LETTER_INDEX = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
 const TREBLE_FLOOR = 53;
 const BASS_CEILING = 64;
 const MIDDLE_C = 60;
@@ -16,30 +16,11 @@ export const STAVES = Object.freeze({
   [clefId.bass]: Object.freeze({ top: 26, shift: -14 }),
 });
 
-function signedOffset(pc, letter) {
-  const offset = (((pc - NATURALS[letter]) % OCTAVE) + OCTAVE) % OCTAVE;
-  return offset > OCTAVE / 2 ? offset - OCTAVE : offset;
-}
-
-function keySpelling(items) {
-  return new Map(items.map(({ chord, pc }) => {
-    const [, name, marks] = NAME_RE.exec(chord);
-    return [pc, { letter: LETTER_INDEX[name], acc: (marks.match(/#/g) ?? []).length - (marks.match(/b/g) ?? []).length }];
-  }));
-}
-
-function chromaticSpelling(pc, sharp) {
-  const natural = NATURALS.indexOf(pc);
-  if (natural >= 0) return { letter: natural, acc: 0 };
-  const letter = NATURALS.indexOf((pc + (sharp ? -1 : 1) + OCTAVE) % OCTAVE);
-  return { letter, acc: signedOffset(pc, letter) };
-}
-
 function keySignature(spelling) {
-  const accs = [...spelling.values()].map((s) => s.acc).filter(Boolean);
-  const acc = Math.sign(accs[0] ?? 0);
-  const letters = new Map([...spelling.values()].filter((s) => s.acc).map((s) => [s.letter, s.acc]));
-  return { acc, count: accs.length, letters };
+  const altered = spelling.filter((s) => s.inKey && s.acc);
+  const acc = Math.sign(altered[0]?.acc ?? 0);
+  const letters = new Map(altered.map((s) => [s.letter, s.acc]));
+  return { acc, count: altered.length, letters };
 }
 
 export function signatureSteps({ acc, count }, clef) {
@@ -55,7 +36,7 @@ function clefsFor(midis) {
 
 function spelledNote(midi, spelling, signature) {
   const pc = midi % OCTAVE;
-  const { letter, acc } = spelling.get(pc) ?? chromaticSpelling(pc, signature.acc > 0);
+  const { letter, acc } = spelling[pc];
   const octave = Math.floor((midi - acc) / OCTAVE) - 1;
   const keyAcc = signature.letters.get(letter) ?? 0;
   return { midi, pc, d: letter + octave * LETTERS, acc: acc === keyAcc ? null : acc };
@@ -71,7 +52,8 @@ function markSeconds(notes) {
 }
 
 export function staffLayout(model) {
-  const spelling = keySpelling(model.items);
+  const [tonic] = model.items;
+  const spelling = keySpelling(tonic.pc, tonic.quality === qualityId.minor);
   const signature = keySignature(spelling);
   const steps = model.run.length ? model.run : [model.shown];
   const clefs = clefsFor(steps.flat());
