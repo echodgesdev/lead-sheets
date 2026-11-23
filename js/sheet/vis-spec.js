@@ -3,21 +3,26 @@ import { isChord, isKeyName, chordSpelling } from './chords.js';
 export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', notes: 'notes', fifths: 'fifths', fretboard: 'fretboard' });
 export const visControlId = Object.freeze({ play: 'play' });
 export const stepKind = Object.freeze({ degree: 'degree', chord: 'chord' });
+export const fingeringId = Object.freeze({ caged: 'caged', threePerString: '3nps', oneString: 'string' });
 
 const MAX_DEGREE = 15;
+const POSITION_RE = /^\d+$/;
 const DIRECTIVE_RE = /^\{(.*)\}$/;
 const FIELD_RE = /^([^:]*):(.*)$/;
 const DEGREE_RE = /^([b#♭♯]?)(\d+)$/;
 const TOKEN_RE = /\[[^\]]*\]?|[^\s[]+/g;
 const SHIFTS = { '': 0, b: -1, '♭': -1, '#': 1, '♯': 1 };
-const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls' });
+const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls', position: 'position', fingering: 'fingering' });
 const VIS_NAMES = new Map([...Object.values(visId).map((v) => [v, v]), ['keys', visId.piano], ['guitar', visId.fretboard]]);
 const CONTROLS = new Set(Object.values(visControlId));
+const FINGERINGS = new Set(Object.values(fingeringId));
 const READERS = new Map([
   [FIELD.vis, readVis],
   [FIELD.key, readKey],
   [FIELD.seq, readSeq],
   [FIELD.controls, readControls],
+  [FIELD.position, readPosition],
+  [FIELD.fingering, readFingering],
 ]);
 
 function fieldsOf(inner) {
@@ -70,12 +75,24 @@ function readControls(value, spec) {
   }
 }
 
+function readPosition(value, spec) {
+  const position = POSITION_RE.test(value) ? Number(value) : 0;
+  spec.position = position > 0 ? position - 1 : null;
+  if (!position) spec.errors.push(`Unknown position "${value}"`);
+}
+
+function readFingering(value, spec) {
+  const fingering = value.toLowerCase();
+  spec.fingering = FINGERINGS.has(fingering) ? fingering : fingeringId.caged;
+  if (!FINGERINGS.has(fingering)) spec.errors.push(`Unknown fingering "${value}", using ${fingeringId.caged}`);
+}
+
 export function parseVisSpec(line) {
   const m = DIRECTIVE_RE.exec(String(line ?? '').trim());
   if (!m) return null;
   const fields = fieldsOf(m[1]);
   if (fields[0]?.name !== FIELD.vis) return null;
-  const spec = { vis: visId.piano, key: null, seq: [], controls: [], errors: [] };
+  const spec = { vis: visId.piano, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] };
   for (const f of fields) {
     const read = READERS.get(f.name);
     if (read) read(f.value, spec);

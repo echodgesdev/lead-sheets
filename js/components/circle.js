@@ -1,10 +1,12 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
-import { renderClock, renderChain, renderKeys, renderFretboard, alignId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, renderFretboard, alignId, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
 import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
+import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
+import { fingeringId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
 import { div, span, iconButton, plainButton, labeledButton, cls } from '../core/dom.js';
@@ -38,6 +40,28 @@ const ROOTINGS = [
   { id: rootingId.onTonic, label: 'On tonic', title: 'Every mode starting on the tonic, like C Dorian' },
 ];
 
+const SHOWS = [
+  { id: showId.position, label: 'Position', title: 'One position at a time' },
+  { id: showId.neck, label: 'Neck', title: 'Every position, with this one highlighted' },
+];
+
+const FINGERINGS = [
+  { id: fingeringId.caged, label: 'CAGED', title: 'Five box shapes' },
+  { id: fingeringId.threePerString, label: '3 / string', title: 'Three notes per string (two for pentatonics)' },
+  { id: fingeringId.oneString, label: 'String', title: 'Along one string' },
+];
+
+const MATCHES = [
+  { id: matchId.unison, label: 'Unison', title: 'Only this exact pitch' },
+  { id: matchId.octaves, label: 'Octaves', title: 'This note in every octave' },
+];
+
+const LABELS = [
+  { id: labelId.none, label: 'None', title: 'No labels' },
+  { id: labelId.name, label: 'Names', title: 'Note names' },
+  { id: labelId.degree, label: 'Degrees', title: 'Degrees from the root' },
+];
+
 const INVERSION_TITLES = ['Root position', '1st inversion', '2nd inversion', '3rd inversion', '4th inversion', '5th inversion'];
 
 const VIEWS = [
@@ -54,7 +78,7 @@ const RENDERERS = {
   [viewId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
   [viewId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [viewId.keys]: renderKeys,
-  [viewId.fretboard]: (model) => renderFretboard(model),
+  [viewId.fretboard]: (model, { layout, labels }) => renderFretboard(model, layout, labels),
 };
 
 function scaleChip(scale) {
@@ -91,6 +115,8 @@ export function createCircleControl() {
   let rooting = rootingId.inKey;
   let selected = { index: 0, minor: false };
   let chordIndex = 0;
+  const neckOptions = { show: showId.position, position: 0, fingering: fingeringId.caged, match: matchId.unison };
+  let labels = labelId.none;
 
   function open() {
     let items = [];
@@ -205,9 +231,17 @@ export function createCircleControl() {
       return cell;
     }
 
+    let neck = null;
+
     function renderStage() {
+      neckRow.hidden = view !== viewId.fretboard;
+      neck = view === viewId.fretboard ? fretLayout(model(), GUITAR, neckOptions) : null;
+      if (neck) {
+        neckOptions.position = neck.position;
+        neckCount.textContent = neck.count ? `${neck.position + 1} / ${neck.count}` : '–';
+      }
       if (view !== viewId.fifths) {
-        stage.replaceChildren(RENDERERS[view](model()));
+        stage.replaceChildren(RENDERERS[view](model(), { layout: neck, labels }));
         return;
       }
       fifths.tagSteps(model().run);
@@ -272,6 +306,38 @@ export function createCircleControl() {
     const controls = modalRow(null, labeledField('Play', modeToggle), voicingField, rootingField);
     controls.classList.add('circle-controls');
 
+    function neckToggle(options, key) {
+      return choiceToggle(options, neckOptions[key], (id) => {
+        if (id === neckOptions[key]) return;
+        neckOptions[key] = id;
+        player.stopRun();
+        renderStage();
+      });
+    }
+
+    function stepPosition(by) {
+      neckOptions.position += by;
+      player.stopRun();
+      renderStage();
+    }
+
+    const neckCount = span('fret-count');
+    const prevPosition = iconButton(iconId.chevronLeft, 'Previous position');
+    const nextPosition = iconButton(iconId.chevronRight, 'Next position');
+    prevPosition.addEventListener(evt.click, () => stepPosition(-1));
+    nextPosition.addEventListener(evt.click, () => stepPosition(1));
+    const stepper = div('fret-stepper');
+    stepper.append(prevPosition, neckCount, nextPosition);
+    const fingeringField = labeledField('Fingering', neckToggle(FINGERINGS, 'fingering'));
+    const matchField = labeledField('Match', neckToggle(MATCHES, 'match'));
+    const labelToggle = choiceToggle(LABELS, labels, (id) => {
+      if (id === labels) return;
+      labels = id;
+      renderStage();
+    });
+    const neckRow = modalRow(null, labeledField('Show', neckToggle(SHOWS, 'show')), labeledField('Position', stepper), fingeringField, matchField, labeledField('Labels', labelToggle));
+    neckRow.classList.add('fret-controls');
+
     function notePcOf(el) {
       const { ring, index, slot } = el.dataset;
       if (ring && ring !== ringId.dim) return keyTonic(Number(index), ring === ringId.inner);
@@ -314,7 +380,7 @@ export function createCircleControl() {
       scaleChoice = id;
       syncChips();
       renderStage();
-      player.playSteps(model().run);
+      player.playSteps(neck?.run ?? model().run);
     }
 
     function voiceFor(el) {
@@ -336,6 +402,8 @@ export function createCircleControl() {
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
       rootingField.hidden = mode !== modeId.scale;
+      fingeringField.hidden = mode !== modeId.scale;
+      matchField.hidden = mode !== modeId.note;
     }
 
     syncMode();
@@ -343,7 +411,7 @@ export function createCircleControl() {
     renderLock();
     return {
       header,
-      rows: [stage, controls, chords],
+      rows: [stage, neckRow, controls, chords],
       onClose: () => {
         player.end();
         player.stopRun();

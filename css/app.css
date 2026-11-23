@@ -1911,29 +1911,64 @@ button.row:active {
 }
 
 .fret-hit {
-  fill: transparent;
   cursor: pointer;
   outline: none;
-  transition: fill 0.15s;
 }
 
-.fret-hit.pressed {
-  fill: color-mix(in srgb, var(--accent) 18%, transparent);
+.fret-hit rect {
+  fill: transparent;
 }
 
 .fret-hit.blocked {
   cursor: not-allowed;
 }
 
+.fret-ghost {
+  fill: var(--muted);
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(0.6);
+  transition: opacity 0.2s, transform 0.2s var(--spring);
+}
+
+.fret-hit .fret-label {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.fret-hit.pressed .fret-ghost {
+  opacity: 1;
+  transform: scale(1.2);
+  transition-duration: 0.08s;
+}
+
+.fret-hit.pressed .fret-label {
+  opacity: 1;
+  transition-duration: 0.08s;
+}
+
+.fret-label {
+  fill: var(--on-accent);
+  font-size: 5px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
 .fret-dot {
   fill: var(--accent);
-  stroke: var(--surface);
-  stroke-width: 1.2;
   cursor: pointer;
   outline: none;
   transform-box: fill-box;
   transform-origin: center;
-  transition: transform 0.3s var(--spring);
+  transition: transform 0.3s var(--spring), opacity 0.2s;
+}
+
+.fret-dot circle {
+  stroke: var(--surface);
+  stroke-width: 1.2;
 }
 
 .fret-dot.root {
@@ -1944,9 +1979,34 @@ button.row:active {
   fill: var(--orange);
 }
 
+.fret-dot.faint {
+  opacity: 0.3;
+}
+
 .fret-dot.pressed {
+  opacity: 1;
   transform: scale(1.35);
   transition-duration: 0.08s;
+}
+
+.fret-controls {
+  justify-content: center;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.fret-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.fret-count {
+  min-width: 3ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
 }
 
 .keys {

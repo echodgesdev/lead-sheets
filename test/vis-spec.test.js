@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { parseVisSpec, visId, visControlId, stepKind } from '../js/sheet/vis-spec.js';
+import { parseVisSpec, visId, visControlId, stepKind, fingeringId } from '../js/sheet/vis-spec.js';
 
 const deg = (degree, shift = 0) => ({ kind: stepKind.degree, degree, shift });
 const chord = (name) => ({ kind: stepKind.chord, chord: name });
@@ -16,6 +16,8 @@ test('parseVisSpec reads a piano with degrees and controls', () => {
     key: null,
     seq: [deg(1), deg(2), deg(3), deg(5), deg(8), deg(1)],
     controls: [visControlId.play],
+    position: null,
+    fingering: fingeringId.caged,
     errors: [],
   });
 });
@@ -26,6 +28,8 @@ test('parseVisSpec reads a clock with a key and chords', () => {
     key: 'G',
     seq: [chord('G'), chord('Em'), chord('C'), chord('D')],
     controls: [],
+    position: null,
+    fingering: fingeringId.caged,
     errors: [],
   });
 });
@@ -47,6 +51,8 @@ test('parseVisSpec is case-insensitive and forgiving of whitespace', () => {
     key: 'F#m',
     seq: [chord('Am'), chord('C')],
     controls: [visControlId.play],
+    position: null,
+    fingering: fingeringId.caged,
     errors: [],
   });
 });
@@ -72,7 +78,7 @@ test('parseVisSpec reports unknown fields and controls', () => {
 });
 
 test('parseVisSpec leaves key null when omitted or empty', () => {
-  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, key: null, seq: [], controls: [], errors: [] });
+  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] });
   eq(parseVisSpec('{vis: fifths, key: }').key, null);
 });
 
@@ -81,4 +87,12 @@ test('parseVisSpec reports unreadable keys and chords it cannot spell', () => {
   eq(spec.key, null);
   eq(spec.seq.map((s) => s.chord ?? s.degree), [1, 'G']);
   eq(spec.errors, ['Unknown key "H", using the song key', 'Skipped step "N.C."']);
+});
+
+test('parseVisSpec reads a fretboard position and fingering', () => {
+  const spec = parseVisSpec('{vis: guitar, position: 3, fingering: 3NPS}');
+  eq([spec.position, spec.fingering, spec.errors], [2, fingeringId.threePerString, []]);
+  const bad = parseVisSpec('{vis: guitar, position: 0, fingering: chair}');
+  eq([bad.position, bad.fingering], [null, fingeringId.caged]);
+  eq(bad.errors, ['Unknown position "0"', 'Unknown fingering "chair", using caged']);
 });

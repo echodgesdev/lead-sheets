@@ -3,6 +3,7 @@ import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic } from '../sheet/circle.js';
 import { sequenceModel, keyAt } from '../sheet/theory-model.js';
+import { GUITAR, fretLayout } from '../sheet/fretboard.js';
 import { visId, visControlId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
@@ -18,7 +19,7 @@ const VIEWS = {
   [visId.intervals]: (model) => renderChain({ ...model, align: alignId.root }),
   [visId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [visId.fifths]: fifthsView,
-  [visId.fretboard]: (model) => renderFretboard(model),
+  [visId.fretboard]: (model, key, layout) => renderFretboard(model, layout),
 };
 
 function fifthsView(model, key) {
@@ -40,7 +41,8 @@ export function createTheoryEmbed(spec) {
   const model = sequenceModel({ ...key, steps: spec.seq, locked: true, minOctaves: getKeyOctaves() });
   const box = div('theory-embed');
   const stage = div('theory-embed-stage');
-  stage.append(VIEWS[spec.vis](model, key));
+  const layout = spec.vis === visId.fretboard ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
+  stage.append(VIEWS[spec.vis](model, key, layout));
   box.append(stage);
 
   const voiceFor = (el) => startNotes(el.dataset.notes ? notesOf(el) : [model.noteMidiOf(wedgePc(el, model))]);
@@ -48,7 +50,7 @@ export function createTheoryEmbed(spec) {
 
   if (spec.controls.includes(visControlId.play)) {
     const play = labeledButton(iconId.play, 'Play', 'theory-embed-play');
-    const onPlay = () => player.playSteps(model.run);
+    const onPlay = () => player.playSteps(layout?.run ?? model.run);
     play.addEventListener(evt.click, onPlay);
     box.append(play);
   }

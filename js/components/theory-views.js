@@ -2,7 +2,6 @@ import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
 import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
-import { GUITAR, fretLayout } from '../sheet/fretboard.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -34,6 +33,12 @@ const PATTERN_ROWS = { [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRow
 export const alignId = Object.freeze({
   root: 'root',
   key: 'key',
+});
+
+export const labelId = Object.freeze({
+  none: 'none',
+  name: 'name',
+  degree: 'degree',
 });
 
 const QUALITY_LABELS = {
@@ -380,43 +385,57 @@ function fretHits(model, { strings, frets }) {
   return strings.flatMap((open, string) => Array.from({ length: frets + 1 }, (_, fret) => {
     const midi = open + fret;
     const pc = midi % OCTAVE;
-    const x = fret ? FRET_NUT + (fret - 1) * FRET_W : 0;
-    return svg('rect', {
+    const name = displayName(model.names[pc]);
+    const y = stringY(string, strings.length);
+    const hit = svg('g', {
       class: classes('fret-hit', isBlocked(model, pc) && cls.blocked),
-      x,
-      y: stringY(string, strings.length) - STRING_GAP / 2,
-      width: fret ? FRET_W : FRET_NUT,
-      height: STRING_GAP,
       role: 'button',
       tabindex: -1,
-      'aria-label': `${displayName(model.names[pc])}, string ${strings.length - string} fret ${fret}`,
+      'aria-label': `${name}, string ${strings.length - string} fret ${fret}`,
       'data-notes': notesAttr([midi]),
     });
+    hit.append(
+      svg('rect', { x: fret ? FRET_NUT + (fret - 1) * FRET_W : 0, y: y - STRING_GAP / 2, width: fret ? FRET_W : FRET_NUT, height: STRING_GAP }),
+      svg('circle', { class: 'fret-ghost', cx: fretX(fret), cy: y, r: FRET_DOT_R }),
+      svg('text', { class: 'fret-label', x: fretX(fret), y }, name),
+    );
+    return hit;
   }));
 }
 
-export function renderFretboard(model, instrument = GUITAR) {
+function dotLabel(model, pc, labels) {
+  if (labels === labelId.name) return displayName(model.names[pc]);
+  const ref = model.mode === modeId.note ? model.keyTonicPc : model.rootPc;
+  return INTERVALS[(pc - ref + OCTAVE) % OCTAVE];
+}
+
+function fretDot(model, dot, count, labels) {
+  const pc = dot.midi % OCTAVE;
+  const root = pc === model.rootPc;
+  const x = fretX(dot.fret);
+  const y = stringY(dot.string, count);
+  const node = svg('g', {
+    class: classes('fret-dot', root && cls.root, !root && isOutside(model, pc) && cls.outside, dot.faint && cls.faint),
+    role: 'button',
+    tabindex: dot.faint ? -1 : 0,
+    'aria-label': `${displayName(model.names[pc])}, string ${count - dot.string} fret ${dot.fret}`,
+    'data-notes': notesAttr([dot.midi]),
+    'data-step': dot.steps.join(' '),
+  });
+  node.append(svg('circle', { cx: x, cy: y, r: FRET_DOT_R }));
+  if (labels !== labelId.none) node.append(svg('text', { class: 'fret-label', x, y }, dotLabel(model, pc, labels)));
+  return node;
+}
+
+export function renderFretboard(model, layout, labels = labelId.none) {
+  const { instrument, dots, muted } = layout;
   const { strings, frets } = instrument;
   const width = FRET_NUT + frets * FRET_W + FRET_END;
   const height = stringY(0, strings.length) + FRET_BOTTOM;
   const art = svg('svg', { class: 'fret-art', viewBox: `0 0 ${width} ${height}`, role: 'group', 'aria-label': 'Fretboard' });
-  const { dots, muted } = fretLayout(model, instrument);
   art.append(...fretGrid(instrument), ...fretHits(model, instrument));
   for (const string of muted) art.append(svg('text', { class: 'fret-muted', x: fretX(0), y: stringY(string, strings.length) }, '×'));
-  for (const dot of dots) {
-    const pc = dot.midi % OCTAVE;
-    const root = pc === model.rootPc;
-    art.append(svg('circle', {
-      class: classes('fret-dot', root && cls.root, !root && isOutside(model, pc) && cls.outside),
-      cx: fretX(dot.fret),
-      cy: stringY(dot.string, strings.length),
-      r: FRET_DOT_R,
-      role: 'button',
-      tabindex: 0,
-      'aria-label': `${displayName(model.names[pc])}, string ${strings.length - dot.string} fret ${dot.fret}`,
-      'data-notes': notesAttr([dot.midi]),
-      'data-step': dot.steps.join(' '),
-    }));
-  }
+  const ordered = [...dots.filter((dot) => dot.faint), ...dots.filter((dot) => !dot.faint)];
+  art.append(...ordered.map((dot) => fretDot(model, dot, strings.length, labels)));
   return art;
 }
