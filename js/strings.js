@@ -7,5 +7,6 @@ export const strings = Object.freeze({
   backToSongs: 'Back to songs',
   songNotFound: 'Song not found.',
   setlistNotFound: 'Setlist not found.',
+  libraryBlocked: 'Lead Sheets is open in another tab or window. Close it, then reload.',
   micUnavailable: 'Microphone unavailable. Check permission in your browser settings.',
 });

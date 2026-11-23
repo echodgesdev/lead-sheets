@@ -186,7 +186,7 @@ test('fretboard layout shows one chord voicing, mutes the rest and plays what it
   eq(fretLayout(model, GUITAR, { position: -1 }).position, 4);
   eq(fretLayout(model, GUITAR, { shape: neckShapeId.triad }).voicing, [48, 52, 55]);
   const power = fretLayout(model, GUITAR, { shape: neckShapeId.power });
-  eq([grip(power.dots), power.muted, power.voicing], ['x355xx', [3, 4, 5], [48, 55, 60]]);
+  eq([grip(power.dots), power.muted, power.voicing], ['x355xx', [0, 4, 5], [48, 55, 60]]);
   const neck = fretLayout(model, GUITAR, { show: showId.neck });
   eq(neck.dots.filter((dot) => !dot.faint).length, 5);
   eq(neck.dots.length > 5, true);

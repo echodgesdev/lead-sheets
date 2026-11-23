@@ -1,3 +1,5 @@
+import { strings } from '../strings.js';
+
 const NAME = 'tabs';
 const VERSION = 3;
 export const SONGS = 'songs';
@@ -20,6 +22,10 @@ function open() {
       resolve(db);
     };
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error(strings.libraryBlocked));
+  }).catch((err) => {
+    opening = null;
+    throw err;
   });
   return opening;
 }
