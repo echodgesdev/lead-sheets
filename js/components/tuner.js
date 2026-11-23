@@ -11,7 +11,7 @@ const MAX_CENTS = 50;
 const MIC_ERROR = 'Microphone unavailable. Check permission in your browser settings.';
 
 export function createTunerControl() {
-  const button = iconButton(iconId.guitar, 'Tuner');
+  const button = iconButton(iconId.tuningFork, 'Tuner');
 
   function buildDisplay() {
     const root = div('modal-row tuner');

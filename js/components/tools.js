@@ -9,9 +9,8 @@ import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
 const TOOLS = [
-  { id: toolId.tuner, title: 'Tuner', icon: iconId.guitar, create: createTunerControl },
+  { id: toolId.tuner, title: 'Tuner', icon: iconId.tuningFork, create: createTunerControl },
   { id: toolId.metronome, title: 'Metronome', icon: iconId.metronome, create: createMetronomeControl },
-  { id: toolId.circle, title: 'Theory', icon: iconId.bookOpen, create: createCircleControl },
 ];
 
 function toolNode(tool, open) {
@@ -40,6 +39,11 @@ export function createToolsPanel() {
     list.append(node);
     return { control, close };
   });
+  const theory = createCircleControl();
+  const body = theory.open();
+  const panel = div('tool theory-panel');
+  panel.append(body.header, ...body.rows);
+  list.append(panel);
   return {
     el: list,
     dispose() {
@@ -47,6 +51,8 @@ export function createToolsPanel() {
         close();
         control.dispose();
       }
+      body.onClose();
+      theory.dispose();
     },
   };
 }

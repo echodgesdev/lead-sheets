@@ -13,7 +13,7 @@ export function selectPill(name, title, options, value) {
   };
   field.addEventListener(evt.change, onChange);
   onChange();
-  pill.append(icon(name), text, field);
+  pill.append(...(name ? [icon(name)] : []), text, field);
   return { pill, select: field };
 }
 

@@ -1,5 +1,6 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
+import { selectPill } from './controls.js';
 import { renderClock, renderChain, renderKeys, renderFretboard, alignId, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
@@ -57,7 +58,7 @@ const MATCHES = [
 ];
 
 const LABELS = [
-  { id: labelId.none, label: 'None', title: 'No labels' },
+  { id: labelId.none, label: 'No labels', title: 'No labels' },
   { id: labelId.name, label: 'Names', title: 'Note names' },
   { id: labelId.degree, label: 'Degrees', title: 'Degrees from the root' },
 ];
@@ -306,13 +307,14 @@ export function createCircleControl() {
     const controls = modalRow(null, labeledField('Play', modeToggle), voicingField, rootingField);
     controls.classList.add('circle-controls');
 
-    function neckToggle(options, key) {
-      return choiceToggle(options, neckOptions[key], (id) => {
-        if (id === neckOptions[key]) return;
-        neckOptions[key] = id;
+    function neckPill(title, options, key) {
+      const { pill, select } = selectPill(null, title, options, neckOptions[key]);
+      select.addEventListener(evt.change, () => {
+        neckOptions[key] = select.value;
         player.stopRun();
         renderStage();
       });
+      return pill;
     }
 
     function stepPosition(by) {
@@ -328,14 +330,14 @@ export function createCircleControl() {
     nextPosition.addEventListener(evt.click, () => stepPosition(1));
     const stepper = div('fret-stepper');
     stepper.append(prevPosition, neckCount, nextPosition);
-    const fingeringField = labeledField('Fingering', neckToggle(FINGERINGS, 'fingering'));
-    const matchField = labeledField('Match', neckToggle(MATCHES, 'match'));
-    const labelToggle = choiceToggle(LABELS, labels, (id) => {
-      if (id === labels) return;
-      labels = id;
+    const fingeringField = neckPill('Fingering', FINGERINGS, 'fingering');
+    const matchField = neckPill('Match', MATCHES, 'match');
+    const { pill: labelPill, select: labelSelect } = selectPill(null, 'Labels', LABELS, labels);
+    labelSelect.addEventListener(evt.change, () => {
+      labels = labelSelect.value;
       renderStage();
     });
-    const neckRow = modalRow(null, labeledField('Show', neckToggle(SHOWS, 'show')), labeledField('Position', stepper), fingeringField, matchField, labeledField('Labels', labelToggle));
+    const neckRow = modalRow(null, stepper, neckPill('Show', SHOWS, 'show'), fingeringField, matchField, labelPill);
     neckRow.classList.add('fret-controls');
 
     function notePcOf(el) {

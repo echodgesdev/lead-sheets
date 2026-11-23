@@ -38,7 +38,6 @@ export const listOptionId = Object.freeze({
 export const toolId = Object.freeze({
   tuner: 'tuner',
   metronome: 'metronome',
-  circle: 'circle',
 });
 
 export const editorId = Object.freeze({
@@ -88,7 +87,7 @@ export const LIST_OPTIONS = [
   { id: listOptionId.rowMenus, label: 'Song Menus' },
 ];
 
-const REMEMBERED_TOOLS = [{ id: toolId.metronome }, { id: toolId.circle }];
+const REMEMBERED_TOOLS = [{ id: toolId.metronome }];
 
 export const EDITOR_OPTIONS = [
   { id: editorId.autofix, label: 'Fix Format On Preview' },

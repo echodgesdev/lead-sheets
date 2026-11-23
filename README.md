@@ -29,7 +29,7 @@ An offline lead sheet and tab viewer that installs to your phone's home screen. 
 
 ## Tools
 
-The tuner and metronome are also in the Live header. In Tools mode each tool expands in place; the metronome and Theory reopen as you left them, and the tuner always starts closed.
+The tuner and metronome are also in the Live header. In Tools mode the tuner and metronome expand in place (the metronome reopens as you left it, the tuner always starts closed) and Theory fills the rest of the page.
 
 - **Tuner:** chromatic, uses the mic only while open.
 - **Metronome:** starts at the song's or setlist's tempo. Tap sets it; tap the Tempo or Beats number to type a value. Tap a beat's square to cycle primary, secondary and silent. Keeps clicking when closed or collapsed (its icon pulses) and stops when you leave Tools.
