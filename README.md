@@ -12,11 +12,11 @@ An offline lead sheet and tab viewer that installs to your phone's home screen. 
 - **Key and capo:** `Key:` is the sounding key; chords are the shapes you play. `Key: D` with `Capo: 2` and C shapes shows C as 1.
 - **In the body:** `Notes:` shows a note in place, `Key change: A` marks a modulation (numbers restart from the new key), and `A*` keeps a marker on a chord.
 - **Theory views:** a line like `{vis: piano, seq: 1 2 3 5 8 1, controls: play}` shows a small locked Theory view in Live.
-  - `vis`: `piano` (or `keys`), `fretboard` (or `guitar`), `clock`, `intervals`, `notes`, `fifths`.
+  - `vis`: `piano` (or `keys`), `fretboard` (or `guitar`), `tab`, `clef` (or `staff`), `clock`, `intervals`, `notes`, `fifths`.
   - `seq`: degrees of the key (`8` is the octave, `b3` / `#4` shift a semitone) and chord names (`G Em7 C/E`).
   - `key: G` sets the key; otherwise the song's key is used, in the same shapes as the chords.
   - `controls: play` adds a Play button that steps through the sequence.
-  - On `fretboard`, `position: 2` fingers the sequence in that position of the key's scale, using `fingering: caged` (default), `3nps` or `string`.
+  - On `fretboard` and `tab`, `position: 2` fingers the sequence in that position of the key's scale, using `fingering: caged` (default), `3nps` or `string`.
   - Only notes in the sequence respond to taps, chords follow Transpose, and anything unreadable is listed under the view.
 
 ## Live
@@ -34,7 +34,7 @@ The tuner and metronome are also in the Live header. In Tools mode the tuner and
 - **Tuner:** chromatic, uses the mic only while open.
 - **Metronome:** starts at the song's or setlist's tempo. Tap sets it; tap the Tempo or Beats number to type a value. Tap a beat's square to cycle primary, secondary and silent. Keeps clicking when closed or collapsed (its icon pulses) and stops when you leave Tools.
 - **Theory:** pick a key on the circle of fifths and explore its chords and scales. Everything plays while held.
-  - **Views:** Fifths, Clock, Intervals (rows lined up on each chord's root), Notes (rows lined up on the key), Keys (piano; Settings → Tools → Piano octaves sets two or three) and Guitar (a standard-tuned fretboard).
+  - **Views:** Fifths, Clock, Intervals (rows lined up on each chord's root), Notes (rows lined up on the key), Keys (piano; Settings → Tools → Piano octaves sets two or three), Guitar (a standard-tuned fretboard), Tab (what the Guitar position plays, as tablature) and Clef (staff notation in the key's signature, treble, bass or both as the notes need).
   - **Guitar:** shows one position at a time; ‹ › moves along the neck, and Neck shows every position faintly with the current one solid. Chords step through voicings on neighbouring strings (unused strings muted), scales through fingerings (CAGED boxes, 3 per string or along one string) and play the position shown, and notes through each place the pitch sounds (Unison) or every octave (Octaves). Labels adds note names or degrees; tapping the neck shows the note.
   - **Play:** Note (scale degrees), Chord (the default) or Scale (seven modes plus major and minor pentatonic).
   - **Chords:** the ⋯ under a chord swaps its shape (Cmaj7, Csus2 …), grouped into In key and Outside the key. Voicing picks root position or an inversion.

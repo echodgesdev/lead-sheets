@@ -782,6 +782,11 @@ button.row:active {
   border-top: 1px solid var(--line);
 }
 
+.tool.theory-panel .tool-header .btn {
+  min-width: 32px;
+  padding: 0 8px;
+}
+
 .theory-panel > .tool-header {
   position: static;
   height: auto;
@@ -2023,6 +2028,101 @@ button.row:active {
   text-align: center;
   font-variant-numeric: tabular-nums;
   color: var(--muted);
+}
+
+.tab-art,
+.staff-art {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.tab-line,
+.staff-line,
+.staff-ledger {
+  stroke: var(--muted);
+  stroke-width: 0.8;
+}
+
+.tab-clef,
+.tab-muted {
+  fill: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
+}
+
+.tab-muted {
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+.tab-note,
+.staff-note {
+  fill: var(--accent);
+  cursor: pointer;
+  outline: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: transform 0.3s var(--spring);
+}
+
+.tab-note text {
+  font-size: 9px;
+  font-weight: 700;
+  text-anchor: middle;
+  dominant-baseline: central;
+  paint-order: stroke;
+  stroke: var(--surface);
+  stroke-width: 3px;
+}
+
+.tab-note.root,
+.staff-note.root {
+  fill: var(--lime);
+}
+
+.tab-note.outside,
+.staff-note.outside {
+  fill: var(--orange);
+}
+
+.tab-note.blocked,
+.staff-note.blocked {
+  cursor: not-allowed;
+}
+
+.tab-note.pressed,
+.staff-note.pressed {
+  transform: scale(1.35);
+  transition-duration: 0.08s;
+}
+
+.tab-hit,
+.staff-hit {
+  fill: transparent;
+}
+
+.staff-clef {
+  fill: var(--fg);
+  font-family: 'Bravura', 'Noto Music', 'Segoe UI Symbol', 'Apple Symbols', serif;
+  pointer-events: none;
+}
+
+.staff-glyph {
+  fill: var(--fg);
+  font-size: 11px;
+  text-anchor: middle;
+  dominant-baseline: central;
+  pointer-events: none;
 }
 
 .keys {

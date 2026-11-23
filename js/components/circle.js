@@ -1,7 +1,7 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
 import { selectPill } from './controls.js';
-import { renderClock, renderChain, renderKeys, renderFretboard, alignId, labelId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, renderFretboard, renderTab, renderStaff, alignId, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
@@ -23,7 +23,11 @@ const viewId = Object.freeze({
   notes: 'notes',
   keys: 'keys',
   fretboard: 'fretboard',
+  tab: 'tab',
+  clef: 'clef',
 });
+
+const NECK_VIEWS = new Set([viewId.fretboard, viewId.tab]);
 
 const MODES = [
   { id: modeId.note, icon: iconId.musicNote, label: 'Note', title: 'Single notes' },
@@ -72,6 +76,8 @@ const VIEWS = [
   { id: viewId.notes, icon: iconId.music, label: 'Notes', title: 'Notes' },
   { id: viewId.keys, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
   { id: viewId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
+  { id: viewId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
+  { id: viewId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
 ];
 
 const RENDERERS = {
@@ -80,6 +86,8 @@ const RENDERERS = {
   [viewId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [viewId.keys]: renderKeys,
   [viewId.fretboard]: (model, { layout, labels }) => renderFretboard(model, layout, labels),
+  [viewId.tab]: (model, { layout }) => renderTab(model, layout),
+  [viewId.clef]: renderStaff,
 };
 
 function scaleChip(scale) {
@@ -235,8 +243,10 @@ export function createCircleControl() {
     let neck = null;
 
     function renderStage() {
-      neckRow.hidden = view !== viewId.fretboard;
-      neck = view === viewId.fretboard ? fretLayout(model(), GUITAR, neckOptions) : null;
+      neckRow.hidden = !NECK_VIEWS.has(view);
+      showPill.hidden = view !== viewId.fretboard;
+      labelPill.hidden = view !== viewId.fretboard;
+      neck = NECK_VIEWS.has(view) ? fretLayout(model(), GUITAR, neckOptions) : null;
       if (neck) {
         neckOptions.position = neck.position;
         neckCount.textContent = neck.count ? `${neck.position + 1} / ${neck.count}` : '–';
@@ -337,7 +347,8 @@ export function createCircleControl() {
       labels = labelSelect.value;
       renderStage();
     });
-    const neckRow = modalRow(null, stepper, neckPill('Show', SHOWS, 'show'), fingeringField, matchField, labelPill);
+    const showPill = neckPill('Show', SHOWS, 'show');
+    const neckRow = modalRow(null, stepper, showPill, fingeringField, matchField, labelPill);
     neckRow.classList.add('fret-controls');
 
     function notePcOf(el) {

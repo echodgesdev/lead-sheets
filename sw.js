@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v109';
+const CACHE = 'tabs-v110';
 
 const ASSETS = [
   './',
@@ -33,6 +33,7 @@ const ASSETS = [
   './js/data/theme.js',
   './js/sheet/chords.js',
   './js/sheet/fretboard.js',
+  './js/sheet/staff.js',
   './js/sheet/circle.js',
   './js/sheet/infer.js',
   './js/sheet/insert.js',

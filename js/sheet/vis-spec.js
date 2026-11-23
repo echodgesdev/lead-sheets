@@ -1,6 +1,6 @@
 import { isChord, isKeyName, chordSpelling } from './chords.js';
 
-export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', notes: 'notes', fifths: 'fifths', fretboard: 'fretboard' });
+export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', notes: 'notes', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', clef: 'clef' });
 export const visControlId = Object.freeze({ play: 'play' });
 export const stepKind = Object.freeze({ degree: 'degree', chord: 'chord' });
 export const fingeringId = Object.freeze({ caged: 'caged', threePerString: '3nps', oneString: 'string' });
@@ -13,7 +13,7 @@ const DEGREE_RE = /^([b#♭♯]?)(\d+)$/;
 const TOKEN_RE = /\[[^\]]*\]?|[^\s[]+/g;
 const SHIFTS = { '': 0, b: -1, '♭': -1, '#': 1, '♯': 1 };
 const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls', position: 'position', fingering: 'fingering' });
-const VIS_NAMES = new Map([...Object.values(visId).map((v) => [v, v]), ['keys', visId.piano], ['guitar', visId.fretboard]]);
+const VIS_NAMES = new Map([...Object.values(visId).map((v) => [v, v]), ['keys', visId.piano], ['guitar', visId.fretboard], ['staff', visId.clef]]);
 const CONTROLS = new Set(Object.values(visControlId));
 const FINGERINGS = new Set(Object.values(fingeringId));
 const READERS = new Map([

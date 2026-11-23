@@ -114,3 +114,14 @@ test('fretboard sequences follow the chosen position', () => {
   eq(high.dots.every((dot) => dot.fret >= 7 && dot.fret <= 11), true);
   eq(high.run, run);
 });
+
+test('fretboard layout orders tab columns by what plays', () => {
+  const scale = fretLayout({ mode: modeId.scale, shown: [], shownPcs: C_MAJOR, run: [] }, GUITAR);
+  eq(scale.columns.length, scale.run.length);
+  eq(scale.columns.map((column) => column.step), scale.run.map((_, i) => i));
+  const chord = fretLayout({ mode: modeId.chord, shown: [60, 64, 67], shownPcs: [0, 4, 7], run: [] }, GUITAR);
+  eq(chord.columns.map((column) => [column.step, column.positions.length]), [[null, 3]]);
+  const run = [[60], [64, 67, 72]];
+  const sequence = fretLayout({ mode: modeId.sequence, shown: [], shownPcs: [], scalePcs: C_MAJOR, run }, GUITAR);
+  eq(sequence.columns.map((column) => [column.step, column.positions.length]), [[0, 1], [1, 3]]);
+});

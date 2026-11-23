@@ -2,6 +2,7 @@ import { svg, polar, annularSector } from '../core/svg.js';
 import { div, span, plainButton, classes, cls } from '../core/dom.js';
 import { qualityId, shapeId, displayName, stepPitches } from '../sheet/circle.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
+import { staffLayout, signatureSteps, STAVES, clefId } from '../sheet/staff.js';
 
 const NOTES = 12;
 const STEP = 360 / NOTES;
@@ -28,6 +29,38 @@ const FRET_INLAYS = [3, 5, 7, 9, 12, 15, 17, 19, 21, 24];
 const FRET_NUM_DY = 13;
 const FRET_STRING_W = 0.7;
 const FRET_STRING_GROW = 0.25;
+const NOTATION_SCALE = 1.6;
+const NOTATION_HIT_R = 7;
+const NOTATION_MIN_COLS = 6;
+const TAB_TOP = 9;
+const TAB_GAP = 10;
+const TAB_LEFT = 22;
+const TAB_COL = 18;
+const TAB_END = 8;
+const TAB_BAR = 2;
+const TAB_LETTERS = ['T', 'A', 'B'];
+const STAFF_GAP = 8;
+const STAFF_HALF = STAFF_GAP / 2;
+const STAFF_SPAN = 8;
+const STAFF_CLEF_ROOM = 4;
+const STAFF_MARGIN = 6;
+const STAFF_EDGE = 2;
+const STAFF_CLEF_X = 4;
+const STAFF_CLEF_SPACES = 4;
+const STAFF_SIG_X = 30;
+const STAFF_SIG_W = 7;
+const STAFF_LEAD = 10;
+const STAFF_COL = 22;
+const STAFF_END = 8;
+const STAFF_LEDGER = 7;
+const STAFF_HEAD_RX = 4.6;
+const STAFF_HEAD_RY = 3.4;
+const STAFF_HEAD_TILT = -20;
+const STAFF_SECOND_SHIFT = 8.5;
+const STAFF_ACC_DX = 10;
+const STAFF_ACC_STAGGER = 7;
+const STAFF_CLEFS = { [clefId.treble]: { glyph: '𝄞', line: 32 }, [clefId.bass]: { glyph: '𝄢', line: 24 } };
+const STAFF_ACCIDENTALS = { [-2]: '♭♭', [-1]: '♭', 0: '♮', 1: '♯', 2: '×' };
 const PATTERN_ROWS = { [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
 
 export const alignId = Object.freeze({
@@ -437,5 +470,119 @@ export function renderFretboard(model, layout, labels = labelId.none) {
   for (const string of muted) art.append(svg('text', { class: 'fret-muted', x: fretX(0), y: stringY(string, strings.length) }, '×'));
   const ordered = [...dots.filter((dot) => dot.faint), ...dots.filter((dot) => !dot.faint)];
   art.append(...ordered.map((dot) => fretDot(model, dot, strings.length, labels)));
+  return art;
+}
+
+function toneClass(model, pc) {
+  if (pc === model.rootPc) return cls.root;
+  return isOutside(model, pc) ? cls.outside : null;
+}
+
+function notationArt(className, width, height, label) {
+  return svg('svg', { class: className, viewBox: `0 0 ${width} ${height}`, width: width * NOTATION_SCALE, role: 'group', 'aria-label': label });
+}
+
+function playable(className, model, midi, step, label) {
+  const pc = midi % OCTAVE;
+  const node = svg('g', {
+    class: classes(className, toneClass(model, pc), isBlocked(model, pc) && cls.blocked),
+    role: 'button',
+    tabindex: 0,
+    'aria-label': label,
+    'data-notes': notesAttr([midi]),
+  });
+  if (step !== null) node.setAttribute('data-step', step);
+  return node;
+}
+
+function tabNote(model, { string, fret, midi }, step, x, y, count) {
+  const node = playable('tab-note', model, midi, step, `${displayName(model.names[midi % OCTAVE])}, string ${count - string} fret ${fret}`);
+  node.append(svg('circle', { class: 'tab-hit', cx: x, cy: y, r: NOTATION_HIT_R }), svg('text', { x, y }, String(fret)));
+  return node;
+}
+
+export function renderTab(model, layout) {
+  const { instrument, columns, muted } = layout;
+  const count = instrument.strings.length;
+  const lineY = (string) => TAB_TOP + (count - 1 - string) * TAB_GAP;
+  const top = lineY(count - 1);
+  const bottom = lineY(0);
+  const width = TAB_LEFT + Math.max(NOTATION_MIN_COLS, columns.length) * TAB_COL + TAB_END;
+  const art = notationArt('tab-art', width, bottom + TAB_TOP, 'Tablature');
+  instrument.strings.forEach((_, string) => art.append(svg('line', { class: 'tab-line', x1: TAB_BAR, y1: lineY(string), x2: width - TAB_BAR, y2: lineY(string) })));
+  for (const x of [TAB_BAR, width - TAB_BAR]) art.append(svg('line', { class: 'tab-line', x1: x, y1: top, x2: x, y2: bottom }));
+  TAB_LETTERS.forEach((letter, i) => art.append(svg('text', { class: 'tab-clef', x: TAB_LEFT / 2, y: top + ((bottom - top) * (i + 1)) / (TAB_LETTERS.length + 1) }, letter)));
+  const columnX = (i) => TAB_LEFT + i * TAB_COL + TAB_COL / 2;
+  if (columns.length === 1) for (const string of muted) art.append(svg('text', { class: 'tab-muted', x: columnX(0), y: lineY(string) }, '×'));
+  columns.forEach((column, i) => {
+    for (const position of column.positions) art.append(tabNote(model, position, column.step, columnX(i), lineY(position.string), count));
+  });
+  return art;
+}
+
+function staffBands(layout) {
+  let cursor = 0;
+  const bands = layout.clefs.map((clef) => {
+    const { top } = STAVES[clef];
+    const ds = layout.columns.flatMap((column) => column.notes.filter((note) => note.staff === clef).map((note) => note.d));
+    const high = Math.max(top + STAFF_CLEF_ROOM, ...ds);
+    const low = Math.min(top - STAFF_SPAN - STAFF_CLEF_ROOM, ...ds);
+    const lineTop = cursor + STAFF_MARGIN + (high - top) * STAFF_HALF;
+    cursor = lineTop + (top - low) * STAFF_HALF + STAFF_MARGIN;
+    return { clef, top, y: (d) => lineTop + (top - d) * STAFF_HALF };
+  });
+  return { bands, height: cursor };
+}
+
+function ledgers(art, band, d, x) {
+  const bottom = band.top - STAFF_SPAN;
+  const lines = [];
+  for (let ld = band.top + 2; ld <= d; ld += 2) lines.push(ld);
+  for (let ld = bottom - 2; ld >= d; ld -= 2) lines.push(ld);
+  for (const ld of lines) art.append(svg('line', { class: 'staff-ledger', x1: x - STAFF_LEDGER, y1: band.y(ld), x2: x + STAFF_LEDGER, y2: band.y(ld) }));
+}
+
+function staffNote(model, note, step, x, y) {
+  const node = playable('staff-note', model, note.midi, step, `${displayName(model.names[note.pc])}${Math.floor(note.midi / OCTAVE) - 1}`);
+  node.append(
+    svg('circle', { class: 'staff-hit', cx: x, cy: y, r: NOTATION_HIT_R }),
+    svg('ellipse', { cx: x, cy: y, rx: STAFF_HEAD_RX, ry: STAFF_HEAD_RY, transform: `rotate(${STAFF_HEAD_TILT} ${x} ${y})` }),
+  );
+  return node;
+}
+
+export function renderStaff(model) {
+  const layout = staffLayout(model);
+  const { bands, height } = staffBands(layout);
+  const firstX = STAFF_SIG_X + layout.signature.count * STAFF_SIG_W + STAFF_LEAD;
+  const width = firstX + Math.max(NOTATION_MIN_COLS, layout.columns.length) * STAFF_COL + STAFF_END;
+  const art = notationArt('staff-art', width, height, 'Staff');
+  const sigGlyph = STAFF_ACCIDENTALS[layout.signature.acc];
+  for (const band of bands) {
+    for (let line = 0; line <= STAFF_SPAN; line += 2) {
+      const y = band.y(band.top - line);
+      art.append(svg('line', { class: 'staff-line', x1: STAFF_EDGE, y1: y, x2: width - STAFF_EDGE, y2: y }));
+    }
+    const clef = STAFF_CLEFS[band.clef];
+    art.append(svg('text', { class: 'staff-clef', x: STAFF_CLEF_X, y: band.y(clef.line), 'font-size': STAFF_GAP * STAFF_CLEF_SPACES }, clef.glyph));
+    signatureSteps(layout.signature, band.clef).forEach((d, i) => art.append(svg('text', { class: 'staff-glyph', x: STAFF_SIG_X + i * STAFF_SIG_W, y: band.y(d) }, sigGlyph)));
+  }
+  if (bands.length > 1) art.append(svg('line', { class: 'staff-line', x1: STAFF_EDGE, y1: bands[0].y(bands[0].top), x2: STAFF_EDGE, y2: bands.at(-1).y(bands.at(-1).top - STAFF_SPAN) }));
+  const bandOf = new Map(bands.map((band) => [band.clef, band]));
+  layout.columns.forEach((column, i) => {
+    const x = firstX + i * STAFF_COL + STAFF_COL / 2;
+    let accidentals = 0;
+    for (const note of column.notes) {
+      const band = bandOf.get(note.staff);
+      const y = band.y(note.d);
+      const nx = x + (note.offset ? STAFF_SECOND_SHIFT : 0);
+      ledgers(art, band, note.d, nx);
+      if (note.acc !== null) {
+        art.append(svg('text', { class: 'staff-glyph', x: x - STAFF_ACC_DX - (accidentals % 2) * STAFF_ACC_STAGGER, y }, STAFF_ACCIDENTALS[note.acc]));
+        accidentals += 1;
+      }
+      art.append(staffNote(model, note, column.step, nx, y));
+    }
+  });
   return art;
 }

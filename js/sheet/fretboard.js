@@ -248,7 +248,8 @@ function sequenceLayout(model, instrument, { position, fingering }) {
     dot.faint = false;
     dot.steps.push(step);
   }));
-  return { instrument, dots: board.list(), muted: [], run: model.run, count: 1, position: 0 };
+  const columns = path.map((positions, step) => ({ step, positions }));
+  return { instrument, dots: board.list(), muted: [], run: model.run, columns, count: 1, position: 0 };
 }
 
 export function fretLayout(model, instrument = GUITAR, options = {}) {
@@ -268,5 +269,6 @@ export function fretLayout(model, instrument = GUITAR, options = {}) {
   });
   const sounding = new Set(shape.map((p) => p.string));
   const muted = model.mode === modeId.chord ? instrument.strings.map((_, string) => string).filter((string) => !sounding.has(string)) : [];
-  return { instrument, dots: board.list(), muted, run, count, position: current };
+  const columns = run.length ? shape.map((p, step) => ({ step, positions: [p] })) : [{ step: null, positions: shape }];
+  return { instrument, dots: board.list(), muted, run, columns, count, position: current };
 }

@@ -1,4 +1,4 @@
-import { renderClock, renderChain, renderKeys, renderFretboard, alignId } from './theory-views.js';
+import { renderClock, renderChain, renderKeys, renderFretboard, renderTab, renderStaff, alignId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic } from '../sheet/circle.js';
@@ -13,6 +13,7 @@ import { iconId } from '../core/icons.js';
 
 const PLAYABLE = '[data-notes], [data-ring]';
 const DEFAULT_KEY = { index: 0, minor: false };
+const NECK_VIS = new Set([visId.fretboard, visId.tab]);
 const VIEWS = {
   [visId.piano]: renderKeys,
   [visId.clock]: renderClock,
@@ -20,6 +21,8 @@ const VIEWS = {
   [visId.notes]: (model) => renderChain({ ...model, align: alignId.key }),
   [visId.fifths]: fifthsView,
   [visId.fretboard]: (model, key, layout) => renderFretboard(model, layout),
+  [visId.tab]: (model, key, layout) => renderTab(model, layout),
+  [visId.clef]: renderStaff,
 };
 
 function fifthsView(model, key) {
@@ -41,7 +44,7 @@ export function createTheoryEmbed(spec) {
   const model = sequenceModel({ ...key, steps: spec.seq, locked: true, minOctaves: getKeyOctaves() });
   const box = div('theory-embed');
   const stage = div('theory-embed-stage');
-  const layout = spec.vis === visId.fretboard ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
+  const layout = NECK_VIS.has(spec.vis) ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
   stage.append(VIEWS[spec.vis](model, key, layout));
   box.append(stage);
 
