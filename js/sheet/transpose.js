@@ -1,4 +1,4 @@
-import { SHARPS, FLATS, chordTokens, chordParts, chordQuality, mapChord, parseKey, keyName, fifthsIndex, flatSide } from './chords.js';
+import { SHARPS, FLATS, chordTokens, chordParts, chordQuality, mapChord, parseKey, keyNameToward, chordRootNames } from './chords.js';
 import { stepKind } from './vis-spec.js';
 import { clamp, mod12 } from '../core/math.js';
 
@@ -52,7 +52,7 @@ const NUMERALS = { nashville, roman };
 export function transposeKey(key, shift) {
   const base = parseKey(key);
   if (!shift || !base) return key;
-  return keyName(mod12(base.pc + shift), base.minor);
+  return keyNameToward(mod12(base.pc + shift), base.minor, shift);
 }
 
 export function hasKey(key) {
@@ -95,7 +95,7 @@ function mapBlock(b, fn) {
 function visKey(spec, key, capo, shift) {
   if (spec.key) return transposeKey(spec.key, shift);
   const shapes = shapesOf(key, capo);
-  return shapes ? keyName(mod12(shapes.pc + shift), shapes.minor) : null;
+  return shapes ? keyNameToward(mod12(shapes.pc + shift), shapes.minor, shift) : null;
 }
 
 function mapVis(b, fn, key, capo, shift) {
@@ -111,8 +111,9 @@ function shapesOf(key, capo) {
 function pitchView(key, capo, shift) {
   if (!shift) return null;
   const shapes = shapesOf(key, capo);
-  const flats = shapes ? flatSide(fifthsIndex(mod12(shapes.pc + shift), shapes.minor)) : shift < 0;
-  return (c) => transposeChord(c, shift, flats);
+  if (!shapes) return (c) => transposeChord(c, shift, shift < 0);
+  const names = chordRootNames(keyNameToward(mod12(shapes.pc + shift), shapes.minor, shift));
+  return (c) => mapChord(c, (pc) => names[mod12(pc + shift)]);
 }
 
 function chordView(key, capo, shift, numbers) {

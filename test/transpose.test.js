@@ -32,7 +32,10 @@ test('transposeKey and hasKey', () => {
   eq(transposeKey('Em', 1), 'Fm');
   eq(transposeKey('G major', 2), 'A');
   eq(transposeKey('E minor', -2), 'Dm');
-  eq(transposeKey('Em', -1), 'D#m');
+  eq(transposeKey('Em', -1), 'Ebm');
+  eq(transposeKey('Dm', 1), 'D#m');
+  eq(transposeKey('G', -1), 'Gb');
+  eq(transposeKey('F', 1), 'F#');
   eq(transposeKey('G major', 0), 'G major');
   eq(transposeKey(undefined, 2), undefined);
   eq([hasKey('F#m'), hasKey(''), hasKey(undefined), hasKey('?')], [true, false, false, false]);
@@ -91,7 +94,8 @@ test('viewChords capoShift keeps shapes and shift changes them', () => {
   const parsed = parse('T\nKey: G\n\nG    C\nHello world');
   eq(chordsOf(viewChords(parsed, { key: 'G', capoShift: 2 })), [['G', 'C']]);
   eq(chordsOf(viewChords(parsed, { key: 'G', shift: 2 })), [['A', 'D']]);
-  eq(chordsOf(viewChords(parsed, { key: 'G', shift: -1 })), [['F#', 'B']]);
+  eq(chordsOf(viewChords(parsed, { key: 'G', shift: -1 })), [['Gb', 'B']]);
+  eq(chordsOf(viewChords(parsed, { key: 'G', shift: 11 })), [['F#', 'B']]);
 });
 
 test('viewChords transpose keeps numbers on the shapes', () => {

@@ -170,6 +170,15 @@ export function keyName(pc, minor) {
   return keyOf(fifthsIndex(pc, minor), minor);
 }
 
+export function keyNameToward(pc, minor, shift) {
+  return fifthsIndex(pc, minor) === SHARP_SIDE && shift < 0 ? `${FLATS[pc]}${minor ? 'm' : ''}` : keyName(pc, minor);
+}
+
+export function chordRootNames(key) {
+  const parsed = parseKey(key);
+  return parsed && keySpelling(parsed.pc, parsed.minor, letterOf(key)).map((spelled, pc) => noteName(IONIAN.includes(pc) ? plainSpelling(pc) : spelled));
+}
+
 export function diatonic(key) {
   const m = /^([A-G])([#b]?)(m|min|minor)?$/.exec(String(key || '').trim());
   if (!m) return [];
