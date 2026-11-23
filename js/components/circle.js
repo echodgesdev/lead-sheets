@@ -7,7 +7,7 @@ import { attachPlayer, notesOf } from './theory-player.js';
 import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
 import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
-import { visId, alignId, fingeringId } from '../sheet/vis-spec.js';
+import { visId, alignId, fingeringId, neckShapeId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
 import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, cls } from '../core/dom.js';
@@ -44,6 +44,14 @@ const FINGERINGS = [
   { id: fingeringId.oneString, label: 'String', title: 'Along one string' },
 ];
 
+const NECK_SHAPES = [
+  { id: neckShapeId.caged, label: 'CAGED', title: 'The five CAGED shapes' },
+  { id: neckShapeId.closed, label: 'Closed', title: 'Every chord tone once on neighbouring strings' },
+  { id: neckShapeId.triad, label: 'Triad', title: 'Three notes on neighbouring strings' },
+  { id: neckShapeId.power, label: 'Power', title: 'Root, fifth and octave' },
+  { id: neckShapeId.shell, label: 'Shell', title: 'Root, third and seventh (or sixth)' },
+];
+
 const MATCHES = [
   { id: matchId.unison, label: 'Unison', title: 'Only this exact pitch' },
   { id: matchId.octaves, label: 'Octaves', title: 'This note in every octave' },
@@ -69,6 +77,7 @@ const VIEWS = [
   { id: visId.piano, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
   { id: visId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
   { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
+  { id: visId.chart, icon: iconId.chordChart, label: 'Chart', title: 'Chord chart' },
   { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
 ];
 
@@ -106,7 +115,7 @@ export function createCircleControl() {
   let rooting = rootingId.inKey;
   let selected = { index: 0, minor: false };
   let chordIndex = 0;
-  const neckOptions = { show: showId.position, position: 0, fingering: fingeringId.caged, match: matchId.unison };
+  const neckOptions = { show: showId.position, position: 0, shape: neckShapeId.caged, fingering: fingeringId.caged, match: matchId.unison };
   let labels = labelId.none;
 
   function open() {
@@ -223,15 +232,16 @@ export function createCircleControl() {
     let neck = null;
 
     function renderStage() {
-      const { neck: neckView, render } = THEORY_VIEWS[view];
-      syncOptions(neckView);
+      const entry = THEORY_VIEWS[view];
+      syncOptions(entry);
       const current = model();
-      neck = neckView ? fretLayout(current, GUITAR, neckOptions) : null;
+      neck = entry.neck ? fretLayout(current, GUITAR, neckOptions) : null;
       if (neck) {
         neckOptions.position = neck.position;
         neckCount.textContent = neck.count ? `${neck.position + 1} / ${neck.count}` : '–';
+        syncShape();
       }
-      const art = render(current, { fifths, layout: neck, labels, align });
+      const art = entry.render(current, { fifths, layout: neck, labels, align });
       if (art.parentNode !== stage) stage.replaceChildren(art);
     }
 
@@ -319,19 +329,44 @@ export function createCircleControl() {
     const labelField = labeledField('Labels', labelPill);
     const showField = neckPill('Show', SHOWS, 'show');
     const positionField = labeledField('Position', positionStepper.el);
+
+    function shapePill(value, enabled) {
+      const { pill, select } = selectPill(null, 'Shape', NECK_SHAPES, value);
+      for (const option of select.options) option.disabled = !enabled.includes(option.value);
+      select.addEventListener(evt.change, () => {
+        neckOptions.shape = select.value;
+        neckOptions.position = 0;
+        player.stopRun();
+        renderStage();
+      });
+      return pill;
+    }
+
+    const shapeField = labeledField('Shape', shapePill(neckOptions.shape, Object.values(neckShapeId)));
+    let shapeState = '';
+
+    function syncShape() {
+      const value = neck.shape ?? neckOptions.shape;
+      const state = `${value}:${neck.shapes}`;
+      if (state === shapeState) return;
+      shapeState = state;
+      shapeField.lastChild.replaceWith(shapePill(value, neck.shapes));
+    }
+
     const alignField = labeledField('Align', choiceToggle(ALIGNS, align, (id) => {
       if (id === align) return;
       align = id;
       renderStage();
     }));
-    const viewFields = [positionField, showField, fingeringField, matchField, labelField, alignField];
+    const viewFields = [positionField, shapeField, showField, fingeringField, matchField, labelField, alignField];
     const viewRow = modalRow(null, ...viewFields);
     viewRow.classList.add('view-controls');
 
-    function syncOptions(neckView) {
+    function syncOptions({ neck: neckView, show, labels: labelled }) {
       positionField.hidden = !neckView;
-      showField.hidden = view !== visId.fretboard;
-      labelField.hidden = view !== visId.fretboard;
+      shapeField.hidden = !neckView || mode !== modeId.chord;
+      showField.hidden = !show;
+      labelField.hidden = !labelled;
       fingeringField.hidden = !neckView || mode !== modeId.scale;
       matchField.hidden = !neckView || mode !== modeId.note;
       alignField.hidden = view !== visId.intervals;

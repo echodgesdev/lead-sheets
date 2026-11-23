@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { parseVisSpec, visId, alignId, visControlId, stepKind, fingeringId } from '../js/sheet/vis-spec.js';
+import { parseVisSpec, visId, alignId, visControlId, stepKind, fingeringId, neckShapeId } from '../js/sheet/vis-spec.js';
 
 const deg = (degree, shift = 0) => ({ kind: stepKind.degree, degree, shift });
 const chord = (name) => ({ kind: stepKind.chord, chord: name });
@@ -19,6 +19,7 @@ test('parseVisSpec reads a piano with degrees and controls', () => {
     controls: [visControlId.play],
     position: null,
     fingering: fingeringId.caged,
+    shape: null,
     errors: [],
   });
 });
@@ -32,6 +33,7 @@ test('parseVisSpec reads a clock with a key and chords', () => {
     controls: [],
     position: null,
     fingering: fingeringId.caged,
+    shape: null,
     errors: [],
   });
 });
@@ -63,6 +65,7 @@ test('parseVisSpec is case-insensitive and forgiving of whitespace', () => {
     controls: [visControlId.play],
     position: null,
     fingering: fingeringId.caged,
+    shape: null,
     errors: [],
   });
 });
@@ -88,7 +91,7 @@ test('parseVisSpec reports unknown fields and controls', () => {
 });
 
 test('parseVisSpec leaves key null when omitted or empty', () => {
-  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] });
+  eq(parseVisSpec('{vis: fifths}'), { vis: visId.fifths, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, shape: null, errors: [] });
   eq(parseVisSpec('{vis: fifths, key: }').key, null);
 });
 
@@ -105,4 +108,13 @@ test('parseVisSpec reads a fretboard position and fingering', () => {
   const bad = parseVisSpec('{vis: guitar, position: 0, fingering: chair}');
   eq([bad.position, bad.fingering], [null, fingeringId.caged]);
   eq(bad.errors, ['Unknown position "0"', 'Unknown fingering "chair", using caged']);
+});
+
+test('parseVisSpec reads a chord chart and its neck shape', () => {
+  const spec = parseVisSpec('{vis: chord, seq: G, shape: Power}');
+  eq([spec.vis, spec.shape, spec.errors], [visId.chart, neckShapeId.power, []]);
+  eq(parseVisSpec('{vis: diagram}').vis, visId.chart);
+  eq(Object.values(neckShapeId).map((id) => parseVisSpec(`{vis: tab, shape: ${id}}`).shape), Object.values(neckShapeId));
+  const bad = parseVisSpec('{vis: guitar, shape: barre}');
+  eq([bad.shape, bad.errors], [null, ['Unknown shape "barre"']]);
 });

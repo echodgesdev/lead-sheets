@@ -116,7 +116,10 @@ export function mount(root, { id, preview = false, setId = null }) {
   numbersBtn.disabled = !keyed;
   const detailsBtn = iconButton(iconId.circleInfo, 'Song details');
   const menuBtn = iconButton(iconId.ellipsisVertical, 'More options');
-  const utilities = createUtilities(rec.tempo);
+  const utilities = createUtilities({
+    tempo: rec.tempo,
+    song: { id: rec.id, title: songTitle(rec), artist: rec.artist ?? '' },
+  });
   const lead = div('live-lead');
   lead.append(homeBtn, shiftStep.el);
   headerEl.append(lead, capoStep.el, numbersBtn, ...utilities.buttons, detailsBtn, menuBtn, editBtn);

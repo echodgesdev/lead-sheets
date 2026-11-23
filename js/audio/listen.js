@@ -1,14 +1,12 @@
 import { audioContext } from './context.js';
 import { detectPitch, noteOf } from './pitch.js';
+import { openMic, closeMic } from './mic.js';
 
 const FFT_SIZE = 4096;
 const HOLD_MS = 500;
 const MEDIAN_SIZE = 5;
 const SMOOTHING = 0.3;
 const JUMP_CENTS = 50;
-const CONSTRAINTS = {
-  audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-};
 
 function median(values) {
   const sorted = [...values].sort((a, b) => a - b);
@@ -22,8 +20,7 @@ function centsBetween(a, b) {
 export async function listen(onNote) {
   // start audio while still inside the user gesture
   audioContext();
-  if (!navigator.mediaDevices?.getUserMedia) throw new Error('Microphone unavailable');
-  const stream = await navigator.mediaDevices.getUserMedia(CONSTRAINTS);
+  const stream = await openMic();
   const ctx = audioContext();
   const source = ctx.createMediaStreamSource(stream);
   const analyser = ctx.createAnalyser();
@@ -65,7 +62,7 @@ export async function listen(onNote) {
     stopped = true;
     cancelAnimationFrame(raf);
     source.disconnect();
-    for (const track of stream.getTracks()) track.stop();
+    closeMic(stream);
   }
 
   raf = requestAnimationFrame(frame);

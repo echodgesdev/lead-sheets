@@ -7,6 +7,7 @@ const NC_RE = /^N\.?C\.?$/;
 const FILLER_RE = /^(?:\(?x\d+\)?|\d+x|[-/%:.()*~]+)$/i;
 const LONE_WORD_RE = /^[a-g][#b]?m?$/;
 const INLINE_RE = /\[([^\]]+)\]/g;
+const CHORD_LIKE_RE = /^[A-H][#b]?(?:maj|min|dim|aug|sus|add|[mMΔ°ø#b+\-\d()]|\/[A-H][#b]?)*\**$/;
 const NOTE_RE = /^([A-Ga-g])([#b]?)/;
 
 const LETTERS = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -97,10 +98,27 @@ export function chordTokens(line) {
     .map((t) => ({ chord: t.text, col: t.col }));
 }
 
+function bracketed(line) {
+  return [...String(line).matchAll(INLINE_RE)].map((m) => ({ chord: m[1].trim(), index: m.index, end: m.index + m[0].length }));
+}
+
 export function inlineChords(line) {
-  return [...String(line).matchAll(INLINE_RE)]
-    .map((m) => ({ chord: m[1].trim(), index: m.index, end: m.index + m[0].length }))
-    .filter(({ chord }) => isChord(chord));
+  return bracketed(line).filter(({ chord }) => isChord(chord));
+}
+
+function isStrayChord(text) {
+  return !isChord(text) && CHORD_LIKE_RE.test(text);
+}
+
+export function strayChordTokens(line) {
+  const tokens = tokensOf(line);
+  const fits = (t) => isChord(t.text) || FILLER_RE.test(t.text) || isStrayChord(t.text);
+  if (!tokens.some((t) => isChord(t.text)) || !tokens.every(fits)) return [];
+  return tokens.filter((t) => isStrayChord(t.text)).map((t) => ({ chord: t.text, col: t.col }));
+}
+
+export function strayInlineChords(line) {
+  return bracketed(line).filter(({ chord }) => isStrayChord(chord));
 }
 
 export function isTabLine(line) {

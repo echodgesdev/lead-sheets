@@ -1075,6 +1075,51 @@ button.row:active {
   overflow: auto;
 }
 
+.hdr .lint-pill {
+  gap: 4px;
+  min-width: 0;
+  background: color-mix(in srgb, var(--orange) 16%, transparent);
+  color: var(--orange);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.lint-list {
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+}
+
+.lint-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lint-item:hover {
+  background: var(--hover);
+}
+
+.lint-line {
+  color: var(--orange);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.lint-message {
+  font-size: 14px;
+}
+
 .status {
   padding: 32px 16px;
   color: var(--muted);
@@ -1369,6 +1414,70 @@ button.row:active {
   from {
     transform: scale(1.22);
     filter: brightness(1.6);
+  }
+}
+
+.popover {
+  inset: auto;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--fg);
+  box-shadow: var(--shadow-lg);
+  animation: modal-in 0.2s var(--ease);
+}
+
+.popover::backdrop {
+  background: transparent;
+}
+
+.hdr .rec-btn.active {
+  background: transparent;
+  box-shadow: none;
+  color: var(--nav-danger);
+  animation: rec-pulse 1.2s ease-in-out infinite;
+}
+
+.rec-toggle {
+  flex: 1;
+  min-height: 64px;
+  font-size: 18px;
+}
+
+.rec-toggle .fa {
+  color: var(--danger);
+}
+
+.rec-toggle.active {
+  border-color: var(--danger);
+  background: var(--surface-2);
+  box-shadow: none;
+  color: var(--danger);
+}
+
+.rec-time {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+
+.rec-lists {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.rec-list .modal-row {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.4;
   }
 }
 
@@ -1872,6 +1981,60 @@ button.row:active {
   opacity: 1;
 }
 
+.chart-art {
+  width: min(100%, 220px);
+}
+
+.chart-name {
+  fill: var(--fg);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.chart-nut {
+  stroke: var(--fg);
+  stroke-width: 3.5;
+}
+
+.chart-fret {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.chart-string {
+  stroke: var(--muted);
+  stroke-width: 0.8;
+}
+
+.chart-start,
+.chart-muted {
+  fill: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.chart-barre {
+  stroke: var(--accent);
+  stroke-width: 9;
+  stroke-linecap: round;
+  opacity: 0.55;
+}
+
+.chart-dot circle {
+  stroke: var(--surface);
+  stroke-width: 1.2;
+}
+
+.chart-open circle {
+  fill: var(--surface);
+  stroke: var(--tone, var(--accent));
+  stroke-width: 1.6;
+}
+
+.chart-open .fret-label {
+  fill: var(--fg);
+}
+
 .view-controls {
   justify-content: center;
   align-items: stretch;
@@ -2049,6 +2212,7 @@ button.row:active {
   *::after,
   *::backdrop {
     animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
 

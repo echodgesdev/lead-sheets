@@ -1,8 +1,7 @@
 import { audioContext } from './context.js';
 import { clamp } from '../core/math.js';
+import { clampBpm } from '../sheet/tempo.js';
 
-export const MIN_BPM = 30;
-export const MAX_BPM = 250;
 export const DEFAULT_BPM = 100;
 export const MIN_BEATS = 1;
 export const MAX_BEATS = 16;
@@ -32,15 +31,6 @@ const PITCH = {
   [levelId.primary]: PRIMARY_HZ,
   [levelId.secondary]: SECONDARY_HZ,
 };
-
-export function clampBpm(n) {
-  return clamp(Math.round(n), MIN_BPM, MAX_BPM);
-}
-
-export function parseBpm(tempo) {
-  const match = /\d+(?:\.\d+)?/.exec(String(tempo ?? ''));
-  return match ? clampBpm(Number(match[0])) : null;
-}
 
 export function defaultPattern(beats) {
   const n = clamp(Math.round(beats), MIN_BEATS, MAX_BEATS);

@@ -1,17 +1,14 @@
 import {
-  MIN_BPM,
-  MAX_BPM,
   DEFAULT_BPM,
   MIN_BEATS,
   MAX_BEATS,
   levelId,
-  clampBpm,
-  parseBpm,
   resizePattern,
   cycleLevel,
   createTapper,
   createMetronome,
 } from '../audio/click.js';
+import { MIN_BPM, MAX_BPM, clampBpm, parseBpm } from '../sheet/tempo.js';
 import { getMetronomePattern, setMetronomePattern } from '../data/prefs.js';
 import { attachDialog, promptNumber } from './modal.js';
 import { stepper } from './controls.js';

@@ -1,45 +1,27 @@
 import * as store from './store.js';
 import * as setlists from './setlists.js';
-import { a } from '../core/dom.js';
 import { compress, decompress } from '../core/compress.js';
+import { saveFile } from '../core/files.js';
+import { dateStamp } from '../core/time.js';
 
 const FORMAT = { app: 'tabs', version: 3 };
 const VERSIONS = [1, 2, 3];
 const GZIP = 'gzip';
 const GZIP_MAGIC = [0x1f, 0x8b];
 
-function localDate() {
-  const d = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function download(blob, name) {
-  const url = URL.createObjectURL(blob);
-  const link = a({ href: url, download: name });
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
 function backupSong({ id, text, updatedAt, scrollSpeed }) {
   return { id, text, updatedAt, scrollSpeed };
 }
 
+export function backupData(songs, sets) {
+  return { ...FORMAT, songs: songs.map(backupSong), setlists: sets };
+}
+
 export async function exportAll() {
-  const body = JSON.stringify({ ...FORMAT, songs: store.all().map(backupSong), setlists: setlists.all() });
-  const name = `lead-sheets-backup-${localDate()}.json.gz`;
+  const body = JSON.stringify(backupData(store.all(), setlists.all()));
+  const name = `lead-sheets-backup-${dateStamp(new Date())}.json.gz`;
   const file = new File([await compress(body, GZIP)], name, { type: 'application/gzip' });
-  if (navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: 'Lead Sheets backup' });
-      return;
-    } catch (err) {
-      if (err.name === 'AbortError') return;
-    }
-  }
-  download(file, name);
+  await saveFile(file, 'Lead Sheets backup');
 }
 
 

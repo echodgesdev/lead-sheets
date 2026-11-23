@@ -1,10 +1,11 @@
 import { isChord, isKeyName, chordSpelling } from './chords.js';
 
-export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', clef: 'clef' });
+export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', chart: 'chart', clef: 'clef' });
 export const alignId = Object.freeze({ root: 'root', key: 'key' });
 export const visControlId = Object.freeze({ play: 'play' });
 export const stepKind = Object.freeze({ degree: 'degree', chord: 'chord' });
 export const fingeringId = Object.freeze({ caged: 'caged', threePerString: '3nps', oneString: 'string' });
+export const neckShapeId = Object.freeze({ caged: 'caged', closed: 'closed', triad: 'triad', power: 'power', shell: 'shell' });
 
 const MAX_DEGREE = 15;
 const POSITION_RE = /^\d+$/;
@@ -13,16 +14,19 @@ const FIELD_RE = /^([^:]*):(.*)$/;
 const DEGREE_RE = /^([b#♭♯]?)(\d+)$/;
 const TOKEN_RE = /\[[^\]]*\]?|[^\s[]+/g;
 const SHIFTS = { '': 0, b: -1, '♭': -1, '#': 1, '♯': 1 };
-const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls', position: 'position', fingering: 'fingering' });
+const FIELD = Object.freeze({ vis: 'vis', key: 'key', seq: 'seq', controls: 'controls', position: 'position', fingering: 'fingering', shape: 'shape' });
 const VIS_NAMES = new Map([
   ...Object.values(visId).map((vis) => [vis, { vis }]),
   ['keys', { vis: visId.piano }],
   ['guitar', { vis: visId.fretboard }],
+  ['chord', { vis: visId.chart }],
+  ['diagram', { vis: visId.chart }],
   ['staff', { vis: visId.clef }],
   ['notes', { vis: visId.intervals, align: alignId.key }],
 ]);
 const CONTROLS = new Set(Object.values(visControlId));
 const FINGERINGS = new Set(Object.values(fingeringId));
+const NECK_SHAPES = new Set(Object.values(neckShapeId));
 const READERS = new Map([
   [FIELD.vis, readVis],
   [FIELD.key, readKey],
@@ -30,6 +34,7 @@ const READERS = new Map([
   [FIELD.controls, readControls],
   [FIELD.position, readPosition],
   [FIELD.fingering, readFingering],
+  [FIELD.shape, readShape],
 ]);
 
 function fieldsOf(inner) {
@@ -95,12 +100,18 @@ function readFingering(value, spec) {
   if (!FINGERINGS.has(fingering)) spec.errors.push(`Unknown fingering "${value}", using ${fingeringId.caged}`);
 }
 
+function readShape(value, spec) {
+  const shape = value.toLowerCase();
+  spec.shape = NECK_SHAPES.has(shape) ? shape : null;
+  if (!NECK_SHAPES.has(shape)) spec.errors.push(`Unknown shape "${value}"`);
+}
+
 export function parseVisSpec(line) {
   const m = DIRECTIVE_RE.exec(String(line ?? '').trim());
   if (!m) return null;
   const fields = fieldsOf(m[1]);
   if (fields[0]?.name !== FIELD.vis) return null;
-  const spec = { vis: visId.piano, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, errors: [] };
+  const spec = { vis: visId.piano, align: alignId.root, key: null, seq: [], controls: [], position: null, fingering: fingeringId.caged, shape: null, errors: [] };
   for (const f of fields) {
     const read = READERS.get(f.name);
     if (read) read(f.value, spec);

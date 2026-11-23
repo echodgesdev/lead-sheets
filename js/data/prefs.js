@@ -38,6 +38,7 @@ export const listOptionId = Object.freeze({
 export const utilityId = Object.freeze({
   tuner: 'tuner',
   metronome: 'metronome',
+  recorder: 'recorder',
 });
 
 export const editorId = Object.freeze({
@@ -119,6 +120,7 @@ export const CONTROLS = [
 export const UTILITIES = [
   { id: utilityId.tuner, label: 'Tuner' },
   { id: utilityId.metronome, label: 'Metronome' },
+  { id: utilityId.recorder, label: 'Recorder' },
 ];
 
 const LIVE_ITEMS = [...CONTROLS, ...UTILITIES];

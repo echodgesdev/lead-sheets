@@ -1,5 +1,6 @@
 import { test, eq } from './harness.js';
-import { parseBpm, createTapper, MIN_BPM, MAX_BPM, MAX_BEATS, levelId, defaultPattern, resizePattern, cycleLevel, parsePattern } from '../js/audio/click.js';
+import { createTapper, MAX_BEATS, levelId, defaultPattern, resizePattern, cycleLevel, parsePattern } from '../js/audio/click.js';
+import { parseBpm, MIN_BPM, MAX_BPM } from '../js/sheet/tempo.js';
 import { detectPitch, noteOf, midiToHz, hzToMidi } from '../js/audio/pitch.js';
 
 const SAMPLE_RATE = 48000;

@@ -27,7 +27,7 @@ export function createTheoryEmbed(spec) {
   const box = div('theory-embed');
   const stage = div('theory-embed-stage');
   const fifths = spec.vis === visId.fifths ? keyFifths(model, key) : null;
-  const layout = view.neck ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering }) : null;
+  const layout = view.neck ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering, shape: spec.shape }) : null;
   stage.append(view.render(model, { fifths, layout, align: spec.align }));
   box.append(stage);
 

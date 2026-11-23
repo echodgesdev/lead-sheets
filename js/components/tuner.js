@@ -4,11 +4,11 @@ import { signed } from '../sheet/transpose.js';
 import { div, small, span, iconButton, cls } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { iconId } from '../core/icons.js';
+import { strings } from '../strings.js';
 
 const IN_TUNE_CENTS = 5;
 const CLOSE_CENTS = 10;
 const MAX_CENTS = 50;
-const MIC_ERROR = 'Microphone unavailable. Check permission in your browser settings.';
 
 export function createTunerControl() {
   const button = iconButton(iconId.tuningFork, 'Tuner');
@@ -57,7 +57,7 @@ export function createTunerControl() {
         else stopListening = stop;
       },
       () => {
-        if (!closed) status.textContent = MIC_ERROR;
+        if (!closed) status.textContent = strings.micUnavailable;
       },
     );
     return {

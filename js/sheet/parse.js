@@ -13,6 +13,21 @@ const NOTE_RE = /^\(.*\)$/;
 const NOTES_RE = /^notes?\s*:\s*(.*)$/i;
 const KEY_CHANGE_RE = /^key\s*change\s*:\s*(\S.*)$/i;
 
+export const lineKind = Object.freeze({
+  blank: 'blank',
+  title: 'title',
+  header: 'header',
+  vis: 'vis',
+  tab: 'tab',
+  notes: 'notes',
+  key: 'key',
+  section: 'section',
+  chords: 'chords',
+  note: 'note',
+  inline: 'inline',
+  lyric: 'lyric',
+});
+
 function titleCase(s) {
   if (s !== s.toLowerCase() && s !== s.toUpperCase()) return s;
   return s
@@ -114,19 +129,22 @@ function asChordLine(line) {
   return isChordLine(line) ? line : null;
 }
 
-function isLyricLine(line) {
+function kindOf(line) {
   const s = line.trim();
-  return (
-    s !== '' &&
-    !isTabLine(line) &&
-    parseVisSpec(line) === null &&
-    !sectionName(line) &&
-    asChordLine(line) === null &&
-    !NOTE_RE.test(s) &&
-    !NOTES_RE.test(s) &&
-    !KEY_CHANGE_RE.test(s) &&
-    !hasInlineChords(line)
-  );
+  if (!s) return lineKind.blank;
+  if (parseVisSpec(line)) return lineKind.vis;
+  if (isTabLine(line)) return lineKind.tab;
+  if (NOTES_RE.test(s)) return lineKind.notes;
+  if (KEY_CHANGE_RE.test(s)) return lineKind.key;
+  if (sectionName(line)) return lineKind.section;
+  if (asChordLine(line) !== null) return lineKind.chords;
+  if (NOTE_RE.test(s)) return lineKind.note;
+  if (hasInlineChords(line)) return lineKind.inline;
+  return lineKind.lyric;
+}
+
+function isLyricLine(line) {
+  return kindOf(line) === lineKind.lyric;
 }
 
 function pairFromChordLine(chordLine, lyric) {
@@ -169,72 +187,69 @@ function tidy(blocks) {
   return out;
 }
 
+function lineBlock(kind, line) {
+  const s = line.trim();
+  if (kind === lineKind.blank) return { type: 'blank' };
+  if (kind === lineKind.vis) return { type: 'vis', spec: parseVisSpec(line) };
+  if (kind === lineKind.key) return { type: 'key', key: KEY_CHANGE_RE.exec(s)[1] };
+  if (kind === lineKind.section) return { type: 'section', name: sectionName(line) };
+  if (kind === lineKind.note) return { type: 'note', text: s };
+  if (kind === lineKind.inline) return { type: 'pair', segments: inlineSegments(line) };
+  if (kind !== lineKind.notes) return { type: 'lyric', text: s };
+  const text = NOTES_RE.exec(s)[1];
+  return text ? { type: 'note', text } : { type: 'section', name: 'Notes' };
+}
+
 function parseBody(lines) {
   const blocks = [];
   let i = 0;
   while (i < lines.length) {
-    const line = lines[i];
-    if (!line.trim()) {
-      blocks.push({ type: 'blank' });
-      i++;
-      continue;
-    }
-    const spec = parseVisSpec(line);
-    if (spec) {
-      blocks.push({ type: 'vis', spec });
-      i++;
-      continue;
-    }
-    if (isTabLine(line)) {
-      const tab = [];
+    const line = lines[i++];
+    const kind = kindOf(line);
+    if (kind === lineKind.tab) {
+      const tab = [line];
       while (i < lines.length && isTabLine(lines[i])) tab.push(lines[i++]);
       blocks.push({ type: 'tab', lines: tab });
-      continue;
+    } else if (kind === lineKind.chords) {
+      const chordLine = asChordLine(line);
+      if (i < lines.length && isLyricLine(lines[i])) blocks.push(pairFromChordLine(chordLine, lines[i++]));
+      else blocks.push({ type: 'chords', line: chordLine });
+    } else {
+      blocks.push(lineBlock(kind, line));
     }
-    const notes = NOTES_RE.exec(line.trim());
-    if (notes) {
-      blocks.push(notes[1] ? { type: 'note', text: notes[1] } : { type: 'section', name: 'Notes' });
-      i++;
-      continue;
-    }
-    const change = KEY_CHANGE_RE.exec(line.trim());
-    if (change) {
-      blocks.push({ type: 'key', key: change[1] });
-      i++;
-      continue;
-    }
-    const name = sectionName(line);
-    if (name) {
-      blocks.push({ type: 'section', name });
-      i++;
-      continue;
-    }
-    const chordLine = asChordLine(line);
-    if (chordLine !== null) {
-      const next = lines[i + 1];
-      if (next !== undefined && isLyricLine(next)) {
-        blocks.push(pairFromChordLine(chordLine, next));
-        i += 2;
-      } else {
-        blocks.push({ type: 'chords', line: chordLine });
-        i++;
-      }
-      continue;
-    }
-    const s = line.trim();
-    const inline = NOTE_RE.test(s) ? null : inlineSegments(line);
-    if (NOTE_RE.test(s)) blocks.push({ type: 'note', text: s });
-    else if (inline) blocks.push({ type: 'pair', segments: inline });
-    else blocks.push({ type: 'lyric', text: s });
-    i++;
   }
   return tidy(blocks);
 }
 
-export function parse(text) {
-  const lines = normalizeLines(text);
+function titleIndex(lines) {
   let i = 0;
   while (i < lines.length && !lines[i].trim()) i++;
+  return i;
+}
+
+function bodyLine(line) {
+  const kind = kindOf(line);
+  if (kind === lineKind.vis) return { kind, spec: parseVisSpec(line) };
+  if (kind === lineKind.key) return { kind, value: KEY_CHANGE_RE.exec(line.trim())[1] };
+  return { kind };
+}
+
+export function lineKinds(text) {
+  const lines = normalizeLines(text);
+  const title = titleIndex(lines);
+  const header = title < lines.length ? readHeader(lines, title + 1) : { fields: [], next: lines.length };
+  return lines.map((line, i) => {
+    if (i < title) return { kind: lineKind.blank };
+    if (i === title) return { kind: lineKind.title };
+    if (i >= header.next) return bodyLine(line);
+    const [key, value] = header.fields[i - title - 1];
+    return { kind: lineKind.header, field: fieldName(key), value };
+  });
+}
+
+export function parse(text) {
+  const lines = normalizeLines(text);
+  const i = titleIndex(lines);
   if (i >= lines.length) return { meta: buildMeta('', []), blocks: [] };
   const title = lines[i].trim().replace(/^#+\s*/, '');
   const header = readHeader(lines, i + 1);

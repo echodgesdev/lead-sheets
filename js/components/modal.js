@@ -1,8 +1,12 @@
 import { dialog, div, h2, iconButton, labeledButton } from '../core/dom.js';
 import { evt, keys } from '../core/events.js';
 import { iconId } from '../core/icons.js';
+import { clamp } from '../core/math.js';
 import { textField } from './controls.js';
 import { modalRow } from './rows.js';
+
+const POPOVER_GAP = 8;
+const POPOVER_EDGE = 16;
 
 let modalCount = 0;
 
@@ -27,7 +31,34 @@ export function openModal(title, ...rows) {
   return modal;
 }
 
-export function attachDialog(trigger, title, open) {
+export function openPopover(anchor, ...rows) {
+  const popover = dialog('popover');
+  popover.append(...rows);
+  document.body.append(popover);
+  const placing = new AbortController();
+
+  function place() {
+    const box = anchor.getBoundingClientRect();
+    const width = popover.offsetWidth;
+    popover.style.top = `${box.bottom + POPOVER_GAP}px`;
+    popover.style.left = `${clamp(box.right - width, POPOVER_EDGE, window.innerWidth - width - POPOVER_EDGE)}px`;
+  }
+
+  popover.addEventListener(evt.click, (e) => {
+    if (e.target === popover) popover.close();
+  });
+  popover.addEventListener(evt.close, () => {
+    placing.abort();
+    popover.remove();
+  });
+  window.addEventListener(evt.resize, place, { signal: placing.signal });
+
+  popover.showModal();
+  place();
+  return popover;
+}
+
+function attach(trigger, show, open) {
   let openDialog = null;
   let onClose = null;
 
@@ -38,10 +69,12 @@ export function attachDialog(trigger, title, open) {
     fn?.();
   }
 
+  const close = () => openDialog?.close();
+
   trigger.addEventListener(evt.click, () => {
     if (openDialog) return;
-    const opened = open();
-    const current = openModal(title, ...[opened.header].filter(Boolean), ...opened.rows);
+    const opened = open(close);
+    const current = show([opened.header, ...opened.rows].filter(Boolean));
     openDialog = current;
     onClose = opened.onClose;
     current.addEventListener(evt.close, () => {
@@ -54,6 +87,14 @@ export function attachDialog(trigger, title, open) {
     teardown();
     current?.close();
   };
+}
+
+export function attachDialog(trigger, title, open) {
+  return attach(trigger, (rows) => openModal(title, ...rows), open);
+}
+
+export function attachPopover(trigger, open) {
+  return attach(trigger, (rows) => openPopover(trigger, ...rows), open);
 }
 
 export function promptNumber(title, value, { min, max }, onSet) {

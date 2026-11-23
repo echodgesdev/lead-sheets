@@ -5,7 +5,8 @@ import { qualityId, shapeId, displayName, stepPitches, intervalNames } from '../
 import { IONIAN } from '../sheet/chords.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
 import { staffLayout, signatureSteps, STAVES, clefId } from '../sheet/staff.js';
-import { visId, alignId } from '../sheet/vis-spec.js';
+import { chartLayout } from '../sheet/fretboard.js';
+import { visId, alignId, neckShapeId } from '../sheet/vis-spec.js';
 
 const STEP = 360 / OCTAVE;
 const COLUMNS = Array.from({ length: OCTAVE }, (_, c) => c);
@@ -42,6 +43,16 @@ const TAB_COL = 18;
 const TAB_END = 8;
 const TAB_BAR = 2;
 const TAB_LETTERS = ['T', 'A', 'B'];
+const CHART_SIDE = 18;
+const CHART_STRING_GAP = 14;
+const CHART_FRET_GAP = 18;
+const CHART_NAME_Y = 9;
+const CHART_MARK_Y = 25;
+const CHART_TOP = 34;
+const CHART_BOTTOM = 6;
+const CHART_START_DX = 11;
+const CHART_DOT_R = 5.5;
+const CHART_OPEN_R = 4;
 const STAFF_GAP = 8;
 const STAFF_HALF = STAFF_GAP / 2;
 const STAFF_SPAN = 8;
@@ -66,6 +77,7 @@ const STAFF_CLEFS = { [clefId.treble]: { glyph: '𝄞', line: 32 }, [clefId.bass
 const STAFF_ACCIDENTALS = { [-2]: '♭♭', [-1]: '♭', 0: '♮', 1: '♯', 2: '×' };
 const CHAIN_ROWS = { [modeId.note]: noteRows, [modeId.chord]: chordRows, [modeId.scale]: scaleRows, [modeId.sequence]: sequenceRows };
 const PATTERN_MODES = new Set([modeId.scale, modeId.sequence]);
+const CHART_TITLES = { [modeId.chord]: chordTitle, [modeId.scale]: scaleTitle, [modeId.note]: (model) => displayName(model.note.name), [modeId.sequence]: sequenceTitle };
 
 export const labelId = Object.freeze({
   none: 'none',
@@ -78,8 +90,9 @@ export const THEORY_VIEWS = Object.freeze({
   [visId.clock]: { render: renderClock },
   [visId.intervals]: { render: (model, { align }) => renderChain(model, align) },
   [visId.piano]: { render: renderKeys },
-  [visId.fretboard]: { neck: true, render: (model, { layout, labels }) => renderFretboard(model, layout, labels) },
+  [visId.fretboard]: { neck: true, show: true, labels: true, render: (model, { layout, labels }) => renderFretboard(model, layout, labels) },
   [visId.tab]: { neck: true, render: (model, { layout }) => renderTab(model, layout) },
+  [visId.chart]: { neck: true, labels: true, render: (model, { layout, labels }) => renderChart(model, layout, labels) },
   [visId.clef]: { render: renderStaff },
 });
 
@@ -166,12 +179,16 @@ function fifthsArt(model, { fifths }) {
   return fifths.el;
 }
 
+function slashBass(chord, bassMidi) {
+  const bassPc = mod12(bassMidi);
+  return bassPc === chord.pc ? '' : `/${displayName(intervalNames(chord.chord)[bassPc])}`;
+}
+
 function centerLabel({ mode, chord, voiced, names, note, scale, tonic, shape, shapeOf, key }) {
   if (mode === modeId.sequence) return hubText(key.root, key.quality, 'clock-center');
   if (mode === modeId.note) return hubText(displayName(note.name), `degree ${note.degree}`, 'clock-center');
   if (mode === modeId.scale) return hubText(displayName(names[tonic]), scale.name, 'clock-center');
-  const bassPc = mod12(voiced[0]);
-  const bass = bassPc === chord.pc ? '' : `/${displayName(intervalNames(chord.chord)[bassPc])}`;
+  const bass = slashBass(chord, voiced[0]);
   const root = rootLetter(chord.chord);
   const sub = shape === shapeId.triad ? QUALITY_LABELS[chord.quality] : displayName(shapeOf(chord).name).slice(root.length);
   return hubText(`${root}${bass}`, sub, 'clock-center');
@@ -459,20 +476,22 @@ function dotLabel(model, pc, labels) {
   return INTERVALS[mod12(pc - ref)];
 }
 
-function fretDot(model, dot, count, labels) {
+function neckDot(model, dot, { x, y, r, count, labels, className }) {
   const pc = mod12(dot.midi);
-  const x = fretX(dot.fret);
-  const y = stringY(dot.string, count);
   const node = svg('g', noteAttrs(model, pc, {
-    className: classes('note-dot fret-dot', dot.faint && cls.faint),
+    className: classes('note-dot', className, dot.faint && cls.faint),
     focusable: !dot.faint,
     midis: [dot.midi],
     steps: dot.steps.join(' '),
     label: `${pcName(model, pc)}, string ${count - dot.string} fret ${dot.fret}`,
   }));
-  node.append(svg('circle', { cx: x, cy: y, r: FRET_DOT_R }));
+  node.append(svg('circle', { cx: x, cy: y, r }));
   if (labels !== labelId.none) node.append(svg('text', { class: 'fret-label', x, y }, dotLabel(model, pc, labels)));
   return node;
+}
+
+function fretDot(model, dot, count, labels) {
+  return neckDot(model, dot, { x: fretX(dot.fret), y: stringY(dot.string, count), r: FRET_DOT_R, count, labels, className: 'fret-dot' });
 }
 
 export function renderFretboard(model, layout, labels = labelId.none) {
@@ -485,6 +504,50 @@ export function renderFretboard(model, layout, labels = labelId.none) {
   for (const string of muted) art.append(svg('text', { class: 'fret-muted', x: fretX(0), y: stringY(string, strings.length) }, '×'));
   const ordered = [...dots.filter((dot) => dot.faint), ...dots.filter((dot) => !dot.faint)];
   art.append(...ordered.map((dot) => fretDot(model, dot, strings.length, labels)));
+  return art;
+}
+
+function chordTitle(model, layout) {
+  const { chord } = model;
+  if (layout.shape === neckShapeId.power) return `${rootLetter(chord.chord)}5`;
+  return `${displayName(model.shapeOf(chord).name)}${slashBass(chord, layout.voicing[0] ?? model.voiced[0])}`;
+}
+
+function scaleTitle(model) {
+  return `${pcName(model, model.tonic)} ${model.scale.name}`;
+}
+
+function sequenceTitle({ steps, key }) {
+  return steps.length === 1 ? steps[0].label : `${key.root} ${key.quality}`;
+}
+
+export function renderChart(model, layout, labels = labelId.none) {
+  const chart = chartLayout(layout);
+  const count = chart.instrument.strings.length;
+  const x = (string) => CHART_SIDE + string * CHART_STRING_GAP;
+  const lineY = (row) => CHART_TOP + row * CHART_FRET_GAP;
+  const fretY = (fret) => lineY(fret - chart.start + 0.5);
+  const left = x(0);
+  const right = x(count - 1);
+  const bottom = lineY(chart.rows);
+  const width = right + CHART_SIDE;
+  const art = theoryArt('chart-art', `0 0 ${width} ${bottom + CHART_BOTTOM}`, 'Chord chart');
+  art.append(svg('text', { class: 'chart-name', x: width / 2, y: CHART_NAME_Y }, CHART_TITLES[model.mode](model, layout)));
+  for (let row = 0; row <= chart.rows; row++) {
+    art.append(svg('line', { class: row === 0 && chart.nut ? 'chart-nut' : 'chart-fret', x1: left, y1: lineY(row), x2: right, y2: lineY(row) }));
+  }
+  for (let string = 0; string < count; string++) art.append(svg('line', { class: 'chart-string', x1: x(string), y1: lineY(0), x2: x(string), y2: bottom }));
+  if (!chart.nut) art.append(svg('text', { class: 'chart-start', x: left - CHART_START_DX, y: fretY(chart.start) }, String(chart.start)));
+  if (chart.barre) {
+    const y = fretY(chart.barre.fret);
+    art.append(svg('line', { class: 'chart-barre', x1: x(chart.barre.from), y1: y, x2: x(chart.barre.to), y2: y }));
+  }
+  for (const string of chart.muted) art.append(svg('text', { class: 'chart-muted', x: x(string), y: CHART_MARK_Y }, '×'));
+  const dot = (each, y, r, className) => neckDot(model, each, { x: x(each.string), y, r, count, labels, className });
+  art.append(
+    ...chart.open.map((each) => dot(each, CHART_MARK_Y, CHART_OPEN_R, 'chart-dot chart-open')),
+    ...chart.dots.map((each) => dot(each, fretY(each.fret), CHART_DOT_R, 'chart-dot')),
+  );
   return art;
 }
 

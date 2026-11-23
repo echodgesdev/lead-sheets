@@ -36,6 +36,7 @@ function builder(tag) {
 }
 
 export const a = builder('a');
+export const audio = builder('audio');
 export const b = builder('b');
 export const details = builder('details');
 export const dialog = builder('dialog');

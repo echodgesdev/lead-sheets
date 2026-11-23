@@ -1,16 +1,18 @@
 import { createTunerControl } from './tuner.js';
 import { createMetronomeControl } from './metronome.js';
+import { createRecorderControl } from './recorder.js';
 import { createCircleControl } from './circle.js';
 import { UTILITIES, utilityId } from '../data/prefs.js';
 import { div } from '../core/dom.js';
 
 const CREATE_UTILITY = {
   [utilityId.tuner]: () => createTunerControl(),
-  [utilityId.metronome]: (tempo) => createMetronomeControl(tempo),
+  [utilityId.metronome]: ({ tempo }) => createMetronomeControl(tempo),
+  [utilityId.recorder]: ({ song }) => createRecorderControl(song),
 };
 
-export function createUtilities(tempo) {
-  const controls = UTILITIES.map((u) => ({ id: u.id, control: CREATE_UTILITY[u.id](tempo) }));
+export function createUtilities(context = {}) {
+  const controls = UTILITIES.map((u) => ({ id: u.id, control: CREATE_UTILITY[u.id](context) }));
   return {
     buttons: controls.map(({ control }) => control.button),
     show(ids) {
