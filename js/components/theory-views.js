@@ -7,6 +7,8 @@ import { modeId, chordRoot } from '../sheet/theory-model.js';
 import { staffLayout, signatureSteps, STAVES, clefId } from '../sheet/staff.js';
 import { chartLayout } from '../sheet/fretboard.js';
 import { visId, alignId, neckShapeId } from '../sheet/vis-spec.js';
+import { theoryArt, isBlocked, isOutside, noteAttrs, pcName, points, stepsOf } from './theory-art.js';
+import { renderTonnetz } from './tonnetz.js';
 
 const STEP = 360 / OCTAVE;
 const COLUMNS = Array.from({ length: OCTAVE }, (_, c) => c);
@@ -94,6 +96,7 @@ export const THEORY_VIEWS = Object.freeze({
   [visId.tab]: { neck: true, render: (model, { layout }) => renderTab(model, layout) },
   [visId.chart]: { neck: true, labels: true, render: (model, { layout, labels }) => renderChart(model, layout, labels) },
   [visId.clef]: { render: renderStaff },
+  [visId.tonnetz]: { render: renderTonnetz },
 });
 
 const QUALITY_LABELS = {
@@ -108,44 +111,10 @@ export function hubText(main, sub, className = '') {
   return text;
 }
 
-export function theoryArt(className, viewBox, label, attrs = {}) {
-  return svg('svg', { class: `theory-art ${className}`, viewBox, role: 'group', 'aria-label': label, ...attrs });
-}
-
-export function tapAttrs(label, focusable = true) {
-  return { role: 'button', tabindex: focusable ? 0 : -1, 'aria-label': label };
-}
-
-function isBlocked({ locked, allowed }, pc) {
-  return locked && !allowed.includes(pc);
-}
-
-function isOutside({ scalePcs }, pc) {
-  return !scalePcs.includes(pc);
-}
-
-function toneClass(model, pc, rootPc) {
-  if (pc === rootPc) return cls.root;
-  return isOutside(model, pc) ? cls.outside : null;
-}
-
-function noteAttrs(model, pc, { className, midis, label, steps = '', on = true, rootPc = model.rootPc, focusable = true }) {
-  return {
-    class: classes(className, on && toneClass(model, pc, rootPc), isBlocked(model, pc) && cls.blocked),
-    ...tapAttrs(label, focusable),
-    'data-notes': midis.join(','),
-    ...(steps ? { 'data-step': steps } : {}),
-  };
-}
-
 function noteButton(text, { class: className, ...attrs }) {
   const node = plainButton(text, className);
   for (const [name, value] of Object.entries(attrs)) node.setAttribute(name, value);
   return node;
-}
-
-function pcName(model, pc) {
-  return displayName(model.names[pc]);
 }
 
 function pitchName(model, midi) {
@@ -160,18 +129,8 @@ function ringOf(midi, tonicMidi) {
   return CLOCK_RINGS[Math.min(CLOCK_RINGS.length - 1, Math.max(0, Math.floor((midi - tonicMidi) / OCTAVE)))];
 }
 
-function points(list) {
-  return list.map(([x, y]) => `${x},${y}`).join(' ');
-}
-
 function rootLetter(chord) {
   return displayName(chordRoot(chord));
-}
-
-export function stepsOf(run, midi, drawn) {
-  return run
-    .flatMap((step, i) => (step.some((m) => m === midi || (!drawn.includes(m) && mod12(m) === mod12(midi))) ? [i] : []))
-    .join(' ');
 }
 
 function fifthsArt(model, { fifths }) {
@@ -522,7 +481,20 @@ function sequenceTitle({ steps, key }) {
 }
 
 export function renderChart(model, layout, labels = labelId.none) {
-  const chart = chartLayout(layout);
+  const count = layout.instrument.strings.length;
+  const dot = (each, at) => neckDot(model, each, { ...at, count, labels });
+  return chordBox(chartLayout(layout), CHART_TITLES[model.mode](model, layout), { dot });
+}
+
+function rootDot(rootPc) {
+  return (each, { x, y, r, className }) => {
+    const node = svg('g', { class: classes('note-dot', className, mod12(each.midi) === rootPc && cls.root) });
+    node.append(svg('circle', { cx: x, cy: y, r }));
+    return node;
+  };
+}
+
+export function chordBox(chart, title, { attrs = {}, rootPc = null, dot = rootDot(rootPc) } = {}) {
   const count = chart.instrument.strings.length;
   const x = (string) => CHART_SIDE + string * CHART_STRING_GAP;
   const lineY = (row) => CHART_TOP + row * CHART_FRET_GAP;
@@ -531,8 +503,8 @@ export function renderChart(model, layout, labels = labelId.none) {
   const right = x(count - 1);
   const bottom = lineY(chart.rows);
   const width = right + CHART_SIDE;
-  const art = theoryArt('chart-art', `0 0 ${width} ${bottom + CHART_BOTTOM}`, 'Chord chart');
-  art.append(svg('text', { class: 'chart-name', x: width / 2, y: CHART_NAME_Y }, CHART_TITLES[model.mode](model, layout)));
+  const art = theoryArt('chart-art', `0 0 ${width} ${bottom + CHART_BOTTOM}`, 'Chord chart', attrs);
+  art.append(svg('text', { class: 'chart-name', x: width / 2, y: CHART_NAME_Y }, title));
   for (let row = 0; row <= chart.rows; row++) {
     art.append(svg('line', { class: row === 0 && chart.nut ? 'chart-nut' : 'chart-fret', x1: left, y1: lineY(row), x2: right, y2: lineY(row) }));
   }
@@ -543,10 +515,9 @@ export function renderChart(model, layout, labels = labelId.none) {
     art.append(svg('line', { class: 'chart-barre', x1: x(chart.barre.from), y1: y, x2: x(chart.barre.to), y2: y }));
   }
   for (const string of chart.muted) art.append(svg('text', { class: 'chart-muted', x: x(string), y: CHART_MARK_Y }, '×'));
-  const dot = (each, y, r, className) => neckDot(model, each, { x: x(each.string), y, r, count, labels, className });
   art.append(
-    ...chart.open.map((each) => dot(each, CHART_MARK_Y, CHART_OPEN_R, 'chart-dot chart-open')),
-    ...chart.dots.map((each) => dot(each, fretY(each.fret), CHART_DOT_R, 'chart-dot')),
+    ...chart.open.map((each) => dot(each, { x: x(each.string), y: CHART_MARK_Y, r: CHART_OPEN_R, className: 'chart-dot chart-open' })),
+    ...chart.dots.map((each) => dot(each, { x: x(each.string), y: fretY(each.fret), r: CHART_DOT_R, className: 'chart-dot' })),
   );
   return art;
 }

@@ -49,6 +49,11 @@ test('parseVisSpec reads every vis id', () => {
   Object.values(visId).forEach((id) => eq(parseVisSpec(`{vis: ${id}}`).vis, id, id));
 });
 
+test('parseVisSpec reads a tonnetz', () => {
+  const spec = parseVisSpec('{vis: Tonnetz, seq: C Am F G, controls: play}');
+  eq([spec.vis, spec.seq, spec.errors], [visId.tonnetz, [chord('C'), chord('Am'), chord('F'), chord('G')], []]);
+});
+
 test('parseVisSpec reads intervals on the root and notes as intervals on the key', () => {
   const intervals = parseVisSpec('{vis: intervals, seq: G C}');
   eq([intervals.vis, intervals.align], [visId.intervals, alignId.root]);

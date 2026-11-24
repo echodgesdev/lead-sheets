@@ -1,11 +1,18 @@
 import { isChord, isKeyName, chordSpelling } from './chords.js';
 
-export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', chart: 'chart', clef: 'clef' });
+export const visId = Object.freeze({ piano: 'piano', clock: 'clock', intervals: 'intervals', fifths: 'fifths', fretboard: 'fretboard', tab: 'tab', chart: 'chart', clef: 'clef', tonnetz: 'tonnetz' });
 export const alignId = Object.freeze({ root: 'root', key: 'key' });
 export const visControlId = Object.freeze({ play: 'play' });
 export const stepKind = Object.freeze({ degree: 'degree', chord: 'chord' });
 export const fingeringId = Object.freeze({ caged: 'caged', threePerString: '3nps', oneString: 'string' });
 export const neckShapeId = Object.freeze({ caged: 'caged', closed: 'closed', triad: 'triad', power: 'power', shell: 'shell' });
+export const NECK_SHAPES = [
+  { id: neckShapeId.caged, label: 'CAGED', title: 'The five CAGED shapes' },
+  { id: neckShapeId.closed, label: 'Closed', title: 'Every chord tone once on neighbouring strings' },
+  { id: neckShapeId.triad, label: 'Triad', title: 'Three notes on neighbouring strings' },
+  { id: neckShapeId.power, label: 'Power', title: 'Root, fifth and octave' },
+  { id: neckShapeId.shell, label: 'Shell', title: 'Root, third and seventh (or sixth)' },
+];
 
 const MAX_DEGREE = 15;
 const POSITION_RE = /^\d+$/;
@@ -26,7 +33,7 @@ const VIS_NAMES = new Map([
 ]);
 const CONTROLS = new Set(Object.values(visControlId));
 const FINGERINGS = new Set(Object.values(fingeringId));
-const NECK_SHAPES = new Set(Object.values(neckShapeId));
+const NECK_SHAPE_IDS = new Set(Object.values(neckShapeId));
 const READERS = new Map([
   [FIELD.vis, readVis],
   [FIELD.key, readKey],
@@ -102,8 +109,8 @@ function readFingering(value, spec) {
 
 function readShape(value, spec) {
   const shape = value.toLowerCase();
-  spec.shape = NECK_SHAPES.has(shape) ? shape : null;
-  if (!NECK_SHAPES.has(shape)) spec.errors.push(`Unknown shape "${value}"`);
+  spec.shape = NECK_SHAPE_IDS.has(shape) ? shape : null;
+  if (!NECK_SHAPE_IDS.has(shape)) spec.errors.push(`Unknown shape "${value}"`);
 }
 
 export function parseVisSpec(line) {

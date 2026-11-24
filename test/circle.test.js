@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, chordNotes, wedgeNotes, displayName, pitchNames, intervalNames, noteMidi, scalePitches, scaleRun, chordShape, shapeChoices, shapeId, stepPitches, voiceNotes, scaleRoot, wedgeOf, degreeMidi, spelledNotes } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, keyScale, chordNotes, wedgeNotes, displayName, pitchNames, intervalNames, noteMidi, scalePitches, scaleRun, chordShape, shapeChoices, shapeId, stepPitches, voiceNotes, scaleRoot, wedgeOf, degreeMidi, spelledNotes } from '../js/sheet/circle.js';
 import { chordSpelling } from '../js/sheet/chords.js';
 
 const C = 0;
@@ -19,16 +19,55 @@ test('circle key window wraps around', () => {
   eq(keyWedges(11), { outer: [10, 11, 0], inner: [10, 11, 0] });
 });
 
+const diatonicOf = (index, minor) => keyChords(index, minor).filter((c) => !c.borrowed);
+const borrowedOf = (index, minor) => keyChords(index, minor).filter((c) => c.borrowed);
+const named = (c) => `${c.chord} ${c.numeral}`;
+
 test('circle key chords with numerals', () => {
-  eq(keyChords(0, false).map((c) => c.numeral), ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']);
-  eq(keyChords(0, true).map((c) => `${c.chord} ${c.numeral}`), ['Am i', 'Bdim ii°', 'C ♭III', 'Dm iv', 'Em v', 'F ♭VI', 'G ♭VII']);
+  eq(diatonicOf(0, false).map((c) => c.numeral), ['I', 'ii', 'iii', 'IV', 'V', 'vi', 'vii°']);
+  eq(diatonicOf(0, true).map(named), ['Am i', 'Bdim ii°', 'C ♭III', 'Dm iv', 'Em v', 'F ♭VI', 'G ♭VII']);
 });
 
 test('circle key chords sit on their wedges', () => {
   const at = (c) => `${c.chord}@${c.ring}${c.index}`;
-  eq(keyChords(0, false).map(at), ['C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1', 'Am@inner0', 'Bdim@dim0']);
-  eq(keyChords(0, true).map(at), ['Am@inner0', 'Bdim@dim0', 'C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1']);
-  eq(keyChords(1, false).at(-1), { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished' });
+  eq(diatonicOf(0, false).map(at), ['C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1', 'Am@inner0', 'Bdim@dim0']);
+  eq(diatonicOf(0, true).map(at), ['Am@inner0', 'Bdim@dim0', 'C@outer0', 'Dm@inner11', 'Em@inner1', 'F@outer11', 'G@outer1']);
+  eq(keyChords(1, false)[6], { chord: 'F#dim', numeral: 'vii°', index: 1, ring: 'dim', pc: 6, quality: 'diminished', scalePcs: [7, 9, 11, 0, 2, 4, 6] });
+  eq(borrowedOf(0, false).map(at), ['Fm@inner8', 'Eb@outer9', 'Ab@outer8', 'Bb@outer10']);
+  eq(borrowedOf(0, true).map(at), ['E@outer4', 'D@outer2', 'Bb@outer10']);
+});
+
+test('circle borrowed chords follow the seven diatonic ones', () => {
+  eq(keyChords(0, false).length, 11);
+  eq(keyChords(0, true).length, 10);
+  eq(keyChords(0, false)[7], { chord: 'Fm', numeral: 'iv', index: 8, ring: 'inner', pc: 5, quality: 'minor', scalePcs: [0, 2, 3, 5, 7, 8, 10], borrowed: true });
+  eq(keyChords(0, false).slice(0, 7).some((c) => c.borrowed), false);
+});
+
+test('circle borrowed chords are spelled in the key', () => {
+  eq(borrowedOf(0, false).map(named), ['Fm iv', 'Eb ♭III', 'Ab ♭VI', 'Bb ♭VII']);
+  eq(borrowedOf(0, true).map(named), ['E V', 'D IV', 'Bb ♭II']);
+  eq(borrowedOf(9, false).map(named), ['Abm iv', 'Gb ♭III', 'Cb ♭VI', 'Db ♭VII']);
+  eq(borrowedOf(6, false).map(named), ['Bm iv', 'A ♭III', 'D ♭VI', 'E ♭VII']);
+});
+
+test('circle borrowed chords stack in the scale they come from', () => {
+  const [iv, flatThree, flatSix, flatSeven] = borrowedOf(0, false);
+  eq(chordShape(iv, shapeId.stack7).name, 'Fm7');
+  eq(chordShape(flatThree, shapeId.stack7).name, 'Ebmaj7');
+  eq(chordShape(flatSix, shapeId.stack11).name, 'Abmaj9#11');
+  eq(chordShape(flatSeven, shapeId.stack7), { steps: [0, 4, 7, 10], name: 'Bb7' });
+  const [five, four, neapolitan] = borrowedOf(0, true);
+  eq(chordShape(five, shapeId.stack7).name, 'E7');
+  eq(chordShape(five, shapeId.stack9).name, 'E7b9');
+  eq(chordShape(four, shapeId.stack7).name, 'D7');
+  eq(chordShape(neapolitan, shapeId.stack7).name, 'Bbmaj7');
+});
+
+test('circle key scale is the seven diatonic notes', () => {
+  eq(keyScale(0, false), [0, 2, 4, 5, 7, 9, 11]);
+  eq(keyScale(0, true), [9, 11, 0, 2, 4, 5, 7]);
+  eq(keyScale(0, false), diatonicOf(0, false).map((c) => c.pc));
 });
 
 test('circle notes rise through the key from its tonic', () => {
@@ -95,43 +134,39 @@ test('circle scales from the tonic', () => {
 });
 
 test('circle chord shapes stack within the key', () => {
-  const cMajor = [0, 2, 4, 5, 7, 9, 11];
-  const items = keyChords(0, false);
-  eq(items.map((item) => chordShape(item, cMajor, '7th').name), ['Cmaj7', 'Dm7', 'Em7', 'Fmaj7', 'G7', 'Am7', 'Bø7']);
-  eq(items.map((item) => chordShape(item, cMajor, '9th').name), ['Cmaj9', 'Dm9', 'Em7b9', 'Fmaj9', 'G9', 'Am9', 'Bø7b9']);
-  eq(chordShape(items[3], cMajor, '11th').name, 'Fmaj9#11');
-  eq(chordShape(items[0], cMajor, '9th').steps, [0, 4, 7, 11, 14]);
-  eq(chordShape(items[0], cMajor, 'triad').name, 'C');
+  const items = diatonicOf(0, false);
+  eq(items.map((item) => chordShape(item, '7th').name), ['Cmaj7', 'Dm7', 'Em7', 'Fmaj7', 'G7', 'Am7', 'Bø7']);
+  eq(items.map((item) => chordShape(item, '9th').name), ['Cmaj9', 'Dm9', 'Em7b9', 'Fmaj9', 'G9', 'Am9', 'Bø7b9']);
+  eq(chordShape(items[3], '11th').name, 'Fmaj9#11');
+  eq(chordShape(items[0], '9th').steps, [0, 4, 7, 11, 14]);
+  eq(chordShape(items[0], 'triad').name, 'C');
 });
 
 test('circle eleventh stacks skip the natural eleven over a major third', () => {
-  const cMajor = [0, 2, 4, 5, 7, 9, 11];
   const items = keyChords(0, false);
-  eq(chordShape(items[0], cMajor, shapeId.stack11), { steps: [0, 4, 7], name: 'C' });
-  eq(chordShape(items[4], cMajor, shapeId.stack11).name, 'G');
-  eq(chordShape(items[1], cMajor, shapeId.stack11).name, 'Dm11');
+  eq(chordShape(items[0], shapeId.stack11), { steps: [0, 4, 7], name: 'C' });
+  eq(chordShape(items[4], shapeId.stack11).name, 'G');
+  eq(chordShape(items[1], shapeId.stack11).name, 'Dm11');
 });
 
-test('circle sixth, lydian and parallel minor shapes', () => {
-  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+test('circle sixth and lydian shapes', () => {
   const items = keyChords(0, false);
-  eq(chordShape(items[0], cMajor, shapeId.sixth), { steps: [0, 4, 7, 9], name: 'C6' });
-  eq(chordShape(items[0], cMajor, shapeId.sixNine), { steps: [0, 4, 7, 9, 14], name: 'C6/9' });
-  eq(chordShape(items[1], cMajor, shapeId.sixth).name, 'Dm6');
-  eq(chordShape(items[1], cMajor, shapeId.sixNine).name, 'Dm');
-  eq(chordShape(items[3], cMajor, shapeId.lydian), { steps: [0, 4, 7, 11, 18], name: 'Fmaj7#11' });
-  eq(chordShape(items[0], cMajor, shapeId.lydian).name, 'C');
-  eq(chordShape(items[3], cMajor, shapeId.minor), { steps: [0, 3, 7], name: 'Fm' });
-  eq(chordShape(items[6], cMajor, shapeId.sixth).name, 'Bdim');
+  eq(chordShape(items[0], shapeId.sixth), { steps: [0, 4, 7, 9], name: 'C6' });
+  eq(chordShape(items[0], shapeId.sixNine), { steps: [0, 4, 7, 9, 14], name: 'C6/9' });
+  eq(chordShape(items[1], shapeId.sixth).name, 'Dm6');
+  eq(chordShape(items[1], shapeId.sixNine).name, 'Dm');
+  eq(chordShape(items[3], shapeId.lydian), { steps: [0, 4, 7, 11, 18], name: 'Fmaj7#11' });
+  eq(chordShape(items[0], shapeId.lydian).name, 'C');
+  eq(chordShape(items[6], shapeId.sixth).name, 'Bdim');
+  eq(Object.values(shapeId).includes('minor'), false);
 });
 
-test('circle borrowed chord shapes', () => {
-  const cMajor = [0, 2, 4, 5, 7, 9, 11];
+test('circle shapes outside the key', () => {
   const items = keyChords(0, false);
-  eq(chordShape(items[0], cMajor, '7'), { steps: [0, 4, 7, 10], name: 'C7' });
-  eq(chordShape(items[1], cMajor, 'maj7').name, 'DmM7');
-  eq(chordShape(items[0], cMajor, 'sus4'), { steps: [0, 5, 7], name: 'Csus4' });
-  eq(chordShape(items[6], cMajor, '7').name, 'Bø7');
+  eq(chordShape(items[0], '7'), { steps: [0, 4, 7, 10], name: 'C7' });
+  eq(chordShape(items[1], 'maj7').name, 'DmM7');
+  eq(chordShape(items[0], 'sus4'), { steps: [0, 5, 7], name: 'Csus4' });
+  eq(chordShape(items[6], '7').name, 'Bø7');
   eq(voiceNotes(0, [0, 4, 7, 10], C, 1), [64, 67, 70, 72]);
 });
 
@@ -154,17 +189,18 @@ test('circle shape choices are split by the notes of each chord', () => {
     const choices = shapeChoices(item, cMajor);
     return [choices.filter((c) => c.inKey).map((c) => c.name), choices.filter((c) => !c.inKey).map((c) => c.name)];
   };
-  eq(split(items[0]), [['C', 'Cmaj7', 'Cmaj9', 'C6', 'C6/9', 'Csus2', 'Csus4', 'Cadd9'], ['C7', 'Cm']]);
+  eq(split(items[0]), [['C', 'Cmaj7', 'Cmaj9', 'C6', 'C6/9', 'Csus2', 'Csus4', 'Cadd9'], ['C7']]);
   eq(split(items[1]), [['Dm', 'Dm7', 'Dm9', 'Dm11', 'Dm6', 'Dsus2', 'Dsus4', 'Dmadd9'], ['DmM7']]);
-  eq(split(items[3]), [['F', 'Fmaj7', 'Fmaj9', 'Fmaj9#11', 'Fmaj7#11', 'F6', 'F6/9', 'Fsus2', 'Fadd9'], ['Fsus4', 'F7', 'Fm']]);
-  eq(split(items[4]), [['G', 'G7', 'G9', 'G6', 'G6/9', 'Gsus2', 'Gsus4', 'Gadd9'], ['Gmaj7', 'Gm']]);
+  eq(split(items[3]), [['F', 'Fmaj7', 'Fmaj9', 'Fmaj9#11', 'Fmaj7#11', 'F6', 'F6/9', 'Fsus2', 'Fadd9'], ['Fsus4', 'F7']]);
+  eq(split(items[4]), [['G', 'G7', 'G9', 'G6', 'G6/9', 'Gsus2', 'Gsus4', 'Gadd9'], ['Gmaj7']]);
   eq(split(items[6])[1], ['Bsus2', 'Bsus4', 'B°add9', 'B°M7']);
+  eq(split(items[7]), [['Fsus2'], ['Fm', 'Fm7', 'Fm9', 'Fm11', 'Fm6', 'Fsus4', 'Fmadd9', 'FmM7']]);
 });
 
 test('circle shape names parse back to their notes', () => {
-  for (const [index, minor] of [[0, false], [0, true], [6, false], [9, true]]) {
+  for (const [index, minor] of [[0, false], [0, true], [6, false], [9, true], [9, false]]) {
     const items = keyChords(index, minor);
-    const keyPcs = items.map((item) => item.pc);
+    const keyPcs = keyScale(index, minor);
     for (const item of items) {
       for (const choice of shapeChoices(item, keyPcs)) eq(chordSpelling(choice.name)?.steps, choice.steps, choice.name);
     }

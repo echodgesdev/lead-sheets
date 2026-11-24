@@ -1,6 +1,9 @@
 import { listen } from '../audio/listen.js';
 import { attachDialog } from './modal.js';
 import { signed } from '../sheet/transpose.js';
+import { GUITAR } from '../sheet/fretboard.js';
+import { stringNames, nearestString } from '../sheet/tuning.js';
+import { displayName } from '../sheet/circle.js';
 import { div, small, span, iconButton, cls } from '../core/dom.js';
 import { clamp } from '../core/math.js';
 import { iconId } from '../core/icons.js';
@@ -9,8 +12,9 @@ import { strings } from '../strings.js';
 const IN_TUNE_CENTS = 5;
 const CLOSE_CENTS = 10;
 const MAX_CENTS = 50;
+const CENTS_PER_STEP = 100;
 
-export function createTunerControl() {
+export function createTunerControl(tuning = GUITAR) {
   const button = iconButton(iconId.tuningFork, 'Tuner');
 
   function buildDisplay() {
@@ -28,7 +32,10 @@ export function createTunerControl() {
     meter.append(needle);
     const cents = div('tuner-cents');
     const hz = div('tuner-hz');
-    root.append(name, meter, cents, hz);
+    const openStrings = stringNames(tuning).map((each) => span('tuner-string', displayName(each)));
+    const stringRow = div('tuner-strings');
+    stringRow.append(...openStrings);
+    root.append(name, meter, cents, hz, stringRow);
 
     function render(note) {
       root.classList.toggle(cls.idle, !note);
@@ -39,6 +46,8 @@ export function createTunerControl() {
       needle.style.left = `${50 + offset}%`;
       cents.textContent = note ? `${signed(note.cents)} cents` : '';
       hz.textContent = note ? `${note.freq.toFixed(1)} Hz` : '';
+      const near = note ? nearestString(tuning, note.midi + note.cents / CENTS_PER_STEP) : -1;
+      openStrings.forEach((each, string) => each.classList.toggle(cls.active, string === near));
     }
 
     return { root, render };

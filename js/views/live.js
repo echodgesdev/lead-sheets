@@ -1,7 +1,11 @@
 import * as store from '../data/store.js';
 import * as setlists from '../data/setlists.js';
 import { parse } from '../sheet/parse.js';
+import { parseTuning } from '../sheet/tuning.js';
+import { GUITAR } from '../sheet/fretboard.js';
+import { chordShapes } from '../sheet/charts.js';
 import { renderSheet } from '../components/sheet.js';
+import { createChordCharts } from '../components/chord-charts.js';
 import {
   viewChords,
   transposeKey,
@@ -15,6 +19,7 @@ import {
 import {
   TAGS,
   NUMBER_STYLES,
+  CHORD_CHARTS,
   numberStyleId,
   tagId,
   controlId,
@@ -25,6 +30,7 @@ import {
   setNumbers,
   getNumberStyle,
   getPedalMode,
+  getChordCharts,
   getTextSize,
   getSongOrder,
   tagValue,
@@ -79,9 +85,11 @@ export function mount(root, { id, preview = false, setId = null }) {
   const maxFret = Math.max(MAX_CAPO, capo);
   const base = placeCapo(capo, entry?.shift ?? 0);
   const parsed = parse(rec.text);
+  const instrument = parseTuning(rec.tuning) ?? GUITAR;
   let autoscroll;
   let style;
   let pedal;
+  let chartMode;
   let numbers;
   let fret = base.capo;
   let shift = base.shift;
@@ -118,8 +126,9 @@ export function mount(root, { id, preview = false, setId = null }) {
   const menuBtn = iconButton(iconId.ellipsisVertical, 'More options');
   const utilities = createUtilities({
     tempo: rec.tempo,
-    song: { id: rec.id, title: songTitle(rec), artist: rec.artist ?? '' },
+    song: { id: rec.id, title: songTitle(rec), artist: rec.artist ?? '', tuning: instrument },
   });
+  const chordCharts = createChordCharts({ songId: rec.id, instrument });
   const lead = div('live-lead');
   lead.append(homeBtn, shiftStep.el);
   headerEl.append(lead, capoStep.el, numbersBtn, ...utilities.buttons, detailsBtn, menuBtn, editBtn);
@@ -139,7 +148,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   const speedLabel = span('live-bar-speed');
   bar.append(prevBtn, slowBtn, playBtn, fastBtn, nextBtn);
 
-  root.replaceChildren(headerEl, tags, title, sheet, bar);
+  root.replaceChildren(headerEl, tags, title, chordCharts.strip, sheet, bar);
 
   const scroll = createAutoscroll({
     speed: Math.round(Number(rec.scrollSpeed) || DEFAULT_SPEED),
@@ -153,8 +162,11 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   function renderContent() {
     const view = { key: rec.key, capo, capoShift: fret - capo, shift, numbers: numbers ? style.id : null };
+    const shown = viewChords(parsed, view);
+    const shapes = view.numbers ? viewChords(parsed, { ...view, numbers: null }) : shown;
     disposeSheet?.();
-    disposeSheet = renderSheet(viewChords(parsed, view), sheet);
+    disposeSheet = renderSheet(chordShapes(shown, shapes), sheet, { instrument });
+    chordCharts.render(shapes, chartMode.strip);
     sheet.classList.toggle(cls.roman, view.numbers === numberStyleId.roman);
     fillTags(tags, shownRec());
     capoBtn.replaceChildren(...keyFace('Capo', fret));
@@ -210,6 +222,7 @@ export function mount(root, { id, preview = false, setId = null }) {
     autoscroll = controls.has(controlId.autoscroll);
     style = NUMBER_STYLES.find((s) => s.id === getNumberStyle());
     pedal = getPedalMode();
+    chartMode = CHORD_CHARTS.find((c) => c.id === getChordCharts());
     numbers = controls.has(controlId.numbers) && keyed && getNumbers();
     capoStep.el.hidden = !controls.has(controlId.capo);
     shiftStep.el.hidden = !controls.has(controlId.transpose);
@@ -251,11 +264,15 @@ export function mount(root, { id, preview = false, setId = null }) {
     if (!tap || tap.id !== e.pointerId) return;
     const moved = Math.hypot(e.clientX - tap.x, e.clientY - tap.y);
     tap = null;
-    if (moved < TAP_SLOP) toggle();
+    if (moved < TAP_SLOP && !chordAt(e.target)) toggle();
   }
 
   function onPointerCancel() {
     tap = null;
+  }
+
+  function chordAt(target) {
+    return chartMode.tap ? target.closest('[data-chord]') : null;
   }
 
   function onKey(e) {
@@ -291,6 +308,12 @@ export function mount(root, { id, preview = false, setId = null }) {
 
   const onCapoReset = () => setFret(base.capo);
   const onReset = () => setShift(base.shift);
+  const onChordTap = (e) => {
+    const chordEl = chordAt(e.target);
+    if (!chordEl) return;
+    scroll.pause();
+    chordCharts.open(chordEl, chordEl.dataset.chord);
+  };
 
   editBtn.addEventListener(evt.click, onEdit);
   capoBtn.addEventListener(evt.click, onCapoReset);
@@ -307,6 +330,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   sheet.addEventListener(evt.pointerdown, onPointerDown);
   sheet.addEventListener(evt.pointerup, onPointerUp);
   sheet.addEventListener(evt.pointercancel, onPointerCancel);
+  sheet.addEventListener(evt.click, onChordTap);
   window.addEventListener(evt.keydown, onKey, { signal: listening.signal });
 
   applyPrefs();
@@ -317,6 +341,7 @@ export function mount(root, { id, preview = false, setId = null }) {
   return () => {
     disposed = true;
     disposeSheet?.();
+    chordCharts.dispose();
     utilities.dispose();
     listening.abort();
     root.classList.remove('with-bar', 'live-view');

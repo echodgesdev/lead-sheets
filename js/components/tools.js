@@ -6,7 +6,7 @@ import { UTILITIES, utilityId } from '../data/prefs.js';
 import { div } from '../core/dom.js';
 
 const CREATE_UTILITY = {
-  [utilityId.tuner]: () => createTunerControl(),
+  [utilityId.tuner]: ({ song }) => createTunerControl(song?.tuning),
   [utilityId.metronome]: ({ tempo }) => createMetronomeControl(tempo),
   [utilityId.recorder]: ({ song }) => createRecorderControl(song),
 };

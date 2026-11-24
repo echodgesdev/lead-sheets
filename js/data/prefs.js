@@ -17,6 +17,7 @@ const LIST_OPTIONS_KEY = 'tabs.listOptions';
 const TOOL_UTILITIES_KEY = 'tabs.toolUtilities';
 const KEY_OCTAVES_KEY = 'tabs.keyOctaves';
 const METRONOME_KEY = 'tabs.metronome';
+const CHORD_CHARTS_KEY = 'tabs.chordCharts';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
@@ -49,6 +50,13 @@ export const editorId = Object.freeze({
 export const numberStyleId = Object.freeze({
   nashville: 'nashville',
   roman: 'roman',
+});
+
+export const chordChartId = Object.freeze({
+  off: 'off',
+  strip: 'strip',
+  tap: 'tap',
+  both: 'both',
 });
 
 export const tagId = Object.freeze({
@@ -94,6 +102,13 @@ export const EDITOR_OPTIONS = [
 export const NUMBER_STYLES = [
   { id: numberStyleId.nashville, label: 'Nashville', short: '123', title: 'Nashville numbers' },
   { id: numberStyleId.roman, label: 'Roman', short: 'I–V', title: 'Roman numerals' },
+];
+
+export const CHORD_CHARTS = [
+  { id: chordChartId.off, label: 'Off', title: 'No chord charts', strip: false, tap: false },
+  { id: chordChartId.strip, label: 'Strip', title: 'Chord boxes for the song above the sheet', strip: true, tap: false },
+  { id: chordChartId.tap, label: 'Tap', title: 'Tap a chord to see its box', strip: false, tap: true },
+  { id: chordChartId.both, label: 'Both', title: 'Strip and tap', strip: true, tap: true },
 ];
 
 export const TAGS = [
@@ -262,6 +277,14 @@ export function getPedalMode() {
 
 export function setPedalMode(id) {
   write(PEDAL_KEY, id);
+}
+
+export function getChordCharts() {
+  return pick(CHORD_CHARTS, read(CHORD_CHARTS_KEY), chordChartId.tap);
+}
+
+export function setChordCharts(id) {
+  write(CHORD_CHARTS_KEY, id);
 }
 
 export function getTextSize() {

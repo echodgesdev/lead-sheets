@@ -2,6 +2,7 @@ import {
   keyOf,
   keyTonic,
   keyChords,
+  keyScale,
   displayName,
   pitchNames,
   noteMidi,
@@ -43,8 +44,8 @@ export function keyItems(index, minor) {
   return keyChords(index, minor).map((item, degree) => ({ ...item, degree, slot: slotOf(item.index, item.ring) }));
 }
 
-export function itemShape(item, items, shapes) {
-  return chordShape(item, items.map((each) => each.pc), shapes[item.degree] ?? shapeId.triad);
+export function itemShape(item, shapes) {
+  return chordShape(item, shapes[item.degree] ?? shapeId.triad);
 }
 
 export function keyLabel(index, minor) {
@@ -56,9 +57,9 @@ export function keyAt(name) {
   return key ? { index: wedgeOf(key.pc, key.minor), minor: key.minor } : null;
 }
 
-function keyFrame({ index, minor, locked, minOctaves }) {
-  const items = keyItems(index, minor);
-  const keyPcs = items.map((item) => item.pc);
+function keyFrame({ index, minor, borrowed, locked, minOctaves }) {
+  const items = keyItems(index, minor).filter((item) => borrowed || !item.borrowed);
+  const keyPcs = keyScale(index, minor);
   const tonic = keyTonic(index, minor);
   return {
     items,
@@ -84,7 +85,7 @@ function uniquePcs(midis) {
 export function theoryModel(state) {
   const { index, minor, mode, chordIndex, inversion, shapes, scaleChoice, inKey } = state;
   const { items, keyPcs, tonic, frame } = keyFrame(state);
-  const shapeOf = (item) => itemShape(item, items, shapes);
+  const shapeOf = (item) => itemShape(item, shapes);
   const chord = items[chordIndex];
   const shaped = shapeOf(chord);
   const voiced = voiceNotes(chord.pc, shaped.steps, tonic, inversion);

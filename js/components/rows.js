@@ -8,6 +8,7 @@ import {
   UTILITIES,
   NUMBER_STYLES,
   PEDAL_MODES,
+  CHORD_CHARTS,
   barId,
   controlId,
   getTextSize,
@@ -20,6 +21,8 @@ import {
   setNumberStyle,
   getPedalMode,
   setPedalMode,
+  getChordCharts,
+  setChordCharts,
   getShownTags,
   setShownTags,
   getKeyOctaves,
@@ -174,5 +177,6 @@ function liveControlRows() {
     utilitiesRow([...shown], saveShown(UTILITIES)),
     barRow('Bottom bar', barId.bottom),
     choiceRow('Page turner', PEDAL_MODES, getPedalMode(), setPedalMode),
+    choiceRow('Chord charts', CHORD_CHARTS, getChordCharts(), setChordCharts),
   ];
 }

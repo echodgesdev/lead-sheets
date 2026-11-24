@@ -942,6 +942,72 @@ button.row:active {
   white-space: pre-wrap;
 }
 
+.chord-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 12px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chord-strip:empty {
+  display: none;
+}
+
+.chord-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.chord-strip .select-pill {
+  align-self: center;
+}
+
+.chord-strip .chart-art {
+  flex: none;
+  width: 84px;
+  margin: 0;
+}
+
+.chord-strip .chart-art,
+.chord-pop .chart-art {
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s;
+}
+
+.chord-strip .chart-art.pressed,
+.chord-pop .chart-art.pressed {
+  background: var(--hover);
+}
+
+.chord-strip .chart-art:focus-visible,
+.chord-pop .chart-art:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.chord-pop {
+  justify-content: center;
+}
+
+.chord-pop .chart-art {
+  width: 160px;
+}
+
+.chord-pop-controls {
+  justify-content: center;
+  gap: 8px;
+}
+
+.chord-pop-none {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .info-value {
   flex: 2;
   min-width: 0;
@@ -1313,6 +1379,28 @@ button.row:active {
   font-variant-numeric: tabular-nums;
 }
 
+.tuner-strings {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.tuner-string {
+  min-width: 36px;
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tuner-string.active {
+  border-color: var(--accent);
+  color: var(--fg);
+}
+
 .tuner-status {
   min-width: 0;
   overflow: hidden;
@@ -1611,6 +1699,11 @@ button.row:active {
   fill: var(--on-accent);
 }
 
+.wedge.outside path {
+  stroke: var(--tone);
+  stroke-width: 1.6;
+}
+
 .wedge:focus-visible path {
   stroke: var(--fg);
   stroke-width: 1.6;
@@ -1709,6 +1802,43 @@ button.row:active {
   font-size: 12px;
 }
 
+.circle-chord.outside,
+.circle-chord.outside .circle-numeral {
+  color: var(--tone);
+}
+
+.circle-chord.outside.active {
+  box-shadow: inset 0 0 0 1.5px var(--tone);
+}
+
+.circle-borrowed {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 0 16px 16px;
+}
+
+.circle-borrowed .circle-chords {
+  align-self: stretch;
+  padding: 0;
+}
+
+.btn.borrowed-toggle {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.borrowed-toggle .fa {
+  transition: transform 0.2s var(--ease);
+}
+
+.borrowed-toggle.active .fa {
+  transform: rotate(180deg);
+}
 
 .clock-hit {
   fill: transparent;
@@ -1790,6 +1920,74 @@ button.row:active {
   stroke-width: 5px;
   stroke-linejoin: round;
   pointer-events: none;
+}
+
+.tonnetz-art {
+  width: min(100%, 420px);
+}
+
+.tonnetz-tri {
+  fill: transparent;
+  stroke: var(--line);
+  stroke-width: 1;
+  stroke-linejoin: round;
+  cursor: pointer;
+  outline: none;
+  transition: fill 0.15s;
+}
+
+.tonnetz-tri.faint {
+  stroke: color-mix(in srgb, var(--accent) 45%, transparent);
+  stroke-dasharray: 3 2;
+}
+
+.tonnetz-tri.voiced {
+  fill: color-mix(in srgb, var(--tone, var(--accent)) 26%, transparent);
+  stroke: var(--tone, var(--accent));
+  stroke-width: 1.4;
+}
+
+.tonnetz-tri.pressed {
+  fill: color-mix(in srgb, var(--tone, var(--accent)) 50%, transparent);
+}
+
+.tonnetz-tri:focus-visible {
+  stroke: var(--fg);
+}
+
+.tonnetz-node circle {
+  fill: var(--surface-2);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.tonnetz-node.in-key circle {
+  stroke: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+
+.tonnetz-node.voiced circle {
+  fill: var(--tone, var(--accent));
+  stroke: var(--surface);
+  stroke-width: 1.2;
+}
+
+.tonnetz-node.pressed circle {
+  stroke: var(--tone, var(--accent));
+  stroke-width: 1.6;
+}
+
+.tonnetz-node text {
+  fill: var(--muted);
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.tonnetz-node.in-key text {
+  fill: var(--fg);
+}
+
+.tonnetz-node.voiced text {
+  fill: var(--on-accent);
 }
 
 .chain {

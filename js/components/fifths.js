@@ -1,4 +1,5 @@
-import { hubText, stepsOf, tapAttrs, theoryArt, CIRCLE_BOX } from './theory-views.js';
+import { hubText, CIRCLE_BOX } from './theory-views.js';
+import { stepsOf, tapAttrs, theoryArt } from './theory-art.js';
 import { WEDGES, ringId, keyTonic, wedgeNames, keyWedges, displayName, wedgeOf } from '../sheet/circle.js';
 import { slotOf, keyLabel } from '../sheet/theory-model.js';
 import { svg, polar, annularSector } from '../core/svg.js';
@@ -99,8 +100,10 @@ export function createFifths() {
 
   function render({ index, minor, items, bare }) {
     const { outer, inner } = keyWedges(index);
+    const borrowed = new Set(items.filter((item) => item.borrowed).map((item) => item.slot));
     for (const w of wedges) {
       w.node.classList.toggle(cls.inKey, (w.minor ? inner : outer).includes(w.index));
+      w.node.classList.toggle(cls.outside, borrowed.has(w.node.dataset.slot));
       w.node.classList.toggle(cls.active, w.index === index && w.minor === minor);
       w.label?.remove();
       w.label = wedgeText(w.index, w.minor, index, bare);

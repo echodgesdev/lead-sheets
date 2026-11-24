@@ -1,16 +1,18 @@
 import { attachDialog, openModal } from './modal.js';
 import { modalRow, choiceToggle, labeledField } from './rows.js';
 import { selectPill, stepper } from './controls.js';
+import { shapePill } from './chord-charts.js';
+import { strings } from '../strings.js';
 import { THEORY_VIEWS, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
-import { ringId, keyTonic, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
+import { ringId, keyTonic, keyScale, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
 import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
 import { visId, alignId, fingeringId, neckShapeId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
-import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, cls } from '../core/dom.js';
+import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 
@@ -44,14 +46,6 @@ const FINGERINGS = [
   { id: fingeringId.oneString, label: 'String', title: 'Along one string' },
 ];
 
-const NECK_SHAPES = [
-  { id: neckShapeId.caged, label: 'CAGED', title: 'The five CAGED shapes' },
-  { id: neckShapeId.closed, label: 'Closed', title: 'Every chord tone once on neighbouring strings' },
-  { id: neckShapeId.triad, label: 'Triad', title: 'Three notes on neighbouring strings' },
-  { id: neckShapeId.power, label: 'Power', title: 'Root, fifth and octave' },
-  { id: neckShapeId.shell, label: 'Shell', title: 'Root, third and seventh (or sixth)' },
-];
-
 const MATCHES = [
   { id: matchId.unison, label: 'Unison', title: 'Only this exact pitch' },
   { id: matchId.octaves, label: 'Octaves', title: 'This note in every octave' },
@@ -79,6 +73,7 @@ const VIEWS = [
   { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
   { id: visId.chart, icon: iconId.chordChart, label: 'Chart', title: 'Chord chart' },
   { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
+  { id: visId.tonnetz, icon: iconId.triangles, label: 'Tonnetz', title: 'Tonnetz' },
 ];
 
 function scaleChip(scale) {
@@ -96,7 +91,7 @@ function inversionOptions(count) {
 function chordChip(item, degree, bare, shaped) {
   const numeral = bare ? String(degree) : item.numeral;
   const name = displayName(bare ? chordRoot(item.chord) : shaped.name);
-  const chip = plainButton(span(bare ? 'circle-degree' : 'circle-numeral', numeral), 'circle-chord');
+  const chip = plainButton(span(bare ? 'circle-degree' : 'circle-numeral', numeral), classes('circle-chord', item.borrowed && cls.outside));
   chip.append(span(null, name));
   chip.dataset.slot = item.slot;
   chip.setAttribute('aria-label', bare ? `${name}, degree ${degree}` : `${name}, ${numeral}`);
@@ -117,6 +112,7 @@ export function createCircleControl() {
   let chordIndex = 0;
   const neckOptions = { show: showId.position, position: 0, shape: neckShapeId.caged, fingering: fingeringId.caged, match: matchId.unison };
   let labels = labelId.none;
+  let borrowedOpen = false;
 
   function open() {
     let items = [];
@@ -125,6 +121,11 @@ export function createCircleControl() {
     const fifths = createFifths();
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
+    const borrowedChips = div('circle-chords');
+    const borrowedToggle = labeledButton(iconId.chevronDown, 'Borrowed', 'borrowed-toggle');
+    const borrowedRow = div('circle-borrowed');
+    borrowedRow.append(borrowedToggle, borrowedChips);
+    const chipAreas = [chords, borrowedChips];
 
     function tonic() {
       return keyTonic(selected.index, selected.minor);
@@ -138,8 +139,12 @@ export function createCircleControl() {
       return mode !== modeId.chord;
     }
 
-    function keyPcs() {
-      return items.map((each) => each.pc);
+    function borrowedShown() {
+      return borrowedOpen && mode === modeId.chord;
+    }
+
+    function shownItems() {
+      return items.filter((item) => borrowedShown() || !item.borrowed);
     }
 
     function shapeIdOf(index) {
@@ -147,7 +152,7 @@ export function createCircleControl() {
     }
 
     function shapeOf(item) {
-      return itemShape(item, items, chordShapes);
+      return itemShape(item, chordShapes);
     }
 
     function model() {
@@ -160,6 +165,7 @@ export function createCircleControl() {
         shapes: chordShapes,
         scaleChoice,
         inKey: rooting === rootingId.inKey,
+        borrowed: borrowedShown(),
         locked,
         minOctaves: getKeyOctaves(),
       });
@@ -193,7 +199,7 @@ export function createCircleControl() {
 
     function openShapes(index) {
       const item = items[index];
-      const choices = shapeChoices(item, keyPcs());
+      const choices = shapeChoices(item, keyScale(selected.index, selected.minor));
       const pick = (id) => {
         if (id === shapeIdOf(index)) return;
         chordShapes[index] = id;
@@ -221,11 +227,11 @@ export function createCircleControl() {
       );
     }
 
-    function chordCell(item, index) {
+    function chordCell(item) {
       const cell = div('chord-cell');
       const more = iconButton(iconId.ellipsis, `Swap ${displayName(item.chord)}`, 'chord-more');
-      more.addEventListener(evt.click, () => openShapes(index));
-      cell.append(chordChip(item, index + 1, false, shapeOf(item)), more);
+      more.addEventListener(evt.click, () => openShapes(item.degree));
+      cell.append(chordChip(item, item.degree + 1, false, shapeOf(item)), more);
       return cell;
     }
 
@@ -247,26 +253,42 @@ export function createCircleControl() {
 
     function syncChips() {
       chords.dataset.mode = mode;
-      [...chords.querySelectorAll('.circle-chord')].forEach((chip, i) => {
-        chip.classList.toggle(cls.active, mode === modeId.scale ? chip.dataset.scale === scaleChoice : i === chordIndex);
-      });
+      for (const chip of chipAreas.flatMap((area) => [...area.querySelectorAll('.circle-chord')])) {
+        chip.classList.toggle(cls.active, mode === modeId.scale ? chip.dataset.scale === scaleChoice : chipItems.get(chip.dataset.slot)?.degree === chordIndex);
+      }
+    }
+
+    function syncBorrowed() {
+      borrowedRow.hidden = mode !== modeId.chord;
+      borrowedChips.hidden = !borrowedOpen;
+      setPressed(borrowedToggle, borrowedOpen);
+      setTitle(borrowedToggle, borrowedOpen ? 'Hide borrowed chords' : 'Show borrowed chords');
     }
 
     function renderChips() {
+      const diatonic = items.filter((item) => !item.borrowed);
       if (mode === modeId.scale) chords.replaceChildren(...model().scales.map(scaleChip));
-      else if (noteMode()) chords.replaceChildren(...items.map((item, i) => chordChip(item, i + 1, true, shapeOf(item))));
-      else chords.replaceChildren(...items.map(chordCell));
+      else if (noteMode()) chords.replaceChildren(...diatonic.map((item) => chordChip(item, item.degree + 1, true, shapeOf(item))));
+      else chords.replaceChildren(...diatonic.map(chordCell));
+      borrowedChips.replaceChildren(...(mode === modeId.chord ? items.filter((item) => item.borrowed).map(chordCell) : []));
+      syncBorrowed();
       syncChips();
     }
 
     function renderKey() {
       items = keyItems(selected.index, selected.minor);
       chipItems = new Map(items.map((item) => [item.slot, item]));
-      fifths.render({ index: selected.index, minor: selected.minor, items, bare: bareLabels() });
+      if (items[chordIndex]?.borrowed && !borrowedShown()) chordIndex = 0;
+      fifths.render({ index: selected.index, minor: selected.minor, items: shownItems(), bare: bareLabels() });
       renderChips();
       syncVoicing();
       renderStage();
     }
+
+    borrowedToggle.addEventListener(evt.click, () => {
+      borrowedOpen = !borrowedOpen;
+      renderKey();
+    });
 
     const lockBtn = iconButton(iconId.lockOpen, 'Lock');
 
@@ -318,7 +340,7 @@ export function createCircleControl() {
     }
 
     const neckCount = span('step-pill-text');
-    const positionStepper = stepper({ pill: true, center: neckCount, downTitle: 'Previous position', upTitle: 'Next position', onStep: stepPosition });
+    const positionStepper = stepper({ pill: true, center: neckCount, downTitle: strings.previousPosition, upTitle: strings.nextPosition, onStep: stepPosition });
     const fingeringField = neckPill('Fingering', FINGERINGS, 'fingering');
     const matchField = neckPill('Match', MATCHES, 'match');
     const { pill: labelPill, select: labelSelect } = selectPill(null, 'Labels', LABELS, labels);
@@ -330,19 +352,14 @@ export function createCircleControl() {
     const showField = neckPill('Show', SHOWS, 'show');
     const positionField = labeledField('Position', positionStepper.el);
 
-    function shapePill(value, enabled) {
-      const { pill, select } = selectPill(null, 'Shape', NECK_SHAPES, value);
-      for (const option of select.options) option.disabled = !enabled.includes(option.value);
-      select.addEventListener(evt.change, () => {
-        neckOptions.shape = select.value;
-        neckOptions.position = 0;
-        player.stopRun();
-        renderStage();
-      });
-      return pill;
+    function pickShape(shape) {
+      neckOptions.shape = shape;
+      neckOptions.position = 0;
+      player.stopRun();
+      renderStage();
     }
 
-    const shapeField = labeledField('Shape', shapePill(neckOptions.shape, Object.values(neckShapeId)));
+    const shapeField = labeledField('Shape', shapePill(neckOptions.shape, Object.values(neckShapeId), pickShape));
     let shapeState = '';
 
     function syncShape() {
@@ -350,7 +367,7 @@ export function createCircleControl() {
       const state = `${value}:${neck.shapes}`;
       if (state === shapeState) return;
       shapeState = state;
-      shapeField.lastChild.replaceWith(shapePill(value, neck.shapes));
+      shapeField.lastChild.replaceWith(shapePill(value, neck.shapes, pickShape));
     }
 
     const alignField = labeledField('Align', choiceToggle(ALIGNS, align, (id) => {
@@ -380,8 +397,8 @@ export function createCircleControl() {
     function pressedFor(el) {
       const { slot } = el.dataset;
       const notePc = noteMode() && view === visId.fifths ? notePcOf(el) : null;
-      if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
-      if (slot) return [...[stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]), ...voicedDots()];
+      if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chipAreas.flatMap((area) => [...area.querySelectorAll(`[data-slot="${slot}"]`)])];
+      if (slot) return [...[stage, ...chipAreas].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]), ...voicedDots()];
       return [el];
     }
 
@@ -407,9 +424,8 @@ export function createCircleControl() {
 
     function chipVoice(slot) {
       const item = chipItems.get(slot);
-      const index = items.indexOf(item);
-      if (index !== chordIndex) {
-        chordIndex = index;
+      if (item.degree !== chordIndex) {
+        chordIndex = item.degree;
         syncChips();
         syncVoicing();
         if (neck) renderStage();
@@ -439,7 +455,7 @@ export function createCircleControl() {
       renderStage();
     };
 
-    const player = attachPlayer({ areas: [stage, chords], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
+    const player = attachPlayer({ areas: [stage, ...chipAreas], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
 
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
@@ -451,7 +467,7 @@ export function createCircleControl() {
     renderLock();
     return {
       header,
-      rows: [stage, viewRow, controls, chords],
+      rows: [stage, viewRow, controls, chords, borrowedRow],
       onClose: player.dispose,
     };
   }

@@ -74,6 +74,23 @@ export const GUITAR = Object.freeze({
 export const showId = Object.freeze({ position: 'position', neck: 'neck' });
 export const matchId = Object.freeze({ unison: 'unison', octaves: 'octaves' });
 
+function retunedForms(forms, from, to) {
+  if (!forms || from.length !== to.length) return null;
+  const drift = from.map((open, string) => open - to[string]);
+  return Object.freeze(forms.map(({ root, offsets }) => ({
+    root,
+    offsets: offsets.map((offset, string) => (offset === null ? null : offset + drift[string] - drift[root])),
+  })));
+}
+
+export function retune(instrument, strings) {
+  return Object.freeze({
+    ...instrument,
+    strings: Object.freeze([...strings]),
+    forms: retunedForms(instrument.forms, instrument.strings, strings),
+  });
+}
+
 export function positionsOf(midi, { strings, frets }) {
   return strings.flatMap((open, string) => {
     const fret = midi - open;

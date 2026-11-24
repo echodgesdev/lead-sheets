@@ -40,7 +40,11 @@ export function openPopover(anchor, ...rows) {
   function place() {
     const box = anchor.getBoundingClientRect();
     const width = popover.offsetWidth;
-    popover.style.top = `${box.bottom + POPOVER_GAP}px`;
+    const height = popover.offsetHeight;
+    const below = box.bottom + POPOVER_GAP;
+    const above = box.top - POPOVER_GAP - height;
+    const flip = below + height > window.innerHeight - POPOVER_EDGE && above >= POPOVER_EDGE;
+    popover.style.top = `${flip ? above : below}px`;
     popover.style.left = `${clamp(box.right - width, POPOVER_EDGE, window.innerWidth - width - POPOVER_EDGE)}px`;
   }
 

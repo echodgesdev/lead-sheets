@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { GUITAR, showId, matchId, positionsOf, pcPositions, chordPositions, chordVoicings, scalePatterns, runPositions, fretLayout, chartLayout } from '../js/sheet/fretboard.js';
+import { GUITAR, showId, matchId, retune, positionsOf, pcPositions, chordPositions, chordVoicings, scalePatterns, runPositions, fretLayout, chartLayout } from '../js/sheet/fretboard.js';
 import { modeId } from '../js/sheet/theory-model.js';
 import { fingeringId, neckShapeId } from '../js/sheet/vis-spec.js';
 
@@ -11,7 +11,10 @@ const ascending = (pattern) => pattern.every((p, i) => i === 0 || p.midi > patte
 const perString = (pattern, count) => Array.from({ length: count }, (_, s) => pattern.filter((p) => p.string === s).length);
 const uniqueStrings = (shape) => new Set(shape.map((p) => p.string)).size === shape.length;
 const grip = (shape) => GUITAR.strings.map((_, s) => shape.find((p) => p.string === s)?.fret ?? 'x').join('');
-const grips = (root, steps, shape) => chordVoicings(root, steps.map((step) => 60 + root + step), GUITAR, shape).positions.map(grip);
+const gripsOn = (instrument, root, steps, shape) => chordVoicings(root, steps.map((step) => 60 + root + step), instrument, shape).positions.map(grip);
+const grips = (root, steps, shape) => gripsOn(GUITAR, root, steps, shape);
+const DROP_D = retune(GUITAR, [38, 45, 50, 55, 59, 64]);
+const DADGAD = retune(GUITAR, [38, 45, 50, 55, 57, 62]);
 const adjacent = (shape) => shape.every((p, i) => i === 0 || p.string === shape[i - 1].string + 1);
 const sequence = (run, roots) => ({ mode: modeId.sequence, shown: [], shownPcs: [], scalePcs: C_MAJOR, run, steps: roots.map((rootPc) => ({ rootPc })) });
 const OPEN_SHAPES = [
@@ -253,4 +256,27 @@ test('fretboard chart frames the position it shows', () => {
   eq(neck.dots.length + neck.open.length, 5);
   const scale = chartLayout(fretLayout({ mode: modeId.scale, shown: [], shownPcs: C_MAJOR, run: [] }, GUITAR));
   eq([scale.start, scale.nut, scale.barre, scale.muted], [1, true, null, []]);
+});
+
+test('fretboard retuning keeps the CAGED shapes sounding the same notes', () => {
+  eq(retune(GUITAR, GUITAR.strings).forms, GUITAR.forms);
+  eq(retune(GUITAR, [28, 33, 38, 43]).forms, null);
+  eq(gripsOn(DROP_D, 2, [0, 4, 7])[0], 'xx0232');
+  eq(gripsOn(DROP_D, 4, [0, 4, 7]).includes('222100'), true);
+  eq(gripsOn(DROP_D, 7, [0, 4, 7]).includes('520003'), true);
+  eq(gripsOn(DROP_D, 2, [0, 4, 7], neckShapeId.power)[0], '000xxx');
+});
+
+test('fretboard voices chords in an open tuning', () => {
+  const d = chordVoicings(2, [62, 66, 69], DADGAD);
+  eq(d.shape, neckShapeId.caged);
+  eq(grip(d.positions[0]), 'xx0254');
+  eq(gripsOn(DADGAD, 2, [0, 4, 7], neckShapeId.closed)[0], 'x542xx');
+  eq(gripsOn(DADGAD, 2, [0, 4, 7], neckShapeId.power)[0], '000xxx');
+  const sounds = (shape) => shape.every(({ string, fret, midi }) => DADGAD.strings[string] + fret === midi && [2, 6, 9].includes(midi % 12));
+  for (const id of Object.values(neckShapeId)) {
+    const { positions } = chordVoicings(2, [62, 66, 69], DADGAD, id);
+    eq(positions.every((shape) => shape.length > 0 && uniqueStrings(shape) && playable(shape) && sounds(shape)), true, id);
+  }
+  eq(scalePatterns(C_MAJOR, DADGAD).every(ascending), true);
 });

@@ -2,6 +2,7 @@ import { lineKind, lineKinds } from './parse.js';
 import { parseKey, strayChordTokens, strayInlineChords } from './chords.js';
 import { capoFret } from './transpose.js';
 import { MIN_BPM, MAX_BPM, inBpmRange } from './tempo.js';
+import { parseTuning } from './tuning.js';
 
 const MAX_CAPO_FRET = 12;
 const LINE_BREAK_RE = /\r\n?|\n/g;
@@ -37,11 +38,16 @@ function tempoMessage(value) {
   return inBpmRange(value) ? null : `Tempo should be ${MIN_BPM}–${MAX_BPM}`;
 }
 
+function tuningMessage(value) {
+  return parseTuning(value) ? null : `"${value}" isn't a tuning`;
+}
+
 function headerMessage({ field, value }) {
   if (!value) return null;
   if (field === 'key') return keyMessage(value);
   if (field === 'capo') return capoMessage(value);
   if (field === 'tempo') return tempoMessage(value);
+  if (field === 'tuning') return tuningMessage(value);
   return null;
 }
 

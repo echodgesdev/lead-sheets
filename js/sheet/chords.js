@@ -75,7 +75,7 @@ export function isChord(token) {
   return NC_RE.test(token) || CHORD_RE.test(token);
 }
 
-function chordName(token) {
+export function chordName(token) {
   return token.replace(/\*+$/, '');
 }
 

@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v116';
+const CACHE = 'tabs-v117';
 
 const ASSETS = [
   './',
@@ -34,6 +34,7 @@ const ASSETS = [
   './js/data/setlists.js',
   './js/data/store.js',
   './js/data/theme.js',
+  './js/sheet/charts.js',
   './js/sheet/chords.js',
   './js/sheet/fretboard.js',
   './js/sheet/staff.js',
@@ -44,7 +45,9 @@ const ASSETS = [
   './js/sheet/lint.js',
   './js/sheet/parse.js',
   './js/sheet/theory-model.js',
+  './js/sheet/tonnetz.js',
   './js/sheet/transpose.js',
+  './js/sheet/tuning.js',
   './js/sheet/vis-spec.js',
   './js/audio/click.js',
   './js/audio/context.js',
@@ -53,6 +56,7 @@ const ASSETS = [
   './js/audio/pitch.js',
   './js/audio/record.js',
   './js/audio/tone.js',
+  './js/components/chord-charts.js',
   './js/components/circle.js',
   './js/components/controls.js',
   './js/components/details.js',
@@ -70,6 +74,8 @@ const ASSETS = [
   './js/components/share.js',
   './js/components/sheet.js',
   './js/components/toast.js',
+  './js/components/tonnetz.js',
+  './js/components/theory-art.js',
   './js/components/theory-embed.js',
   './js/components/theory-player.js',
   './js/components/theory-views.js',

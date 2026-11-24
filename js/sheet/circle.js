@@ -11,6 +11,9 @@ const DIM_ROOT_OFFSET = 2;
 const LOWEST_TONIC = 53;
 const MAJOR_THIRD = 4;
 const NATURAL_ELEVENTH = 17;
+const DORIAN = [0, 2, 3, 5, 7, 9, 10];
+const PHRYGIAN = [0, 1, 3, 5, 7, 8, 10];
+const HARMONIC_MINOR = [0, 2, 3, 5, 7, 8, 11];
 
 export const ringId = Object.freeze({
   outer: 'outer',
@@ -43,7 +46,6 @@ export const shapeId = Object.freeze({
   sus2: 'sus2',
   sus4: 'sus4',
   add9: 'add9',
-  minor: 'minor',
 });
 
 const STACK_SIZES = {
@@ -62,7 +64,6 @@ const SHAPES = {
   [shapeId.sus2]: { steps: [0, 2, 7], names: everyQuality('sus2') },
   [shapeId.sus4]: { steps: [0, 5, 7], names: everyQuality('sus4') },
   [shapeId.add9]: { add: [14], names: { [qualityId.major]: 'add9', [qualityId.minor]: 'madd9', [qualityId.diminished]: '°add9' } },
-  [shapeId.minor]: { steps: TRIADS[qualityId.minor], names: { [qualityId.major]: 'm' } },
 };
 
 const STACK_NAMES = {
@@ -109,6 +110,21 @@ const MINOR_LAYOUT = [
   [1, ringId.outer, qualityId.major],
 ];
 
+const MAJOR_BORROWED = [
+  [5, qualityId.minor, AEOLIAN],
+  [3, qualityId.major, AEOLIAN],
+  [8, qualityId.major, AEOLIAN],
+  [10, qualityId.major, AEOLIAN],
+];
+
+const MINOR_BORROWED = [
+  [7, qualityId.major, HARMONIC_MINOR],
+  [5, qualityId.major, DORIAN],
+  [1, qualityId.major, PHRYGIAN],
+];
+
+const QUALITY_SUFFIX = { [qualityId.major]: '', [qualityId.minor]: 'm' };
+
 function everyQuality(suffix) {
   return Object.fromEntries(Object.values(qualityId).map((quality) => [quality, suffix]));
 }
@@ -129,15 +145,33 @@ export function keyWedges(index) {
   return { outer: around, inner: around };
 }
 
+export function keyScale(index, minor) {
+  return stepPitches(keyTonic(index, minor), minor ? AEOLIAN : IONIAN);
+}
+
+function borrowedChords(index, minor) {
+  const pc = keyTonic(index, minor);
+  const names = pitchNames(index, minor);
+  return (minor ? MINOR_BORROWED : MAJOR_BORROWED).map(([step, quality, steps]) => {
+    const root = mod12(pc + step);
+    const chord = `${names[root]}${QUALITY_SUFFIX[quality]}`;
+    const inner = quality === qualityId.minor;
+    const ring = inner ? ringId.inner : ringId.outer;
+    return { chord, numeral: roman(chord, { pc }), index: fifthsIndex(root, inner), ring, pc: root, quality, scalePcs: stepPitches(pc, steps), borrowed: true };
+  });
+}
+
 export function keyChords(index, minor) {
   const pc = keyTonic(index, minor);
   const layout = minor ? MINOR_LAYOUT : MAJOR_LAYOUT;
-  return diatonic(keyOf(index, minor)).map((chord, i) => {
+  const scalePcs = keyScale(index, minor);
+  const chords = diatonic(keyOf(index, minor)).map((chord, i) => {
     const [offset, ring, quality] = layout[i];
     const at = mod12(index + offset);
     const root = ring === ringId.dim ? keyTonic(mod12(index + DIM_ROOT_OFFSET), true) : keyTonic(at, ring === ringId.inner);
-    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality };
+    return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality, scalePcs };
   });
+  return [...chords, ...borrowedChords(index, minor)];
 }
 
 export function displayName(name) {
@@ -174,27 +208,28 @@ function fitsKey(pc, steps, keyPcs) {
   return stepPitches(pc, steps).every((each) => keyPcs.includes(each));
 }
 
-function stackShape(item, keyPcs, size) {
-  const steps = stackSteps(keyPcs, keyPcs.indexOf(item.pc), size);
+function stackShape(item, size) {
+  const { scalePcs } = item;
+  const steps = stackSteps(scalePcs, scalePcs.indexOf(item.pc), size);
   if (steps.includes(MAJOR_THIRD) && steps.includes(NATURAL_ELEVENTH)) return null;
   return { steps, name: `${rootName(item)}${STACK_NAMES[steps.join(',')] ?? ''}` };
 }
 
-function addedShape(item, keyPcs, shape) {
+function addedShape(item, shape) {
   const { steps, add, names, inKeyOnly } = SHAPES[shape];
   const suffix = names[item.quality];
   if (suffix === undefined) return null;
   const all = steps ?? [...TRIADS[item.quality], ...add];
-  if (inKeyOnly && !fitsKey(item.pc, all, keyPcs)) return null;
+  if (inKeyOnly && !fitsKey(item.pc, all, item.scalePcs)) return null;
   return { steps: all, name: `${rootName(item)}${suffix}` };
 }
 
-function buildShape(item, keyPcs, shape) {
-  return STACK_SIZES[shape] ? stackShape(item, keyPcs, STACK_SIZES[shape]) : addedShape(item, keyPcs, shape);
+function buildShape(item, shape) {
+  return STACK_SIZES[shape] ? stackShape(item, STACK_SIZES[shape]) : addedShape(item, shape);
 }
 
-export function chordShape(item, keyPcs, shape = shapeId.triad) {
-  return buildShape(item, keyPcs, shape) ?? buildShape(item, keyPcs, shapeId.triad);
+export function chordShape(item, shape = shapeId.triad) {
+  return buildShape(item, shape) ?? buildShape(item, shapeId.triad);
 }
 
 const SHAPE_ORDER = [
@@ -210,12 +245,11 @@ const SHAPE_ORDER = [
   shapeId.add9,
   shapeId.seventh,
   shapeId.major7,
-  shapeId.minor,
 ];
 
 export function shapeChoices(item, keyPcs) {
   const seen = new Set();
-  return SHAPE_ORDER.map((id) => ({ id, ...buildShape(item, keyPcs, id) }))
+  return SHAPE_ORDER.map((id) => ({ id, ...buildShape(item, id) }))
     .filter(({ steps }) => steps && !seen.has(steps.join()) && seen.add(steps.join()))
     .map((choice) => ({ ...choice, inKey: fitsKey(item.pc, choice.steps, keyPcs) }));
 }
@@ -239,7 +273,7 @@ export function wedgeNotes(index, minor, chord, tonic, inversion = 0) {
 }
 
 export function degreeMidi(index, minor, degree, shift = 0) {
-  const pcs = keyChords(index, minor).map((item) => item.pc);
+  const pcs = keyScale(index, minor);
   const at = degree - 1;
   return noteMidi(pcs[0], pcs[0]) + mod12(pcs[at % pcs.length] - pcs[0]) + OCTAVE * Math.floor(at / pcs.length) + shift;
 }
@@ -265,8 +299,8 @@ export const scaleId = Object.freeze({
 
 export const SCALES = [
   { id: scaleId.ionian, name: 'Ionian', short: 'Ionian', offset: 0, steps: IONIAN },
-  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', offset: 2, steps: [0, 2, 3, 5, 7, 9, 10] },
-  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', offset: 4, steps: [0, 1, 3, 5, 7, 8, 10] },
+  { id: scaleId.dorian, name: 'Dorian', short: 'Dorian', offset: 2, steps: DORIAN },
+  { id: scaleId.phrygian, name: 'Phrygian', short: 'Phryg.', offset: 4, steps: PHRYGIAN },
   { id: scaleId.lydian, name: 'Lydian', short: 'Lydian', offset: 5, steps: [0, 2, 4, 6, 7, 9, 11] },
   { id: scaleId.mixolydian, name: 'Mixolydian', short: 'Mixo.', offset: 7, steps: [0, 2, 4, 5, 7, 9, 10] },
   { id: scaleId.aeolian, name: 'Aeolian', short: 'Aeolian', offset: 9, steps: AEOLIAN },

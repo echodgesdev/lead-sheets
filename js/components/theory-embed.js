@@ -20,14 +20,14 @@ function keyFifths(model, key) {
   return fifths;
 }
 
-export function createTheoryEmbed(spec) {
+export function createTheoryEmbed(spec, instrument = GUITAR) {
   const key = keyAt(spec.key) ?? DEFAULT_KEY;
   const model = sequenceModel({ ...key, steps: spec.seq, locked: true, minOctaves: getKeyOctaves() });
   const view = THEORY_VIEWS[spec.vis];
   const box = div('theory-embed');
   const stage = div('theory-embed-stage');
   const fifths = spec.vis === visId.fifths ? keyFifths(model, key) : null;
-  const layout = view.neck ? fretLayout(model, GUITAR, { position: spec.position, fingering: spec.fingering, shape: spec.shape }) : null;
+  const layout = view.neck ? fretLayout(model, instrument, { position: spec.position, fingering: spec.fingering, shape: spec.shape }) : null;
   stage.append(view.render(model, { fifths, layout, align: spec.align }));
   box.append(stage);
 

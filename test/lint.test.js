@@ -76,6 +76,14 @@ test('lint: header Tempo', () => {
   eq(lintSong(`T\nTempo: ${MIN_BPM}`), []);
 });
 
+test('lint: header Tuning', () => {
+  eq(lintSong('T\nTuning: banjo'), [at(1, 8, 13, '"banjo" isn\'t a tuning')]);
+  eq(lintSong('T\nTuning: D A D'), [at(1, 8, 13, '"D A D" isn\'t a tuning')]);
+  eq(lintSong('T\nTuning: Drop D'), []);
+  eq(lintSong('T\nTuning: DADGAD'), []);
+  eq(lintSong('T\nTuning: E A D G B E'), []);
+});
+
 test('lint: empty header values pass', () => {
   eq(lintSong('New Song\nArtist: \nKey: \nCapo: \nTempo: \n\nVerse 1:\n'), []);
 });
