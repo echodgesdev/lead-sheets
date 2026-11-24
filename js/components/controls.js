@@ -1,20 +1,30 @@
 import { icon, iconId } from '../core/icons.js';
-import { div, input, option, select, small, span, classes, iconButton } from '../core/dom.js';
+import { div, input, optgroup, option, select, small, span, classes, iconButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
+
+function optionNode(o) {
+  if (!o.options) return option({ value: o.id }, o.label);
+  const group = optgroup({ label: o.label });
+  group.append(...o.options.map(optionNode));
+  return group;
+}
 
 export function selectPill(name, title, options, value) {
   const pill = span('pill select-pill');
   const text = span('select-pill-text');
   const field = select({ 'aria-label': title, title });
-  for (const o of options) field.append(option({ value: o.id }, o.label));
-  field.value = value;
+  field.append(...options.map(optionNode));
   const onChange = () => {
     text.textContent = field.selectedOptions[0]?.textContent ?? '';
   };
+  const set = (id) => {
+    field.value = id;
+    onChange();
+  };
   field.addEventListener(evt.change, onChange);
-  onChange();
+  set(value);
   pill.append(...(name ? [icon(name)] : []), text, field);
-  return { pill, select: field };
+  return { pill, select: field, set };
 }
 
 export function segToggle(...nodes) {

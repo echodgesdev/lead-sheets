@@ -28,7 +28,7 @@ export function createUtilities(context = {}) {
 export function createToolsPanel() {
   const theory = createCircleControl();
   const body = theory.open();
-  const panel = div('tool theory-panel');
+  const panel = div('theory-panel');
   panel.append(body.header, ...body.rows);
   const list = div('list');
   list.append(panel);

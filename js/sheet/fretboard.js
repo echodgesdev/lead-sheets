@@ -23,7 +23,7 @@ const PENTATONIC_SIZE = 5;
 const TRITONE = 6;
 const SHIFTS = [0, -OCTAVE, OCTAVE, -2 * OCTAVE, 2 * OCTAVE];
 const CHART_MIN_ROWS = 4;
-const CHART_MAX_ROWS = 5;
+export const CHART_MAX_ROWS = 5;
 
 const CAGED_FORMS = Object.freeze([
   { root: 1, offsets: [null, 0, -1, -3, -2, -3] },

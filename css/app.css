@@ -454,18 +454,21 @@ input:focus-visible {
 }
 
 .modal .seg-toggle,
-.tool .seg-toggle,
 .set-controls .seg-toggle {
   background: var(--bg);
 }
 
+.theory-panel .seg-toggle {
+  background: var(--surface);
+}
+
 .modal .seg-toggle,
-.tool .seg-toggle {
+.theory-panel .seg-toggle {
   max-width: 100%;
 }
 
 .modal .seg-toggle .btn,
-.tool .seg-toggle .btn {
+.theory-panel .seg-toggle .btn {
   flex: 1 1 auto;
   min-width: 0;
   padding: 0 10px;
@@ -627,6 +630,10 @@ input:focus-visible {
   box-shadow: 0 0 0 2px var(--accent);
 }
 
+.select-pill:has(> select:disabled) {
+  opacity: 0.4;
+}
+
 .input-icon > .fa {
   position: absolute;
   top: 50%;
@@ -733,46 +740,27 @@ button.row:active {
   transform: scale(0.985);
 }
 
-.tool {
-  position: relative;
+.theory-panel {
   min-width: 0;
-  overflow: hidden;
-  border-radius: var(--r-md);
-  background: var(--surface);
-  box-shadow: var(--elev-1);
-}
-
-.tool > .tool-header + * {
-  border-top: 1px solid var(--line);
-}
-
-.tool.theory-panel .tool-header .btn {
-  min-width: 32px;
-  padding: 0 8px;
 }
 
 .theory-panel > .tool-header {
   display: flex;
-  align-items: center;
-  min-height: 48px;
-  padding: 6px 12px;
+  padding: 6px 0;
 }
 
-.tool .tool-header .btn {
-  flex: none;
-  min-width: 36px;
-  padding: 0 10px;
+.theory-panel > .tool-header > .seg-toggle {
+  flex: 1;
+}
+
+.theory-panel > .tool-header .btn {
+  min-width: 32px;
+  padding: 0 8px;
 }
 
 .tool-header .btn:not(.active) .opt-label,
 .compact-toggle .btn:not(.active) .opt-label {
   display: none;
-}
-
-.tool-header > .btn {
-  margin-left: auto;
-  min-height: 32px;
-  border-radius: var(--r-pill);
 }
 
 .modal .tool-header {
@@ -781,14 +769,28 @@ button.row:active {
   padding: 10px 12px;
 }
 
-.tool .modal-row {
-  padding: 10px 12px;
+.theory-panel .modal-row {
+  padding: 10px 0;
+  border-top: 0;
 }
 
+.key-controls,
 .circle-controls {
   justify-content: center;
   align-items: flex-end;
   gap: 12px;
+}
+
+.theory-panel .circle-controls {
+  margin-top: 6px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.key-controls > .btn {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: var(--r-pill);
 }
 
 .field-stack {
@@ -1076,6 +1078,16 @@ button.row:active {
   from {
     opacity: 0;
   }
+}
+
+.resizing {
+  overflow: hidden;
+  overflow: clip;
+  transition: height 0.2s var(--ease);
+}
+
+.entering {
+  animation: fade-in 0.12s var(--ease);
 }
 
 .bar {
@@ -1729,7 +1741,11 @@ button.row:active {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 4px;
-  padding: 0 16px 16px;
+  padding-bottom: 16px;
+}
+
+.circle-chords[data-mode="chord"] {
+  row-gap: 10px;
 }
 
 .circle-chord {
@@ -1790,7 +1806,7 @@ button.row:active {
   min-width: 0;
 }
 
-.tool .chord-more,
+.theory-panel .chord-more,
 .modal .chord-more {
   width: 100%;
   min-width: 0;
@@ -1811,32 +1827,22 @@ button.row:active {
   box-shadow: inset 0 0 0 1.5px var(--tone);
 }
 
-.circle-borrowed {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 0 16px 16px;
+.circle-chord.borrowed-chip {
+  padding: 5px 0;
+  border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
+  background: transparent;
+  color: var(--muted);
 }
 
-.circle-borrowed .circle-chords {
-  align-self: stretch;
-  padding: 0;
+.borrowed-chip small {
+  font-size: 10px;
 }
 
-.btn.borrowed-toggle {
-  min-height: 28px;
-  padding: 0 10px;
-  border-radius: var(--r-pill);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.borrowed-toggle .fa {
+.borrowed-chip .fa {
   transition: transform 0.2s var(--ease);
 }
 
-.borrowed-toggle.active .fa {
+.borrowed-chip[aria-expanded="true"] .fa {
   transform: rotate(180deg);
 }
 

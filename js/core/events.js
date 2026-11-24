@@ -28,6 +28,8 @@ export const evt = Object.freeze({
   touchcancel: 'touchcancel',
   touchend: 'touchend',
   touchstart: 'touchstart',
+  transitioncancel: 'transitioncancel',
+  transitionend: 'transitionend',
   visibilitychange: 'visibilitychange',
   wheel: 'wheel',
 });

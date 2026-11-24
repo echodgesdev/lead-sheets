@@ -6,15 +6,16 @@ import { strings } from '../strings.js';
 import { THEORY_VIEWS, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
-import { ringId, keyTonic, keyScale, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
-import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
+import { WEDGES, ringId, keyTonic, keyScale, chordNotes, wedgeNotes, wedgeNames, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
+import { modeId, keyItems, itemShape, theoryModel, chordRoot, slotOf } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
 import { visId, alignId, fingeringId, neckShapeId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
-import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, classes, cls } from '../core/dom.js';
+import { div, span, small, iconButton, plainButton, labeledButton, setPressed, setTitle, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
+import { smoothHeight } from '../core/smooth-height.js';
 
 const PLAYABLE = '[data-slot], [data-notes], [data-scale]';
 const VOICED = `.note-dot:not(.${cls.faint})`;
@@ -76,6 +77,21 @@ const VIEWS = [
   { id: visId.tonnetz, icon: iconId.triangles, label: 'Tonnetz', title: 'Tonnetz' },
 ];
 
+const KEY_GROUPS = [false, true].map((minor) => ({
+  label: minor ? 'Minor' : 'Major',
+  options: Array.from({ length: WEDGES }, (_, index) => ({
+    id: keySlot({ index, minor }),
+    label: wedgeNames(index, minor, index).map(displayName).join('/'),
+    key: { index, minor },
+  })),
+}));
+
+const KEYS = new Map(KEY_GROUPS.flatMap((group) => group.options).map((o) => [o.id, o.key]));
+
+function keySlot({ index, minor }) {
+  return slotOf(index, minor ? ringId.inner : ringId.outer);
+}
+
 function scaleChip(scale) {
   const chip = plainButton(span('circle-degree', scale.top), 'circle-chord');
   chip.append(span(null, scale.short));
@@ -95,6 +111,16 @@ function chordChip(item, degree, bare, shaped) {
   chip.append(span(null, name));
   chip.dataset.slot = item.slot;
   chip.setAttribute('aria-label', bare ? `${name}, degree ${degree}` : `${name}, ${numeral}`);
+  return chip;
+}
+
+function borrowedChip() {
+  const top = span('circle-numeral');
+  top.append(icon(iconId.chevronDown));
+  const name = span();
+  name.append(small(null, 'Borrowed'));
+  const chip = plainButton(top, 'circle-chord borrowed-chip');
+  chip.append(name);
   return chip;
 }
 
@@ -121,11 +147,9 @@ export function createCircleControl() {
     const fifths = createFifths();
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
-    const borrowedChips = div('circle-chords');
-    const borrowedToggle = labeledButton(iconId.chevronDown, 'Borrowed', 'borrowed-toggle');
-    const borrowedRow = div('circle-borrowed');
-    borrowedRow.append(borrowedToggle, borrowedChips);
-    const chipAreas = [chords, borrowedChips];
+    const borrowedToggle = borrowedChip();
+    const borrowedCell = div('chord-cell');
+    borrowedCell.append(borrowedToggle);
 
     function tonic() {
       return keyTonic(selected.index, selected.minor);
@@ -176,6 +200,7 @@ export function createCircleControl() {
       if (id === view) return;
       view = id;
       renderStage();
+      stage.firstElementChild.classList.add(cls.entering);
     }));
     let voicingCount = 0;
 
@@ -247,21 +272,19 @@ export function createCircleControl() {
         neckCount.textContent = neck.count ? `${neck.position + 1} / ${neck.count}` : '–';
         syncShape();
       }
-      const art = entry.render(current, { fifths, layout: neck, labels, align });
+      const art = entry.render(current, { fifths, layout: neck, labels, align, reserve: true });
       if (art.parentNode !== stage) stage.replaceChildren(art);
     }
 
     function syncChips() {
       chords.dataset.mode = mode;
-      for (const chip of chipAreas.flatMap((area) => [...area.querySelectorAll('.circle-chord')])) {
+      for (const chip of chords.querySelectorAll('.circle-chord')) {
         chip.classList.toggle(cls.active, mode === modeId.scale ? chip.dataset.scale === scaleChoice : chipItems.get(chip.dataset.slot)?.degree === chordIndex);
       }
     }
 
     function syncBorrowed() {
-      borrowedRow.hidden = mode !== modeId.chord;
-      borrowedChips.hidden = !borrowedOpen;
-      setPressed(borrowedToggle, borrowedOpen);
+      borrowedToggle.setAttribute('aria-expanded', String(borrowedOpen));
       setTitle(borrowedToggle, borrowedOpen ? 'Hide borrowed chords' : 'Show borrowed chords');
     }
 
@@ -269,8 +292,7 @@ export function createCircleControl() {
       const diatonic = items.filter((item) => !item.borrowed);
       if (mode === modeId.scale) chords.replaceChildren(...model().scales.map(scaleChip));
       else if (noteMode()) chords.replaceChildren(...diatonic.map((item) => chordChip(item, item.degree + 1, true, shapeOf(item))));
-      else chords.replaceChildren(...diatonic.map(chordCell));
-      borrowedChips.replaceChildren(...(mode === modeId.chord ? items.filter((item) => item.borrowed).map(chordCell) : []));
+      else chords.replaceChildren(...diatonic.map(chordCell), borrowedCell, ...shownItems().filter((item) => item.borrowed).map(chordCell));
       syncBorrowed();
       syncChips();
     }
@@ -280,9 +302,17 @@ export function createCircleControl() {
       chipItems = new Map(items.map((item) => [item.slot, item]));
       if (items[chordIndex]?.borrowed && !borrowedShown()) chordIndex = 0;
       fifths.render({ index: selected.index, minor: selected.minor, items: shownItems(), bare: bareLabels() });
+      showKey(keySlot(selected));
       renderChips();
       syncVoicing();
       renderStage();
+    }
+
+    function pickKey(key) {
+      if (key.index === selected.index && key.minor === selected.minor) return;
+      selected = key;
+      chordIndex = 0;
+      renderKey();
     }
 
     borrowedToggle.addEventListener(evt.click, () => {
@@ -290,12 +320,17 @@ export function createCircleControl() {
       renderKey();
     });
 
+    const { pill: keyPill, select: keySelect, set: showKey } = selectPill(null, 'Key', KEY_GROUPS, keySlot(selected));
+    keySelect.addEventListener(evt.change, () => pickKey(KEYS.get(keySelect.value)));
     const lockBtn = iconButton(iconId.lockOpen, 'Lock');
+    const keyRow = modalRow(null, labeledField('Key', keyPill), lockBtn);
+    keyRow.classList.add('key-controls');
 
     function renderLock() {
       lockBtn.replaceChildren(icon(locked ? iconId.lock : iconId.lockOpen));
       setPressed(lockBtn, locked);
       setTitle(lockBtn, locked ? 'Unlock' : 'Lock to the key or selection');
+      keySelect.disabled = locked;
     }
 
     lockBtn.addEventListener(evt.click, () => {
@@ -319,7 +354,6 @@ export function createCircleControl() {
       renderStage();
     }));
     modeToggle.classList.add('compact-toggle');
-    header.append(lockBtn);
     const controls = modalRow(null, labeledField('Play', modeToggle), voicingField, rootingField);
     controls.classList.add('circle-controls');
 
@@ -397,8 +431,8 @@ export function createCircleControl() {
     function pressedFor(el) {
       const { slot } = el.dataset;
       const notePc = noteMode() && view === visId.fifths ? notePcOf(el) : null;
-      if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chipAreas.flatMap((area) => [...area.querySelectorAll(`[data-slot="${slot}"]`)])];
-      if (slot) return [...[stage, ...chipAreas].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]), ...voicedDots()];
+      if (notePc !== null) return [...fifths.wedgesFor(notePc), ...chords.querySelectorAll(`[data-slot="${slot}"]`)];
+      if (slot) return [...[stage, chords].flatMap((root) => [...root.querySelectorAll(`[data-slot="${slot}"]`)]), ...voicedDots()];
       return [el];
     }
 
@@ -414,11 +448,7 @@ export function createCircleControl() {
       const tapped = { index: Number(el.dataset.index), minor: el.dataset.ring === ringId.inner };
       const key = locked ? selected : tapped;
       const stop = startNotes(wedgeNotes(tapped.index, tapped.minor, mode === modeId.chord, keyTonic(key.index, key.minor), inversion));
-      if (!locked && (tapped.index !== selected.index || tapped.minor !== selected.minor)) {
-        selected = tapped;
-        chordIndex = 0;
-        renderKey();
-      }
+      if (!locked) pickKey(tapped);
       return stop;
     }
 
@@ -455,20 +485,29 @@ export function createCircleControl() {
       renderStage();
     };
 
-    const player = attachPlayer({ areas: [stage, ...chipAreas], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
+    const player = attachPlayer({ areas: [stage, chords], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
 
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
       rootingField.hidden = mode !== modeId.scale;
     }
 
+    const stageContent = div();
+    stageContent.append(stage, keyRow, viewRow);
+    const stageBox = div();
+    stageBox.append(stageContent);
+    const releaseHeight = smoothHeight(stageBox, stageContent);
+
     syncMode();
     renderKey();
     renderLock();
     return {
       header,
-      rows: [stage, viewRow, controls, chords, borrowedRow],
-      onClose: player.dispose,
+      rows: [stageBox, controls, chords],
+      onClose: () => {
+        player.dispose();
+        releaseHeight();
+      },
     };
   }
 

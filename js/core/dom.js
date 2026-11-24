@@ -8,6 +8,7 @@ export const cls = Object.freeze({
   blocked: 'blocked',
   down: 'down',
   dragging: 'dragging',
+  entering: 'entering',
   faint: 'faint',
   idle: 'idle',
   inKey: 'in-key',
@@ -15,6 +16,7 @@ export const cls = Object.freeze({
   intro: 'intro',
   outside: 'outside',
   pressed: 'pressed',
+  resizing: 'resizing',
   roman: 'roman',
   root: 'root',
   voiced: 'voiced',
@@ -46,6 +48,7 @@ export const h2 = builder('h2');
 export const header = builder('header');
 export const input = builder('input');
 export const label = builder('label');
+export const optgroup = builder('optgroup');
 export const option = builder('option');
 export const p = builder('p');
 export const pre = builder('pre');

@@ -5,7 +5,7 @@ import { qualityId, shapeId, displayName, stepPitches, intervalNames } from '../
 import { IONIAN } from '../sheet/chords.js';
 import { modeId, chordRoot } from '../sheet/theory-model.js';
 import { staffLayout, signatureSteps, STAVES, clefId } from '../sheet/staff.js';
-import { chartLayout } from '../sheet/fretboard.js';
+import { chartLayout, CHART_MAX_ROWS } from '../sheet/fretboard.js';
 import { visId, alignId, neckShapeId } from '../sheet/vis-spec.js';
 import { theoryArt, isBlocked, isOutside, noteAttrs, pcName, points, stepsOf } from './theory-art.js';
 import { renderTonnetz } from './tonnetz.js';
@@ -94,7 +94,7 @@ export const THEORY_VIEWS = Object.freeze({
   [visId.piano]: { render: renderKeys },
   [visId.fretboard]: { neck: true, show: true, labels: true, render: (model, { layout, labels }) => renderFretboard(model, layout, labels) },
   [visId.tab]: { neck: true, render: (model, { layout }) => renderTab(model, layout) },
-  [visId.chart]: { neck: true, labels: true, render: (model, { layout, labels }) => renderChart(model, layout, labels) },
+  [visId.chart]: { neck: true, labels: true, render: (model, { layout, labels, reserve }) => renderChart(model, layout, labels, reserve) },
   [visId.clef]: { render: renderStaff },
   [visId.tonnetz]: { render: renderTonnetz },
 });
@@ -480,10 +480,10 @@ function sequenceTitle({ steps, key }) {
   return steps.length === 1 ? steps[0].label : `${key.root} ${key.quality}`;
 }
 
-export function renderChart(model, layout, labels = labelId.none) {
+export function renderChart(model, layout, labels = labelId.none, reserve = false) {
   const count = layout.instrument.strings.length;
   const dot = (each, at) => neckDot(model, each, { ...at, count, labels });
-  return chordBox(chartLayout(layout), CHART_TITLES[model.mode](model, layout), { dot });
+  return chordBox(chartLayout(layout), CHART_TITLES[model.mode](model, layout), { dot, minRows: reserve ? CHART_MAX_ROWS : 0 });
 }
 
 function rootDot(rootPc) {
@@ -494,7 +494,7 @@ function rootDot(rootPc) {
   };
 }
 
-export function chordBox(chart, title, { attrs = {}, rootPc = null, dot = rootDot(rootPc) } = {}) {
+export function chordBox(chart, title, { attrs = {}, rootPc = null, dot = rootDot(rootPc), minRows = 0 } = {}) {
   const count = chart.instrument.strings.length;
   const x = (string) => CHART_SIDE + string * CHART_STRING_GAP;
   const lineY = (row) => CHART_TOP + row * CHART_FRET_GAP;
@@ -503,7 +503,7 @@ export function chordBox(chart, title, { attrs = {}, rootPc = null, dot = rootDo
   const right = x(count - 1);
   const bottom = lineY(chart.rows);
   const width = right + CHART_SIDE;
-  const art = theoryArt('chart-art', `0 0 ${width} ${bottom + CHART_BOTTOM}`, 'Chord chart', attrs);
+  const art = theoryArt('chart-art', `0 0 ${width} ${lineY(Math.max(chart.rows, minRows)) + CHART_BOTTOM}`, 'Chord chart', attrs);
   art.append(svg('text', { class: 'chart-name', x: width / 2, y: CHART_NAME_Y }, title));
   for (let row = 0; row <= chart.rows; row++) {
     art.append(svg('line', { class: row === 0 && chart.nut ? 'chart-nut' : 'chart-fret', x1: left, y1: lineY(row), x2: right, y2: lineY(row) }));
