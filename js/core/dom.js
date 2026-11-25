@@ -14,6 +14,7 @@ export const cls = Object.freeze({
   inKey: 'in-key',
   inTune: 'in-tune',
   intro: 'intro',
+  loading: 'loading',
   outside: 'outside',
   pressed: 'pressed',
   resizing: 'resizing',

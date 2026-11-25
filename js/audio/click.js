@@ -1,5 +1,6 @@
 import { audioContext } from './context.js';
 import { clamp } from '../core/math.js';
+import { evt } from '../core/events.js';
 import { clampBpm } from '../sheet/tempo.js';
 
 export const DEFAULT_BPM = 100;
@@ -87,14 +88,47 @@ export function createMetronome(onBeat) {
     gain.connect(ctx.destination);
     osc.start(time);
     osc.stop(time + CLICK_S);
+    return gain;
+  }
+
+  function msUntil(time) {
+    return Math.max(0, (time - ctx.currentTime) * 1000);
   }
 
   function announce(time, index, level) {
     const id = setTimeout(() => {
       pending.delete(id);
       onBeat(index, level);
-    }, Math.max(0, (time - ctx.currentTime) * 1000));
+    }, msUntil(time));
     pending.add(id);
+  }
+
+  function nextDownbeat() {
+    return nextTime + ((pattern.length - beat) % pattern.length) * (60 / bpm);
+  }
+
+  function countIn(onCount, signal) {
+    if (signal?.aborted) return Promise.resolve(false);
+    ctx = audioContext();
+    const beatS = 60 / bpm;
+    const bar = timer ? [] : defaultPattern(pattern.length);
+    const first = timer ? nextDownbeat() : ctx.currentTime + START_DELAY_S;
+    const gains = bar.map((level, i) => blip(first + i * beatS, PITCH[level]));
+    const counts = bar.map((_, i) => setTimeout(() => onCount(bar.length - i), msUntil(first + i * beatS)));
+    return new Promise((resolve) => {
+      const onAbort = () => {
+        for (const gain of gains) gain.disconnect();
+        finish(false);
+      };
+      const done = setTimeout(() => finish(true), msUntil(first + bar.length * beatS));
+      function finish(ok) {
+        clearTimeout(done);
+        counts.forEach(clearTimeout);
+        signal?.removeEventListener(evt.abort, onAbort);
+        resolve(ok);
+      }
+      signal?.addEventListener(evt.abort, onAbort);
+    });
   }
 
   function schedule() {
@@ -141,6 +175,7 @@ export function createMetronome(onBeat) {
     stop,
     setBpm,
     setPattern,
+    countIn,
     get running() {
       return timer !== 0;
     },

@@ -16,7 +16,7 @@ export function extensionOf(mimeType) {
   return EXTENSIONS[base] ?? (base.split('/')[1] || DEFAULT_EXTENSION);
 }
 
-export async function startRecording() {
+export async function startRecording(ready) {
   if (!globalThis.MediaRecorder) throw new Error('Recording unavailable');
   const stream = await openMic();
   const preferred = pickMimeType((type) => MediaRecorder.isTypeSupported(type));
@@ -26,6 +26,10 @@ export async function startRecording() {
   } catch (err) {
     closeMic(stream);
     throw err;
+  }
+  if (ready && !(await ready())) {
+    closeMic(stream);
+    return null;
   }
   const chunks = [];
   const startedAt = Date.now();

@@ -141,5 +141,10 @@ export function createMetronomeControl(tempo) {
     closeDialog();
   }
 
-  return { button: headerBtn, dispose };
+  function countIn(onCount, signal) {
+    metronome.setBpm(bpm);
+    return metronome.countIn(onCount, signal);
+  }
+
+  return { button: headerBtn, countIn, dispose };
 }

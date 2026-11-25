@@ -18,6 +18,7 @@ const TOOL_UTILITIES_KEY = 'tabs.toolUtilities';
 const KEY_OCTAVES_KEY = 'tabs.keyOctaves';
 const METRONOME_KEY = 'tabs.metronome';
 const CHORD_CHARTS_KEY = 'tabs.chordCharts';
+const COUNT_IN_KEY = 'tabs.countIn';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
@@ -335,6 +336,14 @@ export function getMetronomePattern() {
 
 export function setMetronomePattern(pattern) {
   write(METRONOME_KEY, pattern);
+}
+
+export function getCountIn() {
+  return read(COUNT_IN_KEY) === true;
+}
+
+export function setCountIn(on) {
+  write(COUNT_IN_KEY, on);
 }
 
 export function tagValue(rec, id) {

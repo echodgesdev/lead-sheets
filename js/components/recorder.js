@@ -1,8 +1,10 @@
 import { startRecording } from '../audio/record.js';
-import { addRecording } from '../data/recordings.js';
+import { addRecording, songRecordings } from '../data/recordings.js';
+import { getCountIn, setCountIn } from '../data/prefs.js';
 import { attachPopover } from './modal.js';
 import { modalRow } from './rows.js';
 import { openRecordings } from './recordings.js';
+import { createTake } from './take.js';
 import { toast } from './toast.js';
 import { div, p, span, iconButton, labeledButton, cls, setPressed, setTitle } from '../core/dom.js';
 import { icon, iconId } from '../core/icons.js';
@@ -12,16 +14,18 @@ import { strings } from '../strings.js';
 
 const TICK_MS = 250;
 
-export function createRecorderControl(song) {
+export function createRecorderControl(song, countIn) {
   const headerBtn = iconButton(iconId.circle, 'Recorder', 'rec-btn');
   let session = null;
-  let starting = false;
+  let arming = null;
+  let count = null;
   let error = '';
   let sync = null;
+  let refresh = null;
   let disposed = false;
 
   function changed() {
-    headerBtn.classList.toggle(cls.active, !!session);
+    headerBtn.classList.toggle(cls.active, !!session || !!arming);
     sync?.();
   }
 
@@ -31,35 +35,51 @@ export function createRecorderControl(song) {
     if (!result.blob.size) return;
     try {
       await addRecording({ song, createdAt: started.startedAt, ...result });
-      toast('Recording saved');
+      if (refresh) refresh();
+      else if (disposed) toast('Recording saved');
+      else toast('Recording saved', { label: 'Open', run: () => headerBtn.click() });
     } catch {
       toast('Could not save the recording');
     }
   }
 
   async function start() {
-    starting = true;
+    const abort = new AbortController();
+    arming = abort;
+    count = null;
     error = '';
     changed();
+    const onCount = (n) => {
+      count = n;
+      changed();
+    };
+    const ready = countIn && getCountIn() ? () => countIn(onCount, abort.signal) : null;
     try {
-      const started = await startRecording();
-      if (disposed) {
+      const started = await startRecording(ready);
+      if (started && (abort.signal.aborted || disposed)) {
         started.stop();
-      } else {
+      } else if (started) {
         session = started;
         started.done.then((result) => save(started, result));
       }
     } catch {
       error = strings.micUnavailable;
     }
-    starting = false;
+    if (arming === abort) arming = null;
+    count = null;
     changed();
   }
 
   function toggle() {
-    if (starting) return;
-    if (session) session.stop();
-    else start();
+    if (arming) {
+      arming.abort();
+      arming = null;
+      changed();
+    } else if (session) {
+      session.stop();
+    } else {
+      start();
+    }
   }
 
   function showList(forSong, close) {
@@ -70,42 +90,85 @@ export function createRecorderControl(song) {
   function open(close) {
     const time = span('rec-time');
     const toggleBtn = labeledButton(null, '', 'rec-toggle');
-    const main = modalRow(null, toggleBtn);
+    const countBtn = labeledButton(iconId.metronome, 'Count-in', 'rec-count');
+    setTitle(countBtn, 'Count in one bar of the metronome before recording');
+    const main = modalRow(null, toggleBtn, countBtn);
     const note = p({ class: 'modal-note', hidden: '' });
+    const takeRow = div({ class: 'rec-take', hidden: '' });
     const songBtn = labeledButton(null, 'View recordings');
     const allBtn = labeledButton(null, 'View all recordings');
     songBtn.hidden = !song;
     const lists = div('modal-row rec-lists');
     lists.append(songBtn, allBtn);
+    let take = null;
+    let takeId = null;
+    let closed = false;
 
     const renderTime = () => {
       time.textContent = clockTime(session ? Date.now() - session.startedAt : 0);
     };
 
+    function toggleLabel() {
+      if (session) return ['Stop', time];
+      if (arming) return [count ? String(count) : 'Get ready'];
+      return ['Record', time];
+    }
+
     sync = () => {
-      const on = !!session;
-      toggleBtn.replaceChildren(icon(on ? iconId.stop : iconId.circle), on ? 'Stop' : 'Record', time);
-      setTitle(toggleBtn, on ? 'Stop recording' : 'Start recording');
-      setPressed(toggleBtn, on);
-      toggleBtn.disabled = starting;
+      const busy = !!session || !!arming;
+      toggleBtn.replaceChildren(icon(busy ? iconId.stop : iconId.circle), ...toggleLabel());
+      setTitle(toggleBtn, session ? 'Stop recording' : arming ? 'Cancel' : 'Start recording');
+      setPressed(toggleBtn, busy);
+      setPressed(countBtn, getCountIn());
+      countBtn.disabled = busy;
+      if (busy) take?.pause();
+      takeRow.hidden = busy || !take;
       note.textContent = error;
       note.hidden = !error;
       renderTime();
     };
 
+    refresh = async () => {
+      let recs;
+      try {
+        recs = await songRecordings(song?.id ?? null);
+      } catch {
+        return;
+      }
+      if (closed) return;
+      songBtn.textContent = `View recordings (${recs.length})`;
+      const latest = recs[0] ?? null;
+      if (latest?.id !== takeId) {
+        take?.dispose();
+        takeId = latest?.id ?? null;
+        take = latest ? createTake(latest, { onDelete: () => refresh() }) : null;
+        takeRow.replaceChildren(...(take ? [span('modal-label', 'Last take'), take.el] : []));
+      }
+      sync();
+    };
+
+    const onCountIn = () => {
+      setCountIn(!getCountIn());
+      sync();
+    };
     const onSong = () => showList(song, close);
     const onAll = () => showList(null, close);
     toggleBtn.addEventListener(evt.click, toggle);
+    countBtn.addEventListener(evt.click, onCountIn);
     songBtn.addEventListener(evt.click, onSong);
     allBtn.addEventListener(evt.click, onAll);
 
     const timer = setInterval(renderTime, TICK_MS);
     sync();
+    refresh();
     return {
-      rows: [main, lists, note],
+      rows: [main, note, takeRow, lists],
       onClose: () => {
+        closed = true;
         clearInterval(timer);
+        take?.dispose();
         sync = null;
+        refresh = null;
       },
     };
   }
@@ -114,6 +177,7 @@ export function createRecorderControl(song) {
 
   function dispose() {
     disposed = true;
+    arming?.abort();
     session?.stop();
     closePopover();
   }

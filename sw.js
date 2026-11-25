@@ -1,4 +1,4 @@
-const CACHE = 'tabs-v119';
+const CACHE = 'tabs-v120';
 
 const ASSETS = [
   './',
@@ -56,7 +56,9 @@ const ASSETS = [
   './js/audio/mic.js',
   './js/audio/pitch.js',
   './js/audio/record.js',
+  './js/audio/take.js',
   './js/audio/tone.js',
+  './js/audio/wav.js',
   './js/components/chord-charts.js',
   './js/components/circle.js',
   './js/components/controls.js',
@@ -74,6 +76,7 @@ const ASSETS = [
   './js/components/settings.js',
   './js/components/share.js',
   './js/components/sheet.js',
+  './js/components/take.js',
   './js/components/toast.js',
   './js/components/tonnetz.js',
   './js/components/theory-art.js',

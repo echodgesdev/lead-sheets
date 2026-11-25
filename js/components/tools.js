@@ -5,14 +5,14 @@ import { createCircleControl } from './circle.js';
 import { UTILITIES, utilityId } from '../data/prefs.js';
 import { div } from '../core/dom.js';
 
-const CREATE_UTILITY = {
-  [utilityId.tuner]: ({ song }) => createTunerControl(song?.tuning),
-  [utilityId.metronome]: ({ tempo }) => createMetronomeControl(tempo),
-  [utilityId.recorder]: ({ song }) => createRecorderControl(song),
-};
-
-export function createUtilities(context = {}) {
-  const controls = UTILITIES.map((u) => ({ id: u.id, control: CREATE_UTILITY[u.id](context) }));
+export function createUtilities({ tempo, song } = {}) {
+  const metronome = createMetronomeControl(tempo);
+  const made = {
+    [utilityId.tuner]: createTunerControl(song?.tuning),
+    [utilityId.metronome]: metronome,
+    [utilityId.recorder]: createRecorderControl(song, metronome.countIn),
+  };
+  const controls = UTILITIES.map((u) => ({ id: u.id, control: made[u.id] }));
   return {
     buttons: controls.map(({ control }) => control.button),
     show(ids) {
