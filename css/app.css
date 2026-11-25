@@ -774,11 +774,19 @@ button.row:active {
   border-top: 0;
 }
 
-.key-controls,
 .circle-controls {
   justify-content: center;
   align-items: flex-end;
   gap: 12px;
+}
+
+.key-controls {
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.key-controls .modal-label {
+  flex: none;
 }
 
 .theory-panel .circle-controls {
@@ -1828,6 +1836,9 @@ button.row:active {
 }
 
 .circle-chord.borrowed-chip {
+  flex-direction: row;
+  justify-content: center;
+  gap: 4px;
   padding: 5px 0;
   border: 1px dashed color-mix(in srgb, var(--muted) 55%, transparent);
   background: transparent;

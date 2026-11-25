@@ -70,10 +70,10 @@ const VIEWS = [
   { id: visId.clock, icon: iconId.clock, label: 'Clock', title: 'Clock' },
   { id: visId.intervals, icon: iconId.rulerHorizontal, label: 'Intervals', title: 'Intervals' },
   { id: visId.piano, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
+  { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
   { id: visId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
   { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
   { id: visId.chart, icon: iconId.chordChart, label: 'Chart', title: 'Chord chart' },
-  { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
   { id: visId.tonnetz, icon: iconId.triangles, label: 'Tonnetz', title: 'Tonnetz' },
 ];
 
@@ -115,12 +115,8 @@ function chordChip(item, degree, bare, shaped) {
 }
 
 function borrowedChip() {
-  const top = span('circle-numeral');
-  top.append(icon(iconId.chevronDown));
-  const name = span();
-  name.append(small(null, 'Borrowed'));
-  const chip = plainButton(top, 'circle-chord borrowed-chip');
-  chip.append(name);
+  const chip = plainButton(small(null, 'Borrowed'), 'circle-chord borrowed-chip');
+  chip.append(icon(iconId.chevronRight));
   return chip;
 }
 
@@ -143,7 +139,6 @@ export function createCircleControl() {
   function open() {
     let items = [];
     let chipItems = new Map();
-    let stageDirty = false;
     const fifths = createFifths();
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
@@ -323,7 +318,7 @@ export function createCircleControl() {
     const { pill: keyPill, select: keySelect, set: showKey } = selectPill(null, 'Key', KEY_GROUPS, keySlot(selected));
     keySelect.addEventListener(evt.change, () => pickKey(KEYS.get(keySelect.value)));
     const lockBtn = iconButton(iconId.lockOpen, 'Lock');
-    const keyRow = modalRow(null, labeledField('Key', keyPill), lockBtn);
+    const keyRow = modalRow('Key', keyPill, lockBtn);
     keyRow.classList.add('key-controls');
 
     function renderLock() {
@@ -458,8 +453,7 @@ export function createCircleControl() {
         chordIndex = item.degree;
         syncChips();
         syncVoicing();
-        if (neck) renderStage();
-        else stageDirty = view !== visId.fifths;
+        if (view !== visId.fifths) renderStage();
       }
       return startNotes(mode === modeId.chord ? chordVoice(item) : chordNotes(item.pc, item.quality, false, tonic()));
     }
@@ -479,13 +473,7 @@ export function createCircleControl() {
       return startNotes(notesOf(el));
     }
 
-    const onRelease = () => {
-      if (!stageDirty) return;
-      stageDirty = false;
-      renderStage();
-    };
-
-    const player = attachPlayer({ areas: [stage, chords], stage, selector: PLAYABLE, voiceFor, pressedFor, onRelease });
+    const player = attachPlayer({ areas: [stage, chords], stage, selector: PLAYABLE, voiceFor, pressedFor });
 
     function syncMode() {
       voicingField.hidden = mode !== modeId.chord;
@@ -493,7 +481,7 @@ export function createCircleControl() {
     }
 
     const stageContent = div();
-    stageContent.append(stage, keyRow, viewRow);
+    stageContent.append(stage, viewRow);
     const stageBox = div();
     stageBox.append(stageContent);
     const releaseHeight = smoothHeight(stageBox, stageContent);
@@ -503,7 +491,7 @@ export function createCircleControl() {
     renderLock();
     return {
       header,
-      rows: [stageBox, controls, chords],
+      rows: [keyRow, stageBox, controls, chords],
       onClose: () => {
         player.dispose();
         releaseHeight();

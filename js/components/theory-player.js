@@ -6,7 +6,7 @@ export function notesOf(el) {
   return el.dataset.notes.split(',').map(Number);
 }
 
-export function attachPlayer({ areas, stage, selector, voiceFor = (el) => startNotes(notesOf(el)), pressedFor = (el) => [el], onRelease }) {
+export function attachPlayer({ areas, stage, selector, voiceFor = (el) => startNotes(notesOf(el)), pressedFor = (el) => [el] }) {
   let voice = null;
   let pressed = [];
   let run = null;
@@ -22,7 +22,6 @@ export function attachPlayer({ areas, stage, selector, voiceFor = (el) => startN
     voice?.();
     voice = null;
     press(null);
-    onRelease?.();
   }
 
   function begin(target) {
