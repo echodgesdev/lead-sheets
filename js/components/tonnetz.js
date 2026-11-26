@@ -50,7 +50,7 @@ function latticeNode(model, node, lit) {
     on: lit,
     midis: [midi],
     label: name,
-    steps: model.mode === modeId.sequence ? stepsOf(model.run, midi, []) : '',
+    steps: stepsOf(model.run, midi, []),
   }));
   g.append(svg('circle', { cx: at(node.x), cy: at(node.y), r: NODE_R }), svg('text', { x: at(node.x), y: at(node.y) }, name));
   return g;

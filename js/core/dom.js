@@ -8,6 +8,7 @@ export const cls = Object.freeze({
   blocked: 'blocked',
   down: 'down',
   dragging: 'dragging',
+  editing: 'editing',
   entering: 'entering',
   faint: 'faint',
   idle: 'idle',

@@ -4,6 +4,7 @@ import { capoFret, placeCapo, transposeKey, signed, MAX_SHIFT } from '../sheet/t
 import { icon, iconId } from '../core/icons.js';
 import { div, h1, header, p, span, plainButton, iconButton, labeledButton, cls } from '../core/dom.js';
 import { stepper, keyFace, textField } from '../components/controls.js';
+import { confirmDialog } from '../components/modal.js';
 import { evt } from '../core/events.js';
 import { routes, NEW_ID } from '../routes.js';
 import { createAutosave } from '../core/autosave.js';
@@ -199,7 +200,9 @@ export function mount(el, { id }) {
   }
 
   async function onDelete() {
-    if (!currentId || !confirm('Delete this setlist? The songs stay in your library.')) return;
+    if (!currentId) return;
+    const confirmed = await confirmDialog({ title: strings.deleteSetlist, message: strings.deleteSetlistMessage, confirmLabel: strings.delete, danger: true });
+    if (!confirmed) return;
     await autosave.cancel();
     await setlists.remove(currentId);
     location.hash = routes.home;

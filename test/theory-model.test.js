@@ -6,9 +6,33 @@ const degree = (n, shift = 0) => ({ kind: stepKind.degree, degree: n, shift });
 const chord = (name) => ({ kind: stepKind.chord, chord: name });
 
 test('theory model finds keys by name', () => {
-  eq(keyAt('G'), { index: 1, minor: false });
-  eq(keyAt('Em'), { index: 1, minor: true });
+  eq(keyAt('G'), { index: 1, minor: false, flat: false });
+  eq(keyAt('Em'), { index: 1, minor: true, flat: false });
+  eq(keyAt('F'), { index: 11, minor: false, flat: true });
   eq(keyAt('nope'), null);
+});
+
+test('theory model keeps the spelling of enharmonic keys', () => {
+  eq(['Gb', 'F#', 'Db', 'C#', 'Cb', 'B'].map((name) => keyAt(name)), [
+    { index: 6, minor: false, flat: true },
+    { index: 6, minor: false, flat: false },
+    { index: 7, minor: false, flat: true },
+    { index: 7, minor: false, flat: false },
+    { index: 5, minor: false, flat: true },
+    { index: 5, minor: false, flat: false },
+  ]);
+  eq(['Ebm', 'D#m', 'Abm', 'G#m'].map((name) => keyAt(name).flat), [true, false, true, false]);
+});
+
+test('theory model spells notes and chords from the chosen signature', () => {
+  const state = { index: 6, minor: false, mode: modeId.chord, chordIndex: 3, inversion: 0, shapes: [], scaleChoice: 'ionian', inKey: true, locked: false, minOctaves: 2 };
+  const flat = theoryModel({ ...state, flat: true });
+  eq([flat.key.root, flat.chord.chord, flat.names[11], flat.names[5]], ['G♭', 'Cb', 'Cb', 'F']);
+  const sharp = theoryModel({ ...state, flat: false });
+  eq([sharp.key.root, sharp.chord.chord, sharp.names[11], sharp.names[5]], ['F♯', 'B', 'B', 'E#']);
+  eq(theoryModel({ ...state, index: 7, flat: true }).items.map((item) => item.chord), ['Db', 'Ebm', 'Fm', 'Gb', 'Ab', 'Bbm', 'Cdim']);
+  eq(theoryModel({ ...state, index: 7, flat: false }).items.map((item) => item.chord), ['C#', 'D#m', 'E#m', 'F#', 'G#', 'A#m', 'B#dim']);
+  eq(theoryModel({ ...state, index: 5, minor: true, flat: true, chordIndex: 0 }).key, { root: 'A♭', quality: 'minor' });
 });
 
 test('theory model sequences degrees and chords in the key', () => {

@@ -1,4 +1,5 @@
-import { dialog, div, h2, iconButton, labeledButton } from '../core/dom.js';
+import { classes, dialog, div, h2, iconButton, labeledButton, p } from '../core/dom.js';
+import { strings } from '../strings.js';
 import { evt, keys } from '../core/events.js';
 import { iconId } from '../core/icons.js';
 import { clamp } from '../core/math.js';
@@ -31,8 +32,8 @@ export function openModal(title, ...rows) {
   return modal;
 }
 
-export function openPopover(anchor, ...rows) {
-  const popover = dialog('popover');
+function popoverAt(anchor, className, rows) {
+  const popover = dialog(classes('popover', className));
   popover.append(...rows);
   document.body.append(popover);
   const placing = new AbortController();
@@ -62,6 +63,10 @@ export function openPopover(anchor, ...rows) {
   return popover;
 }
 
+export function openPopover(anchor, ...rows) {
+  return popoverAt(anchor, null, rows);
+}
+
 function attach(trigger, show, open) {
   let openDialog = null;
   let onClose = null;
@@ -78,7 +83,7 @@ function attach(trigger, show, open) {
   trigger.addEventListener(evt.click, () => {
     if (openDialog) return;
     const opened = open(close);
-    const current = show([opened.header, ...opened.rows].filter(Boolean));
+    const current = show([opened.header, ...opened.rows].filter(Boolean), opened);
     openDialog = current;
     onClose = opened.onClose;
     current.addEventListener(evt.close, () => {
@@ -98,7 +103,25 @@ export function attachDialog(trigger, title, open) {
 }
 
 export function attachPopover(trigger, open) {
-  return attach(trigger, (rows) => openPopover(trigger, ...rows), open);
+  return attach(trigger, (rows, opened) => popoverAt(trigger, opened.popoverClass, rows), open);
+}
+
+export function confirmDialog({ title, message, confirmLabel = strings.confirm, danger = false }) {
+  return new Promise((resolve) => {
+    const cancelBtn = labeledButton(null, strings.cancel);
+    const confirmBtn = labeledButton(null, confirmLabel, classes('confirm-go', danger && 'danger'));
+    const rows = [modalRow(null, cancelBtn, confirmBtn)];
+    if (message) rows.unshift(p('confirm-message', message));
+    const modal = openModal(title, ...rows);
+    let answer = false;
+    cancelBtn.addEventListener(evt.click, () => modal.close());
+    confirmBtn.addEventListener(evt.click, () => {
+      answer = true;
+      modal.close();
+    });
+    modal.addEventListener(evt.close, () => resolve(answer));
+    cancelBtn.focus();
+  });
 }
 
 export function promptNumber(title, value, { min, max }, onSet) {

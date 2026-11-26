@@ -1,14 +1,17 @@
 import { decodeTake, peaksOf, createTakePlayer } from '../audio/take.js';
-import { encodeWav, WAV_TYPE } from '../audio/wav.js';
-import { recordingBlob, updateRecording, deleteRecording, trimOf, isTrimmed, trimmedName, MIN_TAKE_MS } from '../data/recordings.js';
+import { encodeWav, WAV_EXT } from '../audio/wav.js';
+import { recordingBlob, updateRecording, replaceAudio, deleteRecording, splitName, renamed, clampTrim, isTrimmed } from '../data/recordings.js';
+import { confirmDialog } from './modal.js';
+import { textField } from './controls.js';
 import { toast } from './toast.js';
-import { div, span, iconButton, labeledButton, cls, setTitle } from '../core/dom.js';
+import { div, span, iconButton, cls, setTitle } from '../core/dom.js';
 import { svg } from '../core/svg.js';
 import { icon, iconId } from '../core/icons.js';
 import { evt, keys } from '../core/events.js';
 import { clockTime } from '../core/time.js';
 import { saveFile } from '../core/files.js';
 import { clamp } from '../core/math.js';
+import { strings } from '../strings.js';
 
 const PEAK_COUNT = 160;
 const HANDLE_PX = 22;
@@ -16,6 +19,7 @@ const MIN_BAR = 0.04;
 const KEY_STEP_MS = 1000;
 const SECOND_MS = 1000;
 const grabId = Object.freeze({ seek: 'seek', start: 'start', end: 'end' });
+const modeId = Object.freeze({ view: 'view', edit: 'edit' });
 
 function wavePath(peaks) {
   const top = Math.max(...peaks, MIN_BAR);
@@ -31,32 +35,44 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
   art.append(bars);
   const wave = div({ class: `take-wave ${cls.loading}`, role: 'slider', tabindex: '0', 'aria-label': 'Position' });
   wave.append(art, div('take-cut take-cut-start'), div('take-cut take-cut-end'), div('take-handle take-handle-start'), div('take-handle take-handle-end'), div('take-head'));
-  const playBtn = iconButton(iconId.play, 'Play');
+  const nameField = textField('File name', 'take-name');
+  const extLabel = span('take-ext');
+  const nameRow = div({ class: 'take-rename', hidden: '' });
+  nameRow.append(nameField, extLabel);
   const time = span('take-time');
-  const resetBtn = labeledButton(null, 'Reset', 'take-reset');
-  setTitle(resetBtn, 'Undo the trim');
-  const saveBtn = iconButton(iconId.arrowUpFromBracket, 'Save');
+  const playBtn = iconButton(iconId.play, 'Play');
+  const saveBtn = iconButton(iconId.download, 'Save');
+  const editBtn = iconButton(iconId.penToSquare, 'Edit');
   const deleteBtn = iconButton(iconId.trashCan, 'Delete', 'danger');
+  const confirmBtn = iconButton(iconId.check, strings.confirm, 'primary');
+  const cancelBtn = iconButton(iconId.xmark, strings.cancel);
   const controls = div('take-controls');
-  controls.append(playBtn, time, resetBtn, saveBtn, deleteBtn);
   const el = div('take');
-  el.append(wave, controls);
+  el.append(nameRow, wave, time, controls);
 
   let current = rec;
   let blob = null;
   let buffer = null;
   let player = null;
   let duration = rec.duration;
-  let trim = trimOf(rec, duration);
-  let at = trim.start;
+  let trim = { start: 0, end: duration };
+  let at = 0;
+  let mode = modeId.view;
+  let saving = false;
   let grab = null;
   let resume = false;
   let frame = 0;
   let disposed = false;
 
   const percent = (ms) => `${duration ? (ms / duration) * 100 : 0}%`;
+  const editing = () => mode === modeId.edit;
+  const originalExt = () => splitName(current.name).ext;
+  const nextExt = () => (isTrimmed(trim, duration) ? WAV_EXT : originalExt());
 
   function render() {
+    wave.classList.toggle(cls.editing, editing());
+    nameRow.hidden = !editing();
+    extLabel.textContent = nextExt();
     wave.style.setProperty('--start', percent(trim.start));
     wave.style.setProperty('--end', percent(trim.end));
     wave.style.setProperty('--at', percent(at));
@@ -65,9 +81,13 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
     const playing = !!player?.playing;
     playBtn.replaceChildren(icon(playing ? iconId.pause : iconId.play));
     setTitle(playBtn, playing ? 'Pause' : 'Play');
-    playBtn.disabled = !buffer;
+    playBtn.disabled = !buffer || saving;
     saveBtn.disabled = !blob;
-    resetBtn.hidden = !isTrimmed(trim, duration);
+    editBtn.disabled = !buffer;
+    nameField.disabled = saving;
+    confirmBtn.disabled = saving;
+    cancelBtn.disabled = saving;
+    controls.replaceChildren(...(editing() ? [playBtn, confirmBtn, cancelBtn] : [playBtn, saveBtn, editBtn, deleteBtn]));
   }
 
   function tick() {
@@ -107,11 +127,11 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
       if (!next || disposed) return;
       current = next;
       onChange(next);
-    }, () => toast('Could not save the trim'));
+    }, () => {});
   }
 
-  function saveTrim() {
-    persist({ trim: isTrimmed(trim, duration) ? { ...trim } : null });
+  function drawPeaks(peaks) {
+    bars.setAttribute('d', wavePath(peaks));
   }
 
   function msAt(e) {
@@ -120,6 +140,7 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
   }
 
   function grabAt(e) {
+    if (!editing()) return grabId.seek;
     const box = wave.getBoundingClientRect();
     const x = e.clientX - box.left;
     const fromStart = Math.abs(x - (trim.start / duration) * box.width);
@@ -130,10 +151,10 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
 
   function moveTo(ms) {
     if (grab === grabId.start) {
-      trim.start = clamp(ms, 0, trim.end - MIN_TAKE_MS);
+      trim = clampTrim({ start: ms, end: trim.end }, duration);
       at = trim.start;
     } else if (grab === grabId.end) {
-      trim.end = clamp(ms, trim.start + MIN_TAKE_MS, duration);
+      trim = clampTrim({ start: trim.start, end: ms }, duration);
       at = clamp(at, trim.start, trim.end);
     } else {
       at = clamp(ms, trim.start, trim.end);
@@ -142,7 +163,7 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
   }
 
   const onDown = (e) => {
-    if (!buffer || e.button > 0) return;
+    if (!buffer || saving || e.button > 0) return;
     resume = player.playing;
     pause();
     grab = grabAt(e);
@@ -156,14 +177,12 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
 
   const onUp = () => {
     if (!grab) return;
-    const released = grab;
     grab = null;
-    if (released !== grabId.seek) saveTrim();
     if (resume) play();
   };
 
   const onKey = (e) => {
-    if (!buffer) return;
+    if (!buffer || saving) return;
     const by = { [keys.arrowLeft]: -KEY_STEP_MS, [keys.arrowRight]: KEY_STEP_MS }[e.key];
     if (by) {
       e.preventDefault();
@@ -179,25 +198,75 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
   };
 
   function togglePlay() {
-    if (!buffer) return;
+    if (!buffer || saving) return;
     if (player.playing) pause();
     else play();
   }
 
-  function resetTrim() {
+  function startEdit() {
+    if (!buffer) return;
     pause();
+    mode = modeId.edit;
+    nameField.value = splitName(current.name).base;
+    render();
+    nameField.focus();
+  }
+
+  function cancelEdit() {
+    if (saving) return;
+    pause();
+    mode = modeId.view;
     trim = { start: 0, end: duration };
     at = 0;
-    saveTrim();
     render();
+  }
+
+  function adopt(nextBuffer, nextBlob, next) {
+    buffer = nextBuffer;
+    blob = nextBlob;
+    player = createTakePlayer(buffer, onEnd);
+    duration = next.duration;
+    current = next;
+  }
+
+  async function confirmEdit() {
+    if (!buffer || saving) return;
+    pause();
+    const trimmed = isTrimmed(trim, duration);
+    const name = renamed(current.name, nameField.value, nextExt());
+    saving = true;
+    render();
+    try {
+      if (trimmed) {
+        const wav = encodeWav(buffer, trim.start / SECOND_MS, trim.end / SECOND_MS);
+        const decoded = await decodeTake(wav);
+        const peaks = peaksOf(decoded, PEAK_COUNT);
+        const next = await replaceAudio(current.id, { name, blob: wav, duration: Math.round(decoded.duration * SECOND_MS), peaks });
+        if (!next) throw new Error('missing');
+        if (disposed) return;
+        adopt(decoded, wav, next);
+        drawPeaks(peaks);
+        onChange(next);
+      } else if (name !== current.name) {
+        const next = await updateRecording(current.id, { name });
+        if (!next) throw new Error('missing');
+        if (disposed) return;
+        current = next;
+        onChange(next);
+      }
+      mode = modeId.view;
+      trim = { start: 0, end: duration };
+      at = 0;
+    } catch {
+      toast('Could not save the changes');
+    }
+    saving = false;
+    if (!disposed) render();
   }
 
   async function save() {
     if (!blob) return;
-    const trimmed = buffer && isTrimmed(trim, duration);
-    const file = trimmed
-      ? new File([encodeWav(buffer, trim.start / SECOND_MS, trim.end / SECOND_MS)], trimmedName(current.name), { type: WAV_TYPE })
-      : new File([blob], current.name, { type: current.mimeType });
+    const file = new File([blob], current.name, { type: current.mimeType });
     try {
       await saveFile(file, file.name);
     } catch {
@@ -206,7 +275,8 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
   }
 
   async function remove() {
-    if (!confirm('Delete this recording?')) return;
+    const confirmed = await confirmDialog({ title: strings.deleteRecording, message: current.name, confirmLabel: strings.delete, danger: true });
+    if (!confirmed || disposed) return;
     dispose();
     try {
       await deleteRecording(current.id);
@@ -225,12 +295,12 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
       if (disposed) return;
       buffer = decoded;
       duration = Math.round(buffer.duration * SECOND_MS);
-      trim = trimOf(current, duration);
-      at = trim.start;
+      trim = { start: 0, end: duration };
+      at = 0;
       player = createTakePlayer(buffer, onEnd);
       const stored = current.peaks?.length === PEAK_COUNT;
       const peaks = stored ? current.peaks : peaksOf(buffer, PEAK_COUNT);
-      bars.setAttribute('d', wavePath(peaks));
+      drawPeaks(peaks);
       wave.classList.remove(cls.loading);
       if (!stored || current.duration !== duration) persist({ peaks, duration });
     } catch {
@@ -244,15 +314,24 @@ export function createTake(rec, { onChange = () => {}, onDelete = () => {} } = {
     pause();
   }
 
+  const onNameKey = (e) => {
+    if (e.key !== keys.enter) return;
+    e.preventDefault();
+    confirmEdit();
+  };
+
   wave.addEventListener(evt.pointerdown, onDown);
   wave.addEventListener(evt.pointermove, onMove);
   wave.addEventListener(evt.pointerup, onUp);
   wave.addEventListener(evt.pointercancel, onUp);
   wave.addEventListener(evt.keydown, onKey);
+  nameField.addEventListener(evt.keydown, onNameKey);
   playBtn.addEventListener(evt.click, togglePlay);
-  resetBtn.addEventListener(evt.click, resetTrim);
   saveBtn.addEventListener(evt.click, save);
+  editBtn.addEventListener(evt.click, startEdit);
   deleteBtn.addEventListener(evt.click, remove);
+  confirmBtn.addEventListener(evt.click, confirmEdit);
+  cancelBtn.addEventListener(evt.click, cancelEdit);
 
   render();
   load();

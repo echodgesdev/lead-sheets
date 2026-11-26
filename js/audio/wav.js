@@ -8,6 +8,7 @@ const FMT_BYTES = 16;
 const MAX_NEGATIVE = 0x8000;
 const MAX_POSITIVE = 0x7fff;
 export const WAV_TYPE = 'audio/wav';
+export const WAV_EXT = '.wav';
 
 function writeText(view, offset, text) {
   for (let i = 0; i < text.length; i++) view.setUint8(offset + i, text.charCodeAt(i));

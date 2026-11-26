@@ -20,6 +20,9 @@ const MAJOR_KEYS = ['C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 
 export const FIFTHS = MAJOR_KEYS.map((name) => pitchOf(name[0], name.slice(1)));
 export const RELATIVE_MINOR = 9;
 const SHARP_SIDE = 6;
+const MOST_ACCIDENTALS = 7;
+const LETTERS_PER_FIFTH = 4;
+export const SIGNATURES = Array.from({ length: 2 * MOST_ACCIDENTALS + 1 }, (_, i) => MOST_ACCIDENTALS - i);
 const CHROMATIC_LETTERS = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];
 const INTERVAL_LETTERS = [0, 1, 1, 2, 2, 3, 4, 4, 5, 5, 6, 6];
 const MAJOR = { steps: IONIAN, quals: ['', 'm', 'm', '', '', 'm', 'dim'] };
@@ -164,16 +167,40 @@ export function keySpelling(pc, minor, letter = letterOf(keyName(pc, minor))) {
   });
 }
 
+export function spellingOf(key) {
+  const parsed = parseKey(key);
+  return parsed && keySpelling(parsed.pc, parsed.minor, letterOf(key.trim()));
+}
+
 export function intervalSpelling(root) {
   const m = NOTE_RE.exec(String(root ?? '').trim());
   return m ? spellFrom(pitchOf(m[1], m[2]), letterOf(m[1]), INTERVAL_LETTERS) : [];
 }
 
-export function keyOf(index, minor) {
-  const major = MAJOR_KEYS[index];
-  if (!minor) return major;
+export function signatureOf(index, flat = flatSide(index)) {
+  return index > MOST_ACCIDENTALS || (flat && index >= OCTAVE - MOST_ACCIDENTALS) ? index - OCTAVE : index;
+}
+
+export function signatureKey(signature) {
+  return { index: mod12(signature), flat: signature < 0 };
+}
+
+function signatureLetter(signature) {
+  const count = LETTERS.length;
+  return (((signature * LETTERS_PER_FIFTH) % count) + count) % count;
+}
+
+export function keyOf(index, minor, flat) {
   const pc = FIFTHS[index];
-  return `${noteName(keySpelling(pc, false, letterOf(major))[mod12(pc + RELATIVE_MINOR)])}m`;
+  const spelling = keySpelling(pc, false, signatureLetter(signatureOf(index, flat)));
+  return minor ? `${noteName(spelling[mod12(pc + RELATIVE_MINOR)])}m` : noteName(spelling[pc]);
+}
+
+export function nameSignature(name) {
+  const key = parseKey(name);
+  if (!key) return null;
+  const index = fifthsIndex(key.pc, key.minor);
+  return signatureOf(index, letterOf(keyOf(index, key.minor, true)) === letterOf(String(name).trim()));
 }
 
 export function fifthsIndex(pc, minor = false) {
@@ -193,8 +220,7 @@ export function keyNameToward(pc, minor, shift) {
 }
 
 export function chordRootNames(key) {
-  const parsed = parseKey(key);
-  return parsed && keySpelling(parsed.pc, parsed.minor, letterOf(key)).map((spelled, pc) => noteName(IONIAN.includes(pc) ? plainSpelling(pc) : spelled));
+  return spellingOf(key)?.map((spelled, pc) => noteName(IONIAN.includes(pc) ? plainSpelling(pc) : spelled)) ?? null;
 }
 
 export function diatonic(key) {

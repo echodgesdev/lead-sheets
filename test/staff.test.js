@@ -29,6 +29,14 @@ test('staff spells every degree of F sharp major on its own letter', () => {
   eq(layout.columns.every((column) => column.notes[0].acc === null), true);
 });
 
+test('staff spells G flat and C flat major in flats', () => {
+  const layout = layoutOf('Gb', [1, 2, 3, 4, 5, 6, 7].map((n) => degree(n)));
+  eq([layout.signature.acc, layout.signature.count], [-1, 6]);
+  eq(layout.columns.map((column) => column.notes[0].d % 7), [4, 5, 6, 0, 1, 2, 3]);
+  eq(layout.columns.every((column) => column.notes[0].acc === null), true);
+  eq(layoutOf('Cb', [degree(1)]).signature.count, 7);
+});
+
 test('staff offsets seconds and splits wide chords across a grand staff', () => {
   eq(layoutOf('C', [chord('Csus2')]).columns[0].notes.map((note) => note.offset), [false, true, false]);
   const split = layoutOf('C', [chord('C/E')]);

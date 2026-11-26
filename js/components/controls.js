@@ -3,7 +3,7 @@ import { div, input, optgroup, option, select, small, span, classes, iconButton 
 import { evt } from '../core/events.js';
 
 function optionNode(o) {
-  if (!o.options) return option({ value: o.id }, o.label);
+  if (!o.options) return option({ value: o.id, ...(o.short && { 'data-short': o.short }) }, o.label);
   const group = optgroup({ label: o.label });
   group.append(...o.options.map(optionNode));
   return group;
@@ -15,7 +15,8 @@ export function selectPill(name, title, options, value) {
   const field = select({ 'aria-label': title, title });
   field.append(...options.map(optionNode));
   const onChange = () => {
-    text.textContent = field.selectedOptions[0]?.textContent ?? '';
+    const chosen = field.selectedOptions[0];
+    text.textContent = chosen?.dataset.short ?? chosen?.textContent ?? '';
   };
   const set = (id) => {
     field.value = id;

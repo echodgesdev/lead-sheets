@@ -2,7 +2,7 @@ import * as store from '../data/store.js';
 import { infer } from '../sheet/infer.js';
 import { lintSong, textRange } from '../sheet/lint.js';
 import { attachKeybar } from '../components/keybar.js';
-import { attachPopover } from '../components/modal.js';
+import { attachPopover, confirmDialog } from '../components/modal.js';
 import { iconId } from '../core/icons.js';
 import { toast } from '../components/toast.js';
 import { editorId, getEditorOptions } from '../data/prefs.js';
@@ -166,7 +166,9 @@ export function mount(el, { id, back = null }) {
   }
 
   async function onDelete() {
-    if (!currentId || !confirm(strings.confirmDeleteSong)) return;
+    if (!currentId) return;
+    const confirmed = await confirmDialog({ title: strings.confirmDeleteSong, confirmLabel: strings.delete, danger: true });
+    if (!confirmed || disposed) return;
     await autosave.cancel();
     await store.remove(currentId);
     location.hash = routes.home;

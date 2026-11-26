@@ -1,5 +1,3 @@
-import { keySpelling } from './chords.js';
-import { qualityId } from './circle.js';
 import { OCTAVE } from '../core/math.js';
 
 const LETTERS = 7;
@@ -52,8 +50,7 @@ function markSeconds(notes) {
 }
 
 export function staffLayout(model) {
-  const [tonic] = model.items;
-  const spelling = keySpelling(tonic.pc, tonic.quality === qualityId.minor);
+  const { spelling } = model;
   const signature = keySignature(spelling);
   const steps = model.run.length ? model.run : [model.shown];
   const clefs = clefsFor(steps.flat());

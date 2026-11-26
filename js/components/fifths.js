@@ -41,7 +41,7 @@ function labelText(x, y, names, bare) {
 }
 
 function keyTitle(index, minor) {
-  const { root } = keyLabel(index, minor);
+  const { root } = keyLabel(index, minor, true);
   return `${root} ${minor ? 'minor' : 'major'}`;
 }
 
@@ -49,10 +49,10 @@ function wedgeAngle(index) {
   return index * STEP - 90;
 }
 
-function wedgeText(index, minor, keyIndex, bare) {
+function wedgeText(index, minor, bare) {
   const ring = minor ? ringId.inner : ringId.outer;
   const [x, y] = polar(LABEL_RADIUS[ring], wedgeAngle(index));
-  return labelText(x, y, wedgeNames(index, minor, keyIndex), bare);
+  return labelText(x, y, wedgeNames(index, minor), bare);
 }
 
 function wedgeNode(ring, index, slot, label) {
@@ -98,7 +98,7 @@ export function createFifths() {
   let dimItem = null;
   el.append(hub, hubName);
 
-  function render({ index, minor, items, bare }) {
+  function render({ index, minor, flat, items, bare }) {
     const { outer, inner } = keyWedges(index);
     const borrowed = new Set(items.filter((item) => item.borrowed).map((item) => item.slot));
     for (const w of wedges) {
@@ -106,10 +106,10 @@ export function createFifths() {
       w.node.classList.toggle(cls.outside, borrowed.has(w.node.dataset.slot));
       w.node.classList.toggle(cls.active, w.index === index && w.minor === minor);
       w.label?.remove();
-      w.label = wedgeText(w.index, w.minor, index, bare);
+      w.label = wedgeText(w.index, w.minor, bare);
       w.node.append(w.label);
     }
-    const { root, quality } = keyLabel(index, minor);
+    const { root, quality } = keyLabel(index, minor, flat);
     const label = hubText(root, quality);
     hubName.replaceWith(label);
     hubName = label;

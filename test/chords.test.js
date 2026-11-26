@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { chordSpelling, isKeyName, keySpelling, keyName, noteName, mapChord, chordQuality } from '../js/sheet/chords.js';
+import { chordSpelling, isKeyName, keySpelling, keyName, noteName, mapChord, chordQuality, SIGNATURES, signatureOf, signatureKey, keyOf, nameSignature, spellingOf } from '../js/sheet/chords.js';
 
 const steps = (name) => chordSpelling(name).steps;
 
@@ -67,6 +67,28 @@ test('key spelling names every pitch class from the tonic', () => {
   eq(names(9, true), ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'Bb', 'B']);
   eq(keySpelling(7, false).filter((s) => s.inKey && s.acc).map(noteName), ['F#']);
   eq([keyName(8, false), keyName(3, true), keyName(6, false)], ['Ab', 'D#m', 'F#']);
+});
+
+test('key signatures run from seven sharps to seven flats, enharmonics apart', () => {
+  const keys = (minor) => SIGNATURES.map((signature) => {
+    const { index, flat } = signatureKey(signature);
+    return keyOf(index, minor, flat);
+  });
+  eq(SIGNATURES.length, 15);
+  eq(keys(false), ['C#', 'F#', 'B', 'E', 'A', 'D', 'G', 'C', 'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb']);
+  eq(keys(true), ['A#m', 'D#m', 'G#m', 'C#m', 'F#m', 'Bm', 'Em', 'Am', 'Dm', 'Gm', 'Cm', 'Fm', 'Bbm', 'Ebm', 'Abm']);
+  eq(SIGNATURES.map((signature) => signatureKey(signature).index).map((index, i) => signatureOf(index, SIGNATURES[i] < 0)), SIGNATURES);
+});
+
+test('key signatures default to the usual spelling and keep the chosen one', () => {
+  eq([5, 6, 7].map((index) => signatureOf(index)), [5, 6, -5]);
+  eq([5, 6, 7].map((index) => signatureOf(index, true)), [-7, -6, -5]);
+  eq([5, 6, 7].map((index) => signatureOf(index, false)), [5, 6, 7]);
+  eq([0, 2, 11].map((index) => signatureOf(index, true)), [0, 2, -1]);
+  eq(['Gb', 'F#', 'Cb', 'B', 'C#', 'Db', 'Ebm', 'D#m', 'G', 'F', 'nope'].map(nameSignature), [-6, 6, -7, 5, 7, -5, -6, 6, 1, -1, null]);
+  eq(spellingOf('Gb').map(noteName)[11], 'Cb');
+  eq(spellingOf('F#').map(noteName)[5], 'E#');
+  eq(spellingOf('nope'), null);
 });
 
 test('key names are checked whole', () => {

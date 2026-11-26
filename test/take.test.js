@@ -1,7 +1,7 @@
 import { test, eq } from './harness.js';
 import { peaksOf } from '../js/audio/take.js';
 import { encodeWav, WAV_TYPE } from '../js/audio/wav.js';
-import { trimOf, isTrimmed, trimmedName, takeLength, MIN_TAKE_MS } from '../js/data/recordings.js';
+import { clampTrim, isTrimmed, splitName, renamed, MIN_TAKE_MS } from '../js/data/recordings.js';
 
 function fakeBuffer(channels, sampleRate = 4) {
   return {
@@ -35,11 +35,11 @@ test('wav holds a 44-byte header and 16-bit frames for the trimmed range', async
   eq([view.getInt16(44, true), view.getInt16(48, true), view.getInt16(52, true), view.getInt16(56, true)], [-32768, 32767, 8191, 0]);
 });
 
-test('trim defaults to the whole take and stays inside it', () => {
-  eq(trimOf({}, 5000), { start: 0, end: 5000 });
-  eq(trimOf({ trim: { start: 1000, end: 4000 } }, 5000), { start: 1000, end: 4000 });
-  eq(trimOf({ trim: { start: -50, end: 9000 } }, 5000), { start: 0, end: 5000 });
-  eq(trimOf({ trim: { start: 3000, end: 3000 } }, 5000), { start: 3000, end: 3000 + MIN_TAKE_MS });
+test('trim handles stay inside the take and a minimum apart', () => {
+  eq(clampTrim({ start: 1000, end: 4000 }, 5000), { start: 1000, end: 4000 });
+  eq(clampTrim({ start: -50, end: 9000 }, 5000), { start: 0, end: 5000 });
+  eq(clampTrim({ start: 3000, end: 3000 }, 5000), { start: 3000, end: 3000 + MIN_TAKE_MS });
+  eq(clampTrim({ start: 9000, end: 9500 }, 5000), { start: 5000 - MIN_TAKE_MS, end: 5000 });
 });
 
 test('a take is trimmed only when either end moved', () => {
@@ -48,8 +48,12 @@ test('a take is trimmed only when either end moved', () => {
   eq(isTrimmed({ start: 0, end: 4990 }, 5000), true);
 });
 
-test('trimmed takes save as wav and list their trimmed length', () => {
-  eq(trimmedName('Zebra - 2026-11-23 14-05-09.m4a'), 'Zebra - 2026-11-23 14-05-09 (trimmed).wav');
-  eq(takeLength({ duration: 9000, trim: null }), 9000);
-  eq(takeLength({ duration: 9000, trim: { start: 1000, end: 4000 } }), 3000);
+test('a name splits into base and extension', () => {
+  eq(splitName('Zebra - 2026-11-23 14-05-09.m4a'), { base: 'Zebra - 2026-11-23 14-05-09', ext: '.m4a' });
+  eq(splitName('Take'), { base: 'Take', ext: '' });
+});
+
+test('renaming keeps the given extension, cleans the name and falls back to the old base', () => {
+  eq(renamed('Old.m4a', 'New: take?', '.m4a'), 'New take.m4a');
+  eq(renamed('Old.m4a', '  ', '.wav'), 'Old.wav');
 });

@@ -5,13 +5,16 @@ import { chordSpelling } from '../js/sheet/chords.js';
 const C = 0;
 const G = 7;
 
-test('circle wedge names lead with the key spelling', () => {
-  eq(wedgeNames(0, false, 0), ['C']);
-  eq(wedgeNames(11, true, 0), ['Dm']);
-  eq(wedgeNames(6, false, 0), ['F#', 'Gb']);
-  eq(wedgeNames(6, false, 6), ['F#', 'Gb']);
-  eq(wedgeNames(6, false, 9), ['Gb', 'F#']);
-  eq(wedgeNames(6, true, 10), ['Ebm', 'D#m']);
+test('circle wedge names lead with the flat spelling', () => {
+  eq(wedgeNames(0, false), ['C']);
+  eq(wedgeNames(11, true), ['Dm']);
+  eq(wedgeNames(8, false), ['Ab']);
+  eq(wedgeNames(5, false), ['Cb', 'B']);
+  eq(wedgeNames(5, true), ['Abm', 'G#m']);
+  eq(wedgeNames(6, false), ['Gb', 'F#']);
+  eq(wedgeNames(6, true), ['Ebm', 'D#m']);
+  eq(wedgeNames(7, false), ['Db', 'C#']);
+  eq(wedgeNames(7, true), ['Bbm', 'A#m']);
 });
 
 test('circle key window wraps around', () => {
@@ -19,8 +22,8 @@ test('circle key window wraps around', () => {
   eq(keyWedges(11), { outer: [10, 11, 0], inner: [10, 11, 0] });
 });
 
-const diatonicOf = (index, minor) => keyChords(index, minor).filter((c) => !c.borrowed);
-const borrowedOf = (index, minor) => keyChords(index, minor).filter((c) => c.borrowed);
+const diatonicOf = (index, minor, flat) => keyChords(index, minor, flat).filter((c) => !c.borrowed);
+const borrowedOf = (index, minor, flat) => keyChords(index, minor, flat).filter((c) => c.borrowed);
 const named = (c) => `${c.chord} ${c.numeral}`;
 
 test('circle key chords with numerals', () => {
@@ -49,6 +52,21 @@ test('circle borrowed chords are spelled in the key', () => {
   eq(borrowedOf(0, true).map(named), ['E V', 'D IV', 'Bb ♭II']);
   eq(borrowedOf(9, false).map(named), ['Abm iv', 'Gb ♭III', 'Cb ♭VI', 'Db ♭VII']);
   eq(borrowedOf(6, false).map(named), ['Bm iv', 'A ♭III', 'D ♭VI', 'E ♭VII']);
+  eq(borrowedOf(6, false, true).map(named), ['Cbm iv', 'A ♭III', 'D ♭VI', 'Fb ♭VII']);
+});
+
+test('circle key chords follow the chosen enharmonic spelling', () => {
+  const chords = (index, minor, flat) => diatonicOf(index, minor, flat).map((c) => c.chord);
+  eq(chords(6, false, true), ['Gb', 'Abm', 'Bbm', 'Cb', 'Db', 'Ebm', 'Fdim']);
+  eq(chords(6, false, false), ['F#', 'G#m', 'A#m', 'B', 'C#', 'D#m', 'E#dim']);
+  eq(chords(6, false), chords(6, false, false));
+  eq(chords(7, false, true), ['Db', 'Ebm', 'Fm', 'Gb', 'Ab', 'Bbm', 'Cdim']);
+  eq(chords(7, false, false), ['C#', 'D#m', 'E#m', 'F#', 'G#', 'A#m', 'B#dim']);
+  eq(chords(5, false, true)[0], 'Cb');
+  eq(chords(5, false, false)[0], 'B');
+  eq(chords(5, true, true)[0], 'Abm');
+  eq(chords(5, true, false)[0], 'G#m');
+  eq(chords(2, false, true), chords(2, false, false));
 });
 
 test('circle borrowed chords stack in the scale they come from', () => {
@@ -95,6 +113,11 @@ test('circle note names spell the key and its chromatic notes from the tonic', (
   eq(pitchNames(0, true)[8], 'G#');
   eq(pitchNames(6, false)[5], 'E#');
   eq(pitchNames(6, true)[7], 'G');
+  eq(pitchNames(6, false, true)[11], 'Cb');
+  eq(pitchNames(6, false, false)[11], 'B');
+  eq(pitchNames(5, false, true)[4], 'Fb');
+  eq(pitchNames(7, false, false)[0], 'B#');
+  eq(pitchNames(7, false, true)[0], 'C');
   eq(displayName('Bb'), 'B♭');
   eq(displayName('F#m'), 'F♯m');
   eq(displayName('Bbm7b5'), 'B♭m7♭5');

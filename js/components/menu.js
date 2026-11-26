@@ -1,4 +1,4 @@
-import { openModal } from './modal.js';
+import { confirmDialog, openModal } from './modal.js';
 import { modalRow, liveSettingsRows } from './rows.js';
 import { labeledButton } from '../core/dom.js';
 import { evt } from '../core/events.js';
@@ -12,9 +12,9 @@ export function openSongActions(rec, { onEdit, onDelete }) {
   const editBtn = labeledButton(iconId.penToSquare, 'Edit song');
   const deleteBtn = labeledButton(iconId.trashCan, 'Delete', 'danger');
   const dialog = openModal(songTitle(rec), modalRow(null, shareBtn, editBtn, deleteBtn));
-  deleteBtn.addEventListener(evt.click, () => {
+  deleteBtn.addEventListener(evt.click, async () => {
     dialog.close();
-    if (confirm(strings.confirmDeleteSong)) onDelete();
+    if (await confirmDialog({ title: strings.confirmDeleteSong, message: songTitle(rec), confirmLabel: strings.delete, danger: true })) onDelete();
   });
   shareBtn.addEventListener(evt.click, () => {
     dialog.close();

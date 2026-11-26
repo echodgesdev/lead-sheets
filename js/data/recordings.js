@@ -6,7 +6,6 @@ import { clamp } from '../core/math.js';
 
 const UNASSIGNED_NAME = 'Recording';
 const EXTENSION_RE = /\.[^.]+$/;
-const TRIMMED_EXTENSION = 'wav';
 export const NO_SONG = 'No song';
 export const MIN_TAKE_MS = 250;
 
@@ -28,22 +27,22 @@ export function recordingName(song, date, ext) {
   return `${parts.join(' - ')}.${ext}`;
 }
 
-export function trimmedName(name) {
-  return `${name.replace(EXTENSION_RE, '')} (trimmed).${TRIMMED_EXTENSION}`;
+export function splitName(name) {
+  const m = EXTENSION_RE.exec(name);
+  return m ? { base: name.slice(0, m.index), ext: m[0] } : { base: name, ext: '' };
 }
 
-export function trimOf(rec, duration) {
-  const start = clamp(rec.trim?.start ?? 0, 0, Math.max(0, duration - MIN_TAKE_MS));
-  const end = clamp(rec.trim?.end ?? duration, start + MIN_TAKE_MS, duration);
-  return { start, end };
+export function renamed(name, typed, ext) {
+  return `${safeFileName(typed) || splitName(name).base}${ext}`;
 }
 
-export function isTrimmed(trim, duration) {
-  return trim.start > 0 || trim.end < duration;
+export function clampTrim({ start, end }, duration) {
+  const first = clamp(start, 0, Math.max(0, duration - MIN_TAKE_MS));
+  return { start: first, end: clamp(end, first + MIN_TAKE_MS, duration) };
 }
 
-export function takeLength(rec) {
-  return rec.trim ? rec.trim.end - rec.trim.start : rec.duration;
+export function isTrimmed({ start, end }, duration) {
+  return start > 0 || end < duration;
 }
 
 export function forSong(recs, songId) {
@@ -95,6 +94,10 @@ export async function updateRecording(id, patch) {
   const next = { ...rec, ...patch };
   await dbPut(RECORDINGS, next);
   return withoutBlob(next);
+}
+
+export async function replaceAudio(id, { name, blob, duration, peaks }) {
+  return updateRecording(id, { name, blob, mimeType: blob.type, size: blob.size, duration, peaks });
 }
 
 export async function deleteRecording(id) {

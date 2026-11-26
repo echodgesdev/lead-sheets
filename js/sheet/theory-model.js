@@ -4,7 +4,7 @@ import {
   keyChords,
   keyScale,
   displayName,
-  pitchNames,
+  pitchSpelling,
   noteMidi,
   shapeId,
   chordShape,
@@ -14,11 +14,10 @@ import {
   scalePitches,
   scaleRun,
   scaleRoot,
-  wedgeOf,
   degreeMidi,
   spelledNotes,
 } from './circle.js';
-import { SHARPS, chordSpelling, parseKey } from './chords.js';
+import { SHARPS, chordSpelling, parseKey, nameSignature, signatureKey, noteName } from './chords.js';
 import { roman } from './transpose.js';
 import { mod12 } from '../core/math.js';
 import { stepKind } from './vis-spec.js';
@@ -40,27 +39,30 @@ export function chordRoot(chord) {
   return chord.replace(/(m|dim)$/, '');
 }
 
-export function keyItems(index, minor) {
-  return keyChords(index, minor).map((item, degree) => ({ ...item, degree, slot: slotOf(item.index, item.ring) }));
+export function keyItems(index, minor, flat) {
+  return keyChords(index, minor, flat).map((item, degree) => ({ ...item, degree, slot: slotOf(item.index, item.ring) }));
 }
 
 export function itemShape(item, shapes) {
   return chordShape(item, shapes[item.degree] ?? shapeId.triad);
 }
 
-export function keyLabel(index, minor) {
-  return { root: displayName(chordRoot(keyOf(index, minor))), quality: minor ? 'minor' : 'Major' };
+export function keyLabel(index, minor, flat) {
+  return { root: displayName(chordRoot(keyOf(index, minor, flat))), quality: minor ? 'minor' : 'Major' };
 }
 
 export function keyAt(name) {
   const key = parseKey(name);
-  return key ? { index: wedgeOf(key.pc, key.minor), minor: key.minor } : null;
+  if (!key) return null;
+  const { index, flat } = signatureKey(nameSignature(name));
+  return { index, minor: key.minor, flat };
 }
 
-function keyFrame({ index, minor, borrowed, locked, minOctaves }) {
-  const items = keyItems(index, minor).filter((item) => borrowed || !item.borrowed);
+function keyFrame({ index, minor, flat, borrowed, locked, minOctaves }) {
+  const items = keyItems(index, minor, flat).filter((item) => borrowed || !item.borrowed);
   const keyPcs = keyScale(index, minor);
   const tonic = keyTonic(index, minor);
+  const spelling = pitchSpelling(index, minor, flat);
   return {
     items,
     keyPcs,
@@ -69,10 +71,11 @@ function keyFrame({ index, minor, borrowed, locked, minOctaves }) {
       items,
       locked,
       minOctaves,
-      key: keyLabel(index, minor),
+      key: keyLabel(index, minor, flat),
       keyTonicPc: tonic,
       keyTonicMidi: noteMidi(tonic, tonic),
-      names: pitchNames(index, minor),
+      spelling,
+      names: spelling.map(noteName),
       scalePcs: keyPcs,
     },
   };

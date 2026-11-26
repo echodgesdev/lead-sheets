@@ -1,5 +1,5 @@
 import * as store from '../data/store.js';
-import { allRecordings, songRecordings, groupRecordings, takeLength } from '../data/recordings.js';
+import { allRecordings, songRecordings, groupRecordings } from '../data/recordings.js';
 import { openModal } from './modal.js';
 import { modalRow } from './rows.js';
 import { rowMain, songTitle } from './parts.js';
@@ -19,7 +19,7 @@ function titleOf(songId) {
 }
 
 function subtitle(rec) {
-  return `${new Date(rec.createdAt).toLocaleString(undefined, DATE_FORMAT)} · ${clockTime(takeLength(rec))}`;
+  return `${new Date(rec.createdAt).toLocaleString(undefined, DATE_FORMAT)} · ${clockTime(rec.duration)}`;
 }
 
 export function openRecordings(song) {

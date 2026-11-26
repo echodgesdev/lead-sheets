@@ -162,6 +162,7 @@ export function createRecorderControl(song, countIn) {
     sync();
     refresh();
     return {
+      popoverClass: 'rec-popover',
       rows: [main, note, takeRow, lists],
       onClose: () => {
         closed = true;

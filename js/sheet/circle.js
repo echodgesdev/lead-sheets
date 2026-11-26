@@ -1,4 +1,4 @@
-import { diatonic, keyOf, fifthsIndex, flatSide, keySpelling, intervalSpelling, noteName, FIFTHS, RELATIVE_MINOR, IONIAN, AEOLIAN } from './chords.js';
+import { diatonic, keyOf, fifthsIndex, spellingOf, intervalSpelling, noteName, FIFTHS, RELATIVE_MINOR, IONIAN, AEOLIAN } from './chords.js';
 import { roman } from './transpose.js';
 import { OCTAVE, mod12 } from '../core/math.js';
 
@@ -6,7 +6,6 @@ export { keyOf, fifthsIndex as wedgeOf };
 
 export const WEDGES = FIFTHS.length;
 
-const ENHARMONIC = { 6: { major: 'Gb', minor: 'Ebm' } };
 const DIM_ROOT_OFFSET = 2;
 const LOWEST_TONIC = 53;
 const MAJOR_THIRD = 4;
@@ -129,11 +128,8 @@ function everyQuality(suffix) {
   return Object.fromEntries(Object.values(qualityId).map((quality) => [quality, suffix]));
 }
 
-export function wedgeNames(index, minor, keyIndex) {
-  const name = keyOf(index, minor);
-  const alt = ENHARMONIC[index]?.[minor ? 'minor' : 'major'];
-  if (!alt) return [name];
-  return flatSide(keyIndex) ? [alt, name] : [name, alt];
+export function wedgeNames(index, minor) {
+  return [...new Set([true, false].map((flat) => keyOf(index, minor, flat)))];
 }
 
 export function keyTonic(index, minor) {
@@ -149,9 +145,9 @@ export function keyScale(index, minor) {
   return stepPitches(keyTonic(index, minor), minor ? AEOLIAN : IONIAN);
 }
 
-function borrowedChords(index, minor) {
+function borrowedChords(index, minor, flat) {
   const pc = keyTonic(index, minor);
-  const names = pitchNames(index, minor);
+  const names = pitchNames(index, minor, flat);
   return (minor ? MINOR_BORROWED : MAJOR_BORROWED).map(([step, quality, steps]) => {
     const root = mod12(pc + step);
     const chord = `${names[root]}${QUALITY_SUFFIX[quality]}`;
@@ -161,17 +157,17 @@ function borrowedChords(index, minor) {
   });
 }
 
-export function keyChords(index, minor) {
+export function keyChords(index, minor, flat) {
   const pc = keyTonic(index, minor);
   const layout = minor ? MINOR_LAYOUT : MAJOR_LAYOUT;
   const scalePcs = keyScale(index, minor);
-  const chords = diatonic(keyOf(index, minor)).map((chord, i) => {
+  const chords = diatonic(keyOf(index, minor, flat)).map((chord, i) => {
     const [offset, ring, quality] = layout[i];
     const at = mod12(index + offset);
     const root = ring === ringId.dim ? keyTonic(mod12(index + DIM_ROOT_OFFSET), true) : keyTonic(at, ring === ringId.inner);
     return { chord, numeral: roman(chord, { pc }), index: at, ring, pc: root, quality, scalePcs };
   });
-  return [...chords, ...borrowedChords(index, minor)];
+  return [...chords, ...borrowedChords(index, minor, flat)];
 }
 
 export function displayName(name) {
@@ -181,8 +177,12 @@ export function displayName(name) {
     .replace(/b(?=\d)/g, '♭');
 }
 
-export function pitchNames(index, minor) {
-  return keySpelling(keyTonic(index, minor), minor).map(noteName);
+export function pitchSpelling(index, minor, flat) {
+  return spellingOf(keyOf(index, minor, flat));
+}
+
+export function pitchNames(index, minor, flat) {
+  return pitchSpelling(index, minor, flat).map(noteName);
 }
 
 export function intervalNames(chord) {
