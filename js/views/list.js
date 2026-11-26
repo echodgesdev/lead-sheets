@@ -6,7 +6,6 @@ import { icon, iconId } from '../core/icons.js';
 import { GROUPS, groupId, groupSongs, groupSetlists } from '../data/group.js';
 import { transposeKey } from '../sheet/transpose.js';
 import {
-  modeId,
   getListMode,
   setListMode,
   getListGroup,
@@ -20,7 +19,7 @@ import {
 } from '../data/prefs.js';
 import { a, div, h1, header, p, span, iconButton, iconLink, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
-import { routes, NEW_ID } from '../routes.js';
+import { routes, listMode, NEW_ID } from '../routes.js';
 import { searchBox, rowMain } from '../components/parts.js';
 import { selectPill } from '../components/controls.js';
 import { choiceToggle } from '../components/rows.js';
@@ -32,9 +31,9 @@ const APP_NAME = 'Lead Sheets';
 const INTRO_MS = 1200;
 
 const MODES = [
-  { id: modeId.live, icon: iconId.play, label: 'Live', title: 'Live' },
-  { id: modeId.edit, icon: iconId.penToSquare, label: 'Edit', title: 'Edit' },
-  { id: modeId.tools, icon: iconId.wrench, label: 'Tools', title: 'Tools' },
+  { id: listMode.live, icon: iconId.play, label: 'Live', title: 'Live' },
+  { id: listMode.edit, icon: iconId.penToSquare, label: 'Edit', title: 'Edit' },
+  { id: listMode.tools, icon: iconId.wrench, label: 'Tools', title: 'Tools' },
 ];
 
 let introPlayed = false;
@@ -43,11 +42,11 @@ function subtitleOf(rec, by) {
   return [by !== 'artist' && rec.artist, by !== 'album' && rec.album].filter(Boolean).join(' · ');
 }
 
-export function mount(el) {
+export function mount(el, { mode: routed, query = {} } = {}) {
   const intro = !introPlayed;
   introPlayed = true;
-  if (intro) setListMode(modeId.live);
-  let mode = getListMode();
+  let mode = routed ?? (intro ? listMode.live : getListMode());
+  let toolsState = query;
   let groupBy = getListGroup();
 
   const screen = div();
@@ -91,7 +90,7 @@ export function mount(el) {
   el.append(screen);
 
   function hrefFor(rec, set) {
-    if (mode === modeId.edit) return routes.edit(rec.id);
+    if (mode === listMode.edit) return routes.edit(rec.id);
     return set ? routes.set(set.id, rec.id) : routes.live(rec.id);
   }
 
@@ -125,7 +124,7 @@ export function mount(el) {
     const ids = group.songs.map((rec) => rec.id);
     const labelEl = div(group.empty ? 'section-label muted-group' : 'section-label');
     labelEl.append(span('group-name', group.name), span('group-count', String(ids.length)));
-    if (group.set && mode === modeId.edit) {
+    if (group.set && mode === listMode.edit) {
       const pen = a({ class: 'group-edit', href: routes.setlist(group.set.id), 'aria-label': `Edit ${group.name}`, title: 'Edit setlist' });
       pen.append(icon(iconId.penToSquare));
       labelEl.append(pen);
@@ -149,27 +148,27 @@ export function mount(el) {
   }
 
   function renderList() {
-    if (mode === modeId.tools) return;
+    if (mode === listMode.tools) return;
     const songs = store.search(search.value);
     const bySet = groupBy === groupId.setlist;
     const groups = bySet ? groupSetlists(songs, setlists.all(), !search.value.trim()) : groupSongs(songs, groupBy);
     const menus = hasListOption(listOptionId.rowMenus);
     const nodes = groups.flatMap((group) => renderGroup(group, menus));
-    if (bySet && mode === modeId.edit) nodes.push(newSetRow());
+    if (bySet && mode === listMode.edit) nodes.push(newSetRow());
     groupsEl.replaceChildren(...nodes);
-    empty.hidden = bySet ? groups.length > 0 || mode === modeId.edit : songs.length > 0;
+    empty.hidden = bySet ? groups.length > 0 || mode === listMode.edit : songs.length > 0;
     empty.textContent = emptyText(bySet);
   }
 
   function applyMode() {
-    const edit = mode === modeId.edit;
-    const tools = mode === modeId.tools;
+    const edit = mode === listMode.edit;
+    const tools = mode === listMode.tools;
     newLink.hidden = !edit;
     searchBar.hidden = tools;
     groupsEl.hidden = tools;
     if (tools) {
       empty.hidden = true;
-      toolsPanel ??= createToolsPanel();
+      toolsPanel ??= createToolsPanel({ initial: toolsState, onChange: onToolsChange });
       toolsEl.replaceChildren(toolsPanel.el);
       if (!utilities) {
         utilities = createUtilities();
@@ -192,9 +191,19 @@ export function mount(el) {
     utilities = null;
   }
 
+  function rememberMode() {
+    setListMode(mode);
+    history.replaceState(history.state, '', routes.list(mode, mode === listMode.tools ? toolsState : null));
+  }
+
+  function onToolsChange(state) {
+    toolsState = state;
+    rememberMode();
+  }
+
   function setMode(next) {
     mode = next;
-    setListMode(next);
+    rememberMode();
     applyMode();
   }
 
@@ -215,6 +224,7 @@ export function mount(el) {
   });
   menuBtn.addEventListener(evt.click, () => openSettings({ onImport: renderList, onClose: applyMode }));
 
+  rememberMode();
   applyMode();
 
   return () => {

@@ -1,4 +1,4 @@
-import { diatonic, keyOf, fifthsIndex, spellingOf, intervalSpelling, noteName, FIFTHS, RELATIVE_MINOR, IONIAN, AEOLIAN } from './chords.js';
+import { diatonic, keyOf, fifthsIndex, flatSide, spellingOf, intervalSpelling, noteName, parseKey, nameSignature, signatureKey, SIGNATURES, FIFTHS, RELATIVE_MINOR, IONIAN, AEOLIAN } from './chords.js';
 import { roman } from './transpose.js';
 import { OCTAVE, mod12 } from '../core/math.js';
 
@@ -134,6 +134,32 @@ export function wedgeNames(index, minor) {
 
 export function keyTonic(index, minor) {
   return mod12(FIFTHS[index] + (minor ? RELATIVE_MINOR : 0));
+}
+
+const ALPHABET = 'ABCDEFG';
+const ACCIDENTAL_ORDER = ['b', '', '#'];
+
+function alphabetical(a, b) {
+  return ALPHABET.indexOf(a.name[0]) - ALPHABET.indexOf(b.name[0]) || ACCIDENTAL_ORDER.indexOf(a.name.slice(1).replace('m', '')) - ACCIDENTAL_ORDER.indexOf(b.name.slice(1).replace('m', ''));
+}
+
+export function keyChoices(minor) {
+  return SIGNATURES.map((signature) => {
+    const { index, flat } = signatureKey(signature);
+    return { signature, index, flat, name: keyOf(index, minor, flat) };
+  }).sort(alphabetical);
+}
+
+export function keyFromName(name) {
+  const parsed = parseKey(name);
+  return parsed && { ...signatureKey(nameSignature(name)), minor: parsed.minor };
+}
+
+export function parallelKey({ index, minor, flat }) {
+  const letter = keyOf(index, minor, flat)[0];
+  const target = fifthsIndex(keyTonic(index, minor), !minor);
+  const spelled = [true, false].find((choice) => keyOf(target, !minor, choice)[0] === letter);
+  return { index: target, minor: !minor, flat: spelled ?? flatSide(target) };
 }
 
 export function keyWedges(index) {

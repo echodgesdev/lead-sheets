@@ -1,6 +1,7 @@
 import { GROUPS, groupId } from './group.js';
 import { clamp } from '../core/math.js';
 import { DEFAULT_BEATS, defaultPattern, parsePattern } from '../audio/click.js';
+import { listMode } from '../routes.js';
 
 const MODE_KEY = 'tabs.mode';
 const GROUP_KEY = 'tabs.group';
@@ -22,11 +23,6 @@ const COUNT_IN_KEY = 'tabs.countIn';
 
 export const TEXT_SIZE = { min: 14, max: 36, fallback: 20 };
 
-export const modeId = Object.freeze({
-  live: 'live',
-  edit: 'edit',
-  tools: 'tools',
-});
 
 export const pedalId = Object.freeze({
   page: 'page',
@@ -196,7 +192,7 @@ function pick(list, id, fallback) {
 
 export function getListMode() {
   const mode = readRaw(localStorage, MODE_KEY);
-  return Object.values(modeId).includes(mode) ? mode : modeId.live;
+  return Object.values(listMode).includes(mode) ? mode : listMode.live;
 }
 
 export function setListMode(mode) {

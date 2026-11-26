@@ -9,8 +9,22 @@ export const views = Object.freeze({
   shared: 'shared',
 });
 
+export const listMode = Object.freeze({
+  live: 'live',
+  edit: 'edit',
+  tools: 'tools',
+});
+
+const LIST_MODES = new Set(Object.values(listMode));
+
+function queryString(query) {
+  const text = new URLSearchParams(Object.entries(query ?? {}).filter(([, value]) => value)).toString();
+  return text ? `?${text}` : '';
+}
+
 export const routes = Object.freeze({
   home: '#/',
+  list: (mode, query) => `${mode === listMode.live ? '#/' : `#/${mode}`}${queryString(query)}`,
   live: (id) => `#/${views.live}/${id}`,
   preview: (id) => `#/${views.preview}/${id}`,
   set: (setId, songId) => `#/${views.set}/${setId}/${songId}`,
@@ -20,9 +34,10 @@ export const routes = Object.freeze({
 });
 
 export function parseRoute(hash) {
-  const parts = hash.slice(1).split('/');
+  const [path, search] = hash.split('?');
+  const parts = path.slice(1).split('/');
   const [, view = '', id = '', songId = ''] = parts;
-  if (!id) return { view: null, params: {} };
+  if (!id) return { view: null, params: LIST_MODES.has(view) ? { mode: view, ...(search && { query: Object.fromEntries(new URLSearchParams(search)) }) } : {} };
   if (view === views.live) return { view, params: { id } };
   if (view === views.preview) return { view, params: { id, preview: true } };
   if (view === views.set && songId) return { view, params: { id: songId, setId: id } };

@@ -6,14 +6,14 @@ import { strings } from '../strings.js';
 import { THEORY_VIEWS, labelId } from './theory-views.js';
 import { createFifths } from './fifths.js';
 import { attachPlayer, notesOf } from './theory-player.js';
-import { ringId, qualityId, keyOf, keyTonic, keyScale, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
-import { SIGNATURES, signatureOf, signatureKey } from '../sheet/chords.js';
+import { ringId, qualityId, keyChoices, parallelKey, keyFromName, keyOf, keyTonic, keyScale, chordNotes, wedgeNotes, displayName, shapeId, shapeChoices, voiceNotes, scaleId } from '../sheet/circle.js';
+import { signatureOf, signatureKey } from '../sheet/chords.js';
 import { modeId, keyItems, itemShape, theoryModel, chordRoot } from '../sheet/theory-model.js';
 import { GUITAR, fretLayout, showId, matchId } from '../sheet/fretboard.js';
 import { visId, alignId, fingeringId, neckShapeId } from '../sheet/vis-spec.js';
 import { startNotes } from '../audio/tone.js';
 import { getKeyOctaves } from '../data/prefs.js';
-import { div, span, small, iconButton, plainButton, labeledButton, setPressed, setTitle, classes, cls } from '../core/dom.js';
+import { div, span, iconButton, plainButton, labeledButton, setPressed, setTitle, classes, cls } from '../core/dom.js';
 import { evt } from '../core/events.js';
 import { icon, iconId } from '../core/icons.js';
 import { smoothHeight } from '../core/smooth-height.js';
@@ -73,25 +73,18 @@ const VIEWS = [
   { id: visId.piano, icon: iconId.pianoKeys, label: 'Keys', title: 'Keys' },
   { id: visId.clef, icon: iconId.staff, label: 'Clef', title: 'Staff notation' },
   { id: visId.fretboard, icon: iconId.guitar, label: 'Guitar', title: 'Fretboard' },
-  { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
   { id: visId.chart, icon: iconId.chordChart, label: 'Chart', title: 'Chord chart' },
+  { id: visId.tab, icon: iconId.tab, label: 'Tab', title: 'Tablature' },
   { id: visId.tonnetz, icon: iconId.triangles, label: 'Tonnetz', title: 'Tonnetz' },
 ];
 
 const QUALITIES = [
-  { id: qualityId.major, label: 'Major', title: 'The signature’s major key' },
-  { id: qualityId.minor, label: 'Minor', title: 'The signature’s relative minor' },
+  { id: qualityId.major, label: 'Major', title: 'Major key' },
+  { id: qualityId.minor, label: 'Minor', title: 'Minor key on the same tonic' },
 ];
 
-const SIGNATURE_OPTIONS = SIGNATURES.map((signature) => {
-  const { index, flat } = signatureKey(signature);
-  const keys = [false, true].map((minor) => displayName(keyOf(index, minor, flat))).join(' / ');
-  const count = signatureCount(signature);
-  return { id: signature, label: `${count ?? 'No ♯/♭'} · ${keys}`, short: count ?? '♮' };
-});
-
-function signatureCount(signature) {
-  return signature ? `${Math.abs(signature)}${signature > 0 ? '♯' : '♭'}` : null;
+function keyOptions(minor) {
+  return keyChoices(minor).map((key) => ({ id: key.signature, label: displayName(chordRoot(key.name)) }));
 }
 
 function scaleChip(scale) {
@@ -116,23 +109,27 @@ function chordChip(item, degree, bare, shaped) {
   return chip;
 }
 
-function borrowedChip() {
-  const chip = plainButton(small(null, 'Borrowed'), 'circle-chord borrowed-chip');
-  chip.append(icon(iconId.chevronRight));
-  return chip;
+function borrowedToggleOf(count) {
+  const toggle = plainButton(span(null, 'Borrowed chords'), 'borrowed-toggle');
+  toggle.append(count, icon(iconId.chevronDown));
+  return toggle;
 }
 
-export function createCircleControl() {
+export function createCircleControl({ initial = {}, onChange = () => {} } = {}) {
   const button = iconButton(iconId.bookOpen, 'Theory');
-  let mode = modeId.chord;
+  let mode = MODES.some((m) => m.id === initial.play) ? initial.play : modeId.chord;
   let locked = false;
-  let view = visId.fifths;
+  let view = VIEWS.some((v) => v.id === initial.view) ? initial.view : visId.fifths;
   let align = alignId.root;
   let inversion = 0;
   let scaleChoice = scaleId.ionian;
   const chordShapes = [];
   let rooting = rootingId.inKey;
-  let selected = { index: 0, minor: false, flat: false };
+  let selected = keyFromName(initial.key) ?? { index: 0, minor: false, flat: false };
+
+  function notify() {
+    onChange({ view, key: keyOf(selected.index, selected.minor, selected.flat), play: mode });
+  }
   let chordIndex = 0;
   const neckOptions = { show: showId.position, position: 0, shape: neckShapeId.caged, fingering: fingeringId.caged, match: matchId.unison };
   let labels = labelId.none;
@@ -144,7 +141,8 @@ export function createCircleControl() {
     const fifths = createFifths();
     const stage = div('modal-row circle-row');
     const chords = div('circle-chords');
-    const borrowedToggle = borrowedChip();
+    const borrowedCount = span('badge');
+    const borrowedToggle = borrowedToggleOf(borrowedCount);
 
     function tonic() {
       return keyTonic(selected.index, selected.minor);
@@ -195,6 +193,7 @@ export function createCircleControl() {
     header.append(choiceToggle(VIEWS, view, (id) => {
       if (id === view) return;
       view = id;
+      notify();
       renderStage();
       stage.firstElementChild.classList.add(cls.entering);
     }));
@@ -281,6 +280,7 @@ export function createCircleControl() {
 
     function syncBorrowed() {
       borrowedToggle.setAttribute('aria-expanded', String(borrowedOpen));
+      borrowedCount.textContent = String(items.filter((item) => item.borrowed).length);
       setTitle(borrowedToggle, borrowedOpen ? 'Hide borrowed chords' : 'Show borrowed chords');
     }
 
@@ -298,8 +298,7 @@ export function createCircleControl() {
       chipItems = new Map(items.map((item) => [item.slot, item]));
       if (items[chordIndex]?.borrowed && !borrowedShown()) chordIndex = 0;
       fifths.render({ ...selected, items: shownItems(), bare: bareLabels() });
-      showKey(signatureOf(selected.index, selected.flat));
-      syncQuality();
+      syncKeyControls();
       renderChips();
       syncVoicing();
       renderStage();
@@ -309,6 +308,7 @@ export function createCircleControl() {
       if (key.index === selected.index && key.minor === selected.minor && key.flat === selected.flat) return;
       selected = key;
       chordIndex = 0;
+      notify();
       renderKey();
     }
 
@@ -317,33 +317,42 @@ export function createCircleControl() {
       renderKey();
     });
 
-    const { pill: keyPill, select: keySelect, set: showKey } = selectPill(null, 'Key signature', SIGNATURE_OPTIONS, signatureOf(selected.index, selected.flat));
-    keySelect.addEventListener(evt.change, () => pickKey({ ...signatureKey(Number(keySelect.value)), minor: selected.minor }));
+    function keyPicker() {
+      const { pill, select } = selectPill(null, 'Key', keyOptions(selected.minor), signatureOf(selected.index, selected.flat));
+      select.disabled = locked;
+      select.addEventListener(evt.change, () => pickKey({ ...signatureKey(Number(select.value)), minor: selected.minor }));
+      return pill;
+    }
 
     function qualityToggle() {
-      const toggle = choiceToggle(QUALITIES, selected.minor ? qualityId.minor : qualityId.major, (id) => pickKey({ ...selected, minor: id === qualityId.minor }));
+      const toggle = choiceToggle(QUALITIES, selected.minor ? qualityId.minor : qualityId.major, (id) => {
+        if ((id === qualityId.minor) !== selected.minor) pickKey(parallelKey(selected));
+      });
       for (const b of toggle.children) b.disabled = locked;
       return toggle;
     }
 
+    let keyField = keyPicker();
     let qualityField = qualityToggle();
 
-    function syncQuality() {
-      const next = qualityToggle();
-      qualityField.replaceWith(next);
-      qualityField = next;
+    function syncKeyControls() {
+      const nextKey = keyPicker();
+      const nextQuality = qualityToggle();
+      keyField.replaceWith(nextKey);
+      qualityField.replaceWith(nextQuality);
+      keyField = nextKey;
+      qualityField = nextQuality;
     }
 
     const lockBtn = iconButton(iconId.lockOpen, 'Lock');
-    const keyRow = modalRow('Key signature', keyPill, qualityField, lockBtn);
+    const keyRow = modalRow('Key', keyField, qualityField, lockBtn);
     keyRow.classList.add('key-controls');
 
     function renderLock() {
       lockBtn.replaceChildren(icon(locked ? iconId.lock : iconId.lockOpen));
       setPressed(lockBtn, locked);
       setTitle(lockBtn, locked ? 'Unlock' : 'Lock to the key or selection');
-      keySelect.disabled = locked;
-      syncQuality();
+      syncKeyControls();
     }
 
     lockBtn.addEventListener(evt.click, () => {
@@ -355,6 +364,7 @@ export function createCircleControl() {
     const modeToggle = choiceToggle(MODES, mode, (id) => {
       if (id === mode) return;
       mode = id;
+      notify();
       player.stopRun();
       syncMode();
       renderKey();
@@ -433,7 +443,7 @@ export function createCircleControl() {
       labelField.hidden = !labelled;
       fingeringField.hidden = !neckView || mode !== modeId.scale;
       matchField.hidden = !neckView || mode !== modeId.note;
-      alignField.hidden = view !== visId.intervals;
+      alignField.hidden = view !== visId.intervals || mode !== modeId.chord;
       viewRow.hidden = viewFields.every((field) => field.hidden);
     }
 

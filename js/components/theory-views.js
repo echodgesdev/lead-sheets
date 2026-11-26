@@ -90,7 +90,7 @@ export const labelId = Object.freeze({
 export const THEORY_VIEWS = Object.freeze({
   [visId.fifths]: { render: fifthsArt },
   [visId.clock]: { render: renderClock },
-  [visId.intervals]: { render: (model, { align }) => renderChain(model, align) },
+  [visId.intervals]: { labels: true, render: (model, { align, labels }) => renderChain(model, align, labels) },
   [visId.piano]: { render: renderKeys },
   [visId.fretboard]: { neck: true, show: true, labels: true, render: (model, { layout, labels }) => renderFretboard(model, layout, labels) },
   [visId.tab]: { neck: true, render: (model, { layout }) => renderTab(model, layout) },
@@ -205,6 +205,12 @@ function rowName(top, topClass, letter, slot) {
   return name;
 }
 
+function cellText(model, pc, refPc, labels, name = pcName(model, pc)) {
+  if (labels === labelId.name) return name;
+  if (labels === labelId.degree) return INTERVALS[mod12(pc - refPc)];
+  return '';
+}
+
 function chainCell(model, { pc, on, text = '', shade = false, ...note }) {
   return noteButton(on ? text : '', noteAttrs(model, pc, {
     ...note,
@@ -219,7 +225,7 @@ function chainRow(model, name, picked, cells) {
   return row;
 }
 
-function chordRows(model, align) {
+function chordRows(model, align, labels) {
   const byRoot = align === alignId.root;
   return model.items.map((item, i) => {
     const shaped = model.shapeOf(item);
@@ -234,7 +240,7 @@ function chordRows(model, align) {
         pc,
         on,
         rootPc: item.pc,
-        text: name,
+        text: cellText(model, pc, item.pc, labels, name),
         shade: !byRoot,
         midis: byRoot ? (c ? [rootMidi, rootMidi + c] : [rootMidi]) : [model.keyTonicMidi + c],
         label: byRoot ? `${displayName(item.chord)} ${INTERVALS[c]}, ${name}` : name,
@@ -244,7 +250,7 @@ function chordRows(model, align) {
   });
 }
 
-function noteRows(model, align) {
+function noteRows(model, align, labels) {
   return model.items.map((item, i) => {
     const top = String(i + 1);
     const letter = rootLetter(item.chord);
@@ -254,7 +260,7 @@ function noteRows(model, align) {
       return {
         pc,
         on,
-        text: align === alignId.root ? INTERVALS[c] : letter,
+        text: cellText(model, pc, model.keyTonicPc, labels, letter),
         midis: [model.keyTonicMidi + c],
         label: on ? `${letter}, ${top}` : INTERVALS[c],
       };
@@ -263,7 +269,7 @@ function noteRows(model, align) {
   });
 }
 
-function patternRow(model, { top, label, title, play, pcs, rootPc, midiOf, stepsAt, picked }) {
+function patternRow(model, labels, { top, label, title, play, pcs, rootPc, midiOf, stepsAt, picked }) {
   const name = rowName(top, 'circle-degree', label);
   Object.assign(name.dataset, play);
   name.setAttribute('aria-label', title);
@@ -274,6 +280,7 @@ function patternRow(model, { top, label, title, play, pcs, rootPc, midiOf, steps
       pc,
       on,
       rootPc,
+      text: cellText(model, pc, rootPc, labels),
       shade: true,
       midis: [on ? midiOf(pc) : model.keyTonicMidi + c],
       steps: on ? stepsAt(pc) : '',
@@ -287,10 +294,10 @@ function midiWithPc(midis, pc) {
   return midis.find((midi) => mod12(midi) === pc);
 }
 
-function scaleRows(model) {
+function scaleRows(model, align, labels) {
   return model.scales.map((scale) => {
     const picked = scale.id === model.scale.id;
-    return patternRow(model, {
+    return patternRow(model, labels, {
       top: scale.top,
       label: scale.short,
       title: scale.name,
@@ -304,8 +311,8 @@ function scaleRows(model) {
   });
 }
 
-function sequenceRows(model) {
-  return model.steps.map((step, i) => patternRow(model, {
+function sequenceRows(model, align, labels) {
+  return model.steps.map((step, i) => patternRow(model, labels, {
     top: step.top,
     label: step.label,
     title: step.label,
@@ -318,9 +325,9 @@ function sequenceRows(model) {
   }));
 }
 
-export function renderChain(model, align = alignId.root) {
+export function renderChain(model, align = alignId.root, labels = labelId.name) {
   const chain = div(classes('chain', PATTERN_MODES.has(model.mode) && 'chain-patterns'));
-  chain.append(chainHead(align, model), ...CHAIN_ROWS[model.mode](model, align));
+  chain.append(chainHead(align, model), ...CHAIN_ROWS[model.mode](model, align, labels));
   return chain;
 }
 

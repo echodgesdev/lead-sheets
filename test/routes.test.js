@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { routes, parseRoute, views, NEW_ID } from '../js/routes.js';
+import { routes, parseRoute, views, listMode, NEW_ID } from '../js/routes.js';
 
 test('route builders', () => {
   eq(routes.home, '#/');
@@ -26,7 +26,24 @@ test('parseRoute round-trips the builders', () => {
 test('parseRoute falls back to the list', () => {
   eq(parseRoute(''), { view: null, params: {} });
   eq(parseRoute(routes.home), { view: null, params: {} });
-  eq(parseRoute('#/live'), { view: null, params: {} });
   eq(parseRoute('#/set/s1'), { view: null, params: {} });
+  eq(parseRoute('#/nope'), { view: null, params: {} });
   eq(parseRoute('#/nope/a1'), { view: null, params: {} });
+});
+
+test('list modes have their own routes', () => {
+  eq(routes.list(listMode.live), '#/');
+  eq(routes.list(listMode.edit), '#/edit');
+  eq(routes.list(listMode.tools), '#/tools');
+  eq(parseRoute(routes.list(listMode.edit)), { view: null, params: { mode: listMode.edit } });
+  eq(parseRoute(routes.list(listMode.tools)), { view: null, params: { mode: listMode.tools } });
+  eq(parseRoute('#/live'), { view: null, params: { mode: listMode.live } });
+});
+
+test('the Tools route carries its state as a query', () => {
+  const state = { view: 'tonnetz', key: 'C#m', play: 'scale' };
+  eq(routes.list(listMode.tools, state), '#/tools?view=tonnetz&key=C%23m&play=scale');
+  eq(routes.list(listMode.tools, {}), '#/tools');
+  eq(routes.list(listMode.live, null), '#/');
+  eq(parseRoute(routes.list(listMode.tools, state)), { view: null, params: { mode: listMode.tools, query: state } });
 });

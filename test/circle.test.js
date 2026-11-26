@@ -1,5 +1,5 @@
 import { test, eq } from './harness.js';
-import { wedgeNames, keyWedges, keyChords, keyScale, chordNotes, wedgeNotes, displayName, pitchNames, intervalNames, noteMidi, scalePitches, scaleRun, chordShape, shapeChoices, shapeId, stepPitches, voiceNotes, scaleRoot, wedgeOf, degreeMidi, spelledNotes } from '../js/sheet/circle.js';
+import { wedgeNames, keyWedges, keyChords, keyScale, chordNotes, wedgeNotes, displayName, pitchNames, intervalNames, noteMidi, scalePitches, scaleRun, chordShape, shapeChoices, shapeId, stepPitches, voiceNotes, scaleRoot, wedgeOf, degreeMidi, spelledNotes, keyChoices, parallelKey, keyFromName, keyOf } from '../js/sheet/circle.js';
 import { chordSpelling } from '../js/sheet/chords.js';
 
 const C = 0;
@@ -239,4 +239,30 @@ test('circle degrees climb the key and wrap to the octave', () => {
 test('circle spelled notes put a slash bass underneath', () => {
   eq(spelledNotes({ pc: C, steps: [0, 4, 7], bass: null }, C), [60, 64, 67]);
   eq(spelledNotes({ pc: C, steps: [0, 4, 7], bass: 4 }, C), [52, 60, 64, 67]);
+});
+
+test('key choices list every spelled key alphabetically, flats before sharps', () => {
+  eq(keyChoices(false).map((k) => k.name), ['Ab', 'A', 'Bb', 'B', 'Cb', 'C', 'C#', 'Db', 'D', 'Eb', 'E', 'F', 'F#', 'Gb', 'G']);
+  eq(keyChoices(true).map((k) => k.name), ['Abm', 'Am', 'A#m', 'Bbm', 'Bm', 'Cm', 'C#m', 'Dm', 'D#m', 'Ebm', 'Em', 'Fm', 'F#m', 'Gm', 'G#m']);
+});
+
+test('the parallel key keeps the tonic and its letter where it can', () => {
+  const name = (key) => keyOf(key.index, key.minor, key.flat);
+  const major = (tonic) => keyChoices(false).find((k) => k.name === tonic);
+  const minor = (tonic) => keyChoices(true).find((k) => k.name === tonic);
+  eq(name(parallelKey({ ...major('C'), minor: false })), 'Cm');
+  eq(name(parallelKey({ ...major('Gb'), minor: false })), 'F#m');
+  eq(name(parallelKey({ ...major('F#'), minor: false })), 'F#m');
+  eq(name(parallelKey({ ...major('Db'), minor: false })), 'C#m');
+  eq(name(parallelKey({ ...minor('Ebm'), minor: true })), 'Eb');
+  eq(name(parallelKey({ ...minor('D#m'), minor: true })), 'Eb');
+  eq(name(parallelKey({ ...minor('Am'), minor: true })), 'A');
+});
+
+test('a key name maps back to its wedge, quality and spelling', () => {
+  for (const name of ['C', 'Am', 'Gb', 'F#', 'Cb', 'B', 'C#', 'Db', 'Ebm', 'D#m', 'Abm', 'G#m']) {
+    const key = keyFromName(name);
+    eq(keyOf(key.index, key.minor, key.flat), name, name);
+  }
+  eq(keyFromName('nope'), null);
 });

@@ -25,8 +25,8 @@ export function createUtilities({ tempo, song } = {}) {
   };
 }
 
-export function createToolsPanel() {
-  const theory = createCircleControl();
+export function createToolsPanel(theoryOptions) {
+  const theory = createCircleControl(theoryOptions);
   const body = theory.open();
   const panel = div('theory-panel');
   panel.append(body.header, ...body.rows);
